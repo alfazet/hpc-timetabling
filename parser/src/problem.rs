@@ -8,8 +8,12 @@ use crate::{error::ParseError, optimization::Optimization, utils::parse_value};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Problem {
     pub name: String,
+    /// number of days in a week
     pub nr_days: u32,
+    /// number of weeks in a semester
     pub nr_weeks: u32,
+    /// number of time slots in a day
+    /// (usually `288 = 24 * 60 / 5`, meaning 288 5 min slots in 24 h)
     pub slots_per_day: u32,
     pub optimization: Optimization,
 }
@@ -93,23 +97,26 @@ mod tests {
 
     #[test]
     fn parses_problem_with_optimization() {
-        let xml = include_str!("../../data/bet-sum18.xml");
+        let xml = include_str!("../../data/itc2019/sample.xml");
 
         let problem = Problem::parse(&xml).unwrap();
 
-        assert_eq!(problem.name, "bet-sum18");
-        assert_eq!(problem.nr_days, 7);
-        assert_eq!(problem.nr_weeks, 6);
-        assert_eq!(problem.slots_per_day, 288);
+        dbg!(&problem);
         assert_eq!(
-            problem.optimization,
-            Optimization {
-                time: 1,
-                room: 1,
-                distribution: 10,
-                student: 10,
+            problem,
+            Problem {
+                name: "unique-instance-name".into(),
+                nr_days: 7,
+                nr_weeks: 13,
+                slots_per_day: 288,
+                optimization: Optimization {
+                    time: 2,
+                    room: 1,
+                    distribution: 1,
+                    student: 2
+                }
             }
-        )
+        );
     }
 
     #[test]
