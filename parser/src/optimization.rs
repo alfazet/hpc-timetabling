@@ -2,8 +2,8 @@ use quick_xml::events::BytesStart;
 
 use crate::{error::ParseError, utils::parse_value};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
 /// optimization weights: weights on the total penalty of the solution
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Optimization {
     /// penalty for assigned times
     pub time: i32,

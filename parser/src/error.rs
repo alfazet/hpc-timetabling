@@ -20,4 +20,7 @@ pub enum ParseError {
 
     #[error("Invalid value for `{attr}`: `{value}`")]
     InvalidValue { attr: &'static str, value: String },
+
+    #[error("Invalid bit string for `{0}`")]
+    InvalidBitString(String),
 }
