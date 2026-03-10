@@ -3,10 +3,15 @@ use quick_xml::events::BytesStart;
 use crate::{error::ParseError, utils::parse_value};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// optimization weights: weights on the total penalty of the solution
 pub struct Optimization {
+    /// penalty for assigned times
     pub time: i32,
+    /// penalty for assigned rooms
     pub room: i32,
+    /// penalty for violated soft distribution constraints
     pub distribution: i32,
+    /// penalty for student conflicts
     pub student: i32,
 }
 
