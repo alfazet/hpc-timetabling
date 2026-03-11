@@ -10,7 +10,11 @@ TODO: krótki opis tego algorytmu, w szczególności jak mierzymy fitness danego
 
 ## Etap 2. (1 tydzień)
 ### Parallelizacja na CPU
-TODO
+Możliwości parallelizacji:
+- Obliczenie fitness jest niezależne dla każdego planu.
+- W ramach jednego planu różne wątki mogą sprawdzać różne pary zajęć pod względem konfliktów. Każdy
+wątek dostaje swój przydział par i sumuje karę ze wszystkich konfliktów między tymi parami. Potem
+wszystkie te częściowe sumy są sumowane redukcją aby otrzymać całkowitą karę dla całego planu.
 
 ## Etap 3. (2 tygodnie)
 ### Przepisanie na GPU
@@ -22,9 +26,9 @@ Jakości planu w zależności od czasu obliczeń, jak parametryzacja algortymu w
 
 # Etap 5. (2-3 tygodnie)
 ### Inne podejścia
-Inne sposoby rozwiązujące problem, niekoniecznie na GPU.
-Porównanie tych innych metod podobnie jak w etapie 4.
+Testy innych metod rozwiązujących problem, niekoniecznie na GPU.
+Porównanie tych innych metod do algortymu genetycznego.
 
 # Etap 6. (do deadline'u)
 ### Podsumowanie
-???
+Zebranie całej pracy w jeden raport.
