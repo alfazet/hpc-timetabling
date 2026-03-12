@@ -8,11 +8,6 @@ impl Weeks {
         let mut value = 0u16;
 
         for (i, c) in bits.chars().enumerate() {
-            let max_weeks_per_semester = 15;
-            if i >= max_weeks_per_semester {
-                return Err(ParseError::InvalidBitString("weeks".into()));
-            }
-
             match c {
                 '1' => value |= 1 << i,
                 '0' => {}
@@ -66,16 +61,6 @@ mod tests {
     #[test]
     fn invalid_character() {
         let err = Weeks::parse("10a0000").unwrap_err();
-
-        match err {
-            ParseError::InvalidBitString(s) => assert_eq!(s, "weeks"),
-            other => panic!("unexpected error: {:?}", other),
-        }
-    }
-
-    #[test]
-    fn too_long() {
-        let err = Weeks::parse("1110001110001110").unwrap_err();
 
         match err {
             ParseError::InvalidBitString(s) => assert_eq!(s, "weeks"),

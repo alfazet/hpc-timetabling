@@ -3,7 +3,7 @@ use quick_xml::{
     events::{BytesStart, Event},
 };
 
-use crate::{error::ParseError, optimization::Optimization, utils::parse_value};
+use crate::{error::ParseError, optimization::Optimization, rooms::Rooms, utils::parse_value};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Problem {
@@ -16,6 +16,7 @@ pub struct Problem {
     /// (usually `288 = 24 * 60 / 5`, meaning 288 5 min slots in 24 h)
     pub slots_per_day: u32,
     pub optimization: Optimization,
+    pub rooms: Rooms,
 }
 
 impl Problem {
@@ -27,15 +28,22 @@ impl Problem {
 
         let mut problem_attrs = None;
         let mut optimization = None;
+        let mut rooms = None;
 
         loop {
-            match reader.read_event_into(&mut buf)? {
+            let event = reader.read_event_into(&mut buf)?;
+            match event {
                 Event::Start(e) if e.name().as_ref() == b"problem" => {
                     problem_attrs = Some(Self::parse_problem_attrs(&e)?);
                 }
 
                 Event::Empty(e) if e.name().as_ref() == b"optimization" => {
                     optimization = Some(Optimization::parse(&e)?);
+                }
+
+                Event::Start(e) if e.name().as_ref() == b"rooms" => {
+                    let e = e.to_owned();
+                    rooms = Some(Rooms::parse(&mut reader, &e, &mut buf)?);
                 }
 
                 Event::Eof => break,
@@ -55,6 +63,7 @@ impl Problem {
             nr_weeks,
             slots_per_day,
             optimization: optimization.ok_or(ParseError::MissingElement("optimization"))?,
+            rooms: rooms.ok_or(ParseError::MissingElement("rooms"))?,
         })
     }
 
@@ -93,6 +102,12 @@ impl Problem {
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        days::Days,
+        rooms::{Room, RoomId, Travel, Unavailable},
+        weeks::Weeks,
+    };
+
     use super::*;
 
     #[test]
@@ -114,7 +129,46 @@ mod tests {
                     room: 1,
                     distribution: 1,
                     student: 2
-                }
+                },
+                rooms: Rooms(vec![
+                    Room {
+                        id: RoomId(1),
+                        capacity: 50,
+                        travels: vec![],
+                        unavailabilities: vec![],
+                    },
+                    Room {
+                        id: RoomId(2),
+                        capacity: 100,
+                        travels: vec![Travel {
+                            room: RoomId(1),
+                            value: 2,
+                        }],
+                        unavailabilities: vec![],
+                    },
+                    Room {
+                        id: RoomId(3),
+                        capacity: 80,
+                        travels: vec![Travel {
+                            room: RoomId(2),
+                            value: 3,
+                        }],
+                        unavailabilities: vec![
+                            Unavailable {
+                                start: 102,
+                                length: 24,
+                                days: Days(3),
+                                weeks: Weeks(u16::from_str_radix("1111111111111", 2).unwrap()),
+                            },
+                            Unavailable {
+                                start: 144,
+                                length: 144,
+                                days: Days(8),
+                                weeks: Weeks(u16::from_str_radix("1010101010101", 2).unwrap()),
+                            }
+                        ],
+                    },
+                ]),
             }
         );
     }
