@@ -48,3 +48,76 @@ impl Optimization {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quick_xml::{Reader, events::Event};
+
+    fn start_event(xml: &str) -> BytesStart<'_> {
+        let mut reader = Reader::from_str(xml);
+        reader.config_mut().trim_text(true);
+
+        let mut buf = Vec::new();
+
+        match reader.read_event_into(&mut buf).unwrap() {
+            Event::Empty(e) => e.to_owned(),
+            Event::Start(e) => e.to_owned(),
+            other => panic!("expected start or empty event, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_valid_optimization() {
+        let e = start_event(r#"<optimization time="1" room="2" distribution="3" student="4"/>"#);
+
+        let opt = Optimization::parse(&e).unwrap();
+
+        assert_eq!(
+            opt,
+            Optimization {
+                time: 1,
+                room: 2,
+                distribution: 3,
+                student: 4,
+            }
+        );
+    }
+
+    #[test]
+    fn missing_time_attr() {
+        let e = start_event(r#"<optimization room="2" distribution="3" student="4"/>"#);
+
+        let err = Optimization::parse(&e).unwrap_err();
+        assert!(matches!(err, ParseError::MissingAttr("time")));
+    }
+
+    #[test]
+    fn unexpected_attribute() {
+        let e = start_event(
+            r#"<optimization time="1" room="2" distribution="3" student="4" foo="5"/>"#,
+        );
+
+        let err = Optimization::parse(&e).unwrap_err();
+
+        match err {
+            ParseError::UnexpectedAttr(attr) => assert_eq!(attr, "foo"),
+            other => panic!("unexpected error: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn invalid_integer_value() {
+        let e = start_event(r#"<optimization time="x" room="2" distribution="3" student="4"/>"#);
+
+        let err = Optimization::parse(&e).unwrap_err();
+
+        match err {
+            ParseError::InvalidValue {
+                attr: "time",
+                value,
+            } => assert_eq!(value, "x"),
+            other => panic!("unexpected error: {:?}", other),
+        }
+    }
+}
