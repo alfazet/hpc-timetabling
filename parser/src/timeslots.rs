@@ -61,7 +61,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_valid_timeslot() {
+    fn valid_timeslot() {
         let e = element(r#"<time start="90" length="10" days="1010100" weeks="1111111111111"/>"#);
 
         let ts = TimeSlots::parse(&e).unwrap();
@@ -73,7 +73,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_valid_timeslot_costom_name() {
+    fn valid_timeslot_costom_name() {
         let e =
             element(r#"<helloworld start="90" length="10" days="1010100" weeks="1111111111111"/>"#);
 

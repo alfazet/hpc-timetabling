@@ -5,7 +5,7 @@ use quick_xml::{
 
 use crate::{
     courses::Courses, error::ParseError, optimization::Optimization, rooms::Rooms,
-    utils::parse_value,
+    students::Students, utils::parse_value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +21,7 @@ pub struct Problem {
     pub optimization: Optimization,
     pub rooms: Rooms,
     pub courses: Courses,
+    pub students: Students,
 }
 
 impl Problem {
@@ -34,6 +35,7 @@ impl Problem {
         let mut optimization = None;
         let mut rooms = None;
         let mut courses = None;
+        let mut students = None;
 
         loop {
             let event = reader.read_event_into(&mut buf)?;
@@ -56,6 +58,11 @@ impl Problem {
                     courses = Some(Courses::parse(&mut reader, &e, &mut buf)?);
                 }
 
+                Event::Start(e) if e.name().as_ref() == b"students" => {
+                    let e = e.to_owned();
+                    students = Some(Students::parse(&mut reader, &e, &mut buf)?);
+                }
+
                 Event::Eof => break,
 
                 _ => {}
@@ -75,6 +82,8 @@ impl Problem {
             optimization: optimization.ok_or(ParseError::MissingElement("optimization"))?,
             rooms: rooms.ok_or(ParseError::MissingElement("rooms"))?,
             courses: courses.ok_or(ParseError::MissingElement("courses"))?,
+            // `students` is just a single closing tag in some instances
+            students: students.unwrap_or(Students(vec![])),
         })
     }
 
@@ -113,12 +122,14 @@ impl Problem {
 
 #[cfg(test)]
 mod tests {
-    use crate::{courses::*, days::Days, rooms::*, timeslots::TimeSlots, weeks::Weeks};
+    use crate::{
+        courses::*, days::Days, rooms::*, students::*, timeslots::TimeSlots, weeks::Weeks,
+    };
 
     use super::*;
 
     #[test]
-    fn parses_sample() {
+    fn sample() {
         let xml = include_str!("../../data/itc2019/sample.xml");
 
         let problem = Problem::parse(&xml).unwrap();
@@ -268,6 +279,16 @@ mod tests {
                 ],
             }],
         }]);
+        let students = Students(vec![
+            Student {
+                id: StudentId(1),
+                courses: vec![CourseId(1), CourseId(5)],
+            },
+            Student {
+                id: StudentId(2),
+                courses: vec![CourseId(1), CourseId(3), CourseId(4)],
+            },
+        ]);
 
         assert_eq!(
             problem,
@@ -284,12 +305,13 @@ mod tests {
                 },
                 rooms,
                 courses,
+                students,
             }
         );
     }
 
     #[test]
-    fn parses_all_instances() {
+    fn all_instances() {
         fn visit_dir(dir: &std::path::Path) {
             for entry in std::fs::read_dir(dir).unwrap() {
                 let entry = entry.unwrap();

@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_empty_rooms() {
+    fn empty_rooms() {
         let xml = r#"<rooms></rooms>"#;
         let (mut reader, start, mut buf) = prepare(xml);
 
@@ -193,7 +193,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_multiple_rooms() {
+    fn multiple_rooms() {
         let xml = r#"
         <rooms>
             <room id="1" capacity="100"/>

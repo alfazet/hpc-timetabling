@@ -33,7 +33,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_bitstring() {
+    fn bitstring() {
         let days = Days::parse("1100000").unwrap();
 
         assert_eq!(days.0, 1 << 0 | 1 << 1);
@@ -46,7 +46,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_all_zero() {
+    fn all_zero() {
         let days = Days::parse("0000000").unwrap();
 
         for d in 0..7 {
@@ -55,7 +55,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_all_one() {
+    fn all_one() {
         let days = Days::parse("1111111").unwrap();
 
         for d in 0..7 {

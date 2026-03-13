@@ -3,9 +3,9 @@
 //! 1) student chooses some courses
 //! 2) algorithm is free to choose on of each the courses' configs
 //! 3) within each subpart of the config the algorithm must choose exactly
-//! one class (such that the parent constraint is satisfied)
+//!    one class (such that the parent constraint is satisfied)
 //! 4) within each class the algorithm must choose exactly one time and one room,
-//! except it is possible for a class to have no rooms
+//!    except it is possible for a class to have no rooms
 
 use quick_xml::{
     Reader,
@@ -113,7 +113,9 @@ impl ClassTime {
 
             match key {
                 b"penalty" => penalty = Some(parse_value("penalty", val)?),
-                _ => {}
+                _ => {
+                    // other keys parsed by [`TimeSlots::parse`]
+                }
             }
         }
 
@@ -399,7 +401,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_single_course_structure() {
+    fn single_course_structure() {
         let xml = r#"
         <courses>
             <course id="1">
@@ -439,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_class_with_room() {
+    fn class_with_room() {
         let xml = r#"
         <courses>
             <course id="1">
@@ -466,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_class_with_parent() {
+    fn class_with_parent() {
         let xml = r#"
         <courses>
             <course id="1">
@@ -515,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_multiple_courses() {
+    fn multiple_courses() {
         let xml = r#"
         <courses>
             <course id="1">

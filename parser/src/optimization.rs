@@ -68,7 +68,7 @@ mod tests {
     }
 
     #[test]
-    fn parses_valid_optimization() {
+    fn valid_optimization() {
         let e = start_event(r#"<optimization time="1" room="2" distribution="3" student="4"/>"#);
 
         let opt = Optimization::parse(&e).unwrap();
