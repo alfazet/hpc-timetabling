@@ -20,7 +20,7 @@ impl Days {
             }
         }
 
-        Ok(Days(value))
+        Ok(Self(value))
     }
 
     pub fn contains(self, day: u8) -> bool {

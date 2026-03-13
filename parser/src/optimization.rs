@@ -40,7 +40,7 @@ impl Optimization {
             }
         }
 
-        Ok(Optimization {
+        Ok(Self {
             time: time.ok_or(ParseError::MissingAttr("time"))?,
             room: room.ok_or(ParseError::MissingAttr("room"))?,
             distribution: distribution.ok_or(ParseError::MissingAttr("distribution"))?,

@@ -15,7 +15,7 @@ impl Weeks {
             }
         }
 
-        Ok(Weeks(value))
+        Ok(Self(value))
     }
 
     pub fn contains(self, week: u8) -> bool {

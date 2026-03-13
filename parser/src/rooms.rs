@@ -3,7 +3,7 @@ use quick_xml::{
     events::{BytesStart, Event},
 };
 
-use crate::{ParseError, days::Days, utils::parse_value, weeks::Weeks};
+use crate::{ParseError, timeslots::TimeSlots, utils::parse_value};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rooms(pub Vec<Room>);
@@ -20,19 +20,6 @@ pub struct Travel {
     pub value: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Unavailable {
-    /// start time (from the beginning of a day) in time slots
-    /// (see [crate::Problem::slots_per_day])
-    pub start: u32,
-    /// time length in time slots (see [crate::Problem::slots_per_day])
-    pub length: u32,
-    /// days on which the [Room] is NOT available
-    pub days: Days,
-    /// weeks on which the [Room] is NOT available
-    pub weeks: Weeks,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Room {
     pub id: RoomId,
@@ -40,7 +27,7 @@ pub struct Room {
     pub capacity: u32,
     pub travels: Vec<Travel>,
     /// times when the room is unavailable
-    pub unavailabilities: Vec<Unavailable>,
+    pub unavailabilities: Vec<TimeSlots>,
 }
 
 impl Travel {
@@ -64,43 +51,9 @@ impl Travel {
             }
         }
 
-        Ok(Travel {
+        Ok(Self {
             room: room.ok_or(ParseError::MissingAttr("room"))?,
             value: value.ok_or(ParseError::MissingAttr("value"))?,
-        })
-    }
-}
-
-impl Unavailable {
-    fn parse(e: &BytesStart) -> Result<Self, ParseError> {
-        let mut start = None;
-        let mut length = None;
-        let mut days = None;
-        let mut weeks = None;
-
-        for attr in e.attributes() {
-            let attr = attr?;
-            let key = attr.key.as_ref();
-            let val = std::str::from_utf8(&attr.value)?;
-
-            match key {
-                b"start" => start = Some(parse_value("start", val)?),
-                b"length" => length = Some(parse_value("length", val)?),
-                b"days" => days = Some(Days::parse(val)?),
-                b"weeks" => weeks = Some(Weeks::parse(val)?),
-                _ => {
-                    return Err(ParseError::UnexpectedAttr(
-                        std::str::from_utf8(key)?.to_string(),
-                    ));
-                }
-            }
-        }
-
-        Ok(Unavailable {
-            start: start.ok_or(ParseError::MissingAttr("start"))?,
-            length: length.ok_or(ParseError::MissingAttr("length"))?,
-            days: days.ok_or(ParseError::MissingAttr("days"))?,
-            weeks: weeks.ok_or(ParseError::MissingAttr("weeks"))?,
         })
     }
 }
@@ -148,7 +101,7 @@ impl Room {
                     travels.push(Travel::parse(&e)?);
                 }
                 Event::Empty(e) if e.name().as_ref() == b"unavailable" => {
-                    unavailabilities.push(Unavailable::parse(&e)?);
+                    unavailabilities.push(TimeSlots::parse(&e)?);
                 }
 
                 Event::End(e) if e.name().as_ref() == b"room" => break,
@@ -159,7 +112,7 @@ impl Room {
             buf.clear();
         }
 
-        Ok(Room {
+        Ok(Self {
             id,
             capacity,
             travels,
@@ -204,12 +157,14 @@ impl Rooms {
             buf.clear();
         }
 
-        Ok(Rooms(rooms))
+        Ok(Self(rooms))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::{days::Days, timeslots::TimeSlots, weeks::Weeks};
+
     use super::*;
     use quick_xml::{Reader, events::Event};
 
@@ -262,7 +217,7 @@ mod tests {
         assert_eq!(rooms.0[2].capacity, 300);
         assert_eq!(
             rooms.0[2].unavailabilities,
-            vec![Unavailable {
+            vec![TimeSlots {
                 start: 102,
                 length: 24,
                 days: Days(1 << 0 | 1 << 1),

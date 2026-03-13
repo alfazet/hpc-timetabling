@@ -3,7 +3,10 @@ use quick_xml::{
     events::{BytesStart, Event},
 };
 
-use crate::{error::ParseError, optimization::Optimization, rooms::Rooms, utils::parse_value};
+use crate::{
+    courses::Courses, error::ParseError, optimization::Optimization, rooms::Rooms,
+    utils::parse_value,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Problem {
@@ -17,6 +20,7 @@ pub struct Problem {
     pub slots_per_day: u32,
     pub optimization: Optimization,
     pub rooms: Rooms,
+    pub courses: Courses,
 }
 
 impl Problem {
@@ -29,6 +33,7 @@ impl Problem {
         let mut problem_attrs = None;
         let mut optimization = None;
         let mut rooms = None;
+        let mut courses = None;
 
         loop {
             let event = reader.read_event_into(&mut buf)?;
@@ -46,6 +51,11 @@ impl Problem {
                     rooms = Some(Rooms::parse(&mut reader, &e, &mut buf)?);
                 }
 
+                Event::Start(e) if e.name().as_ref() == b"courses" => {
+                    let e = e.to_owned();
+                    courses = Some(Courses::parse(&mut reader, &e, &mut buf)?);
+                }
+
                 Event::Eof => break,
 
                 _ => {}
@@ -57,13 +67,14 @@ impl Problem {
         let (name, nr_days, nr_weeks, slots_per_day) =
             problem_attrs.ok_or(ParseError::MissingElement("problem"))?;
 
-        Ok(Problem {
+        Ok(Self {
             name,
             nr_days,
             nr_weeks,
             slots_per_day,
             optimization: optimization.ok_or(ParseError::MissingElement("optimization"))?,
             rooms: rooms.ok_or(ParseError::MissingElement("rooms"))?,
+            courses: courses.ok_or(ParseError::MissingElement("courses"))?,
         })
     }
 
@@ -102,21 +113,162 @@ impl Problem {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        days::Days,
-        rooms::{Room, RoomId, Travel, Unavailable},
-        weeks::Weeks,
-    };
+    use crate::{courses::*, days::Days, rooms::*, timeslots::TimeSlots, weeks::Weeks};
 
     use super::*;
 
     #[test]
-    fn parses_problem_with_optimization() {
+    fn parses_sample() {
         let xml = include_str!("../../data/itc2019/sample.xml");
 
         let problem = Problem::parse(&xml).unwrap();
 
-        dbg!(&problem);
+        let rooms = Rooms(vec![
+            Room {
+                id: RoomId(1),
+                capacity: 50,
+                travels: vec![],
+                unavailabilities: vec![],
+            },
+            Room {
+                id: RoomId(2),
+                capacity: 100,
+                travels: vec![Travel {
+                    room: RoomId(1),
+                    value: 2,
+                }],
+                unavailabilities: vec![],
+            },
+            Room {
+                id: RoomId(3),
+                capacity: 80,
+                travels: vec![Travel {
+                    room: RoomId(2),
+                    value: 3,
+                }],
+                unavailabilities: vec![
+                    TimeSlots {
+                        start: 102,
+                        length: 24,
+                        days: Days(3),
+                        weeks: Weeks(u16::from_str_radix("1111111111111", 2).unwrap()),
+                    },
+                    TimeSlots {
+                        start: 144,
+                        length: 144,
+                        days: Days(8),
+                        weeks: Weeks(u16::from_str_radix("1010101010101", 2).unwrap()),
+                    },
+                ],
+            },
+        ]);
+        let courses = Courses(vec![Course {
+            id: CourseId(1),
+            configs: vec![Config {
+                id: ConfigId(1),
+                subparts: vec![
+                    Subpart {
+                        id: SubpartId(1),
+                        classes: vec![
+                            Class {
+                                id: ClassId(1),
+                                limit: Some(20),
+                                parent: None,
+                                rooms: vec![
+                                    ClassRoom {
+                                        room: RoomId(1),
+                                        penalty: 0,
+                                    },
+                                    ClassRoom {
+                                        room: RoomId(2),
+                                        penalty: 10,
+                                    },
+                                ],
+                                times: vec![
+                                    ClassTime {
+                                        times: TimeSlots {
+                                            start: 90,
+                                            length: 10,
+                                            days: Days(21),
+                                            weeks: Weeks(8191),
+                                        },
+                                        penalty: 0,
+                                    },
+                                    ClassTime {
+                                        times: TimeSlots {
+                                            start: 96,
+                                            length: 15,
+                                            days: Days(10),
+                                            weeks: Weeks(8191),
+                                        },
+                                        penalty: 2,
+                                    },
+                                ],
+                            },
+                            Class {
+                                id: ClassId(2),
+                                limit: Some(20),
+                                parent: None,
+                                rooms: vec![ClassRoom {
+                                    room: RoomId(4),
+                                    penalty: 0,
+                                }],
+                                times: vec![
+                                    ClassTime {
+                                        times: TimeSlots {
+                                            start: 86,
+                                            length: 18,
+                                            days: Days(1),
+                                            weeks: Weeks(2730),
+                                        },
+                                        penalty: 0,
+                                    },
+                                    ClassTime {
+                                        times: TimeSlots {
+                                            start: 86,
+                                            length: 18,
+                                            days: Days(2),
+                                            weeks: Weeks(2730),
+                                        },
+                                        penalty: 0,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                    Subpart {
+                        id: SubpartId(2),
+                        classes: vec![Class {
+                            id: ClassId(3),
+                            limit: None,
+                            parent: Some(ClassId(1)),
+                            rooms: vec![],
+                            times: vec![
+                                ClassTime {
+                                    times: TimeSlots {
+                                        start: 96,
+                                        length: 22,
+                                        days: Days(16),
+                                        weeks: Weeks(1),
+                                    },
+                                    penalty: 2,
+                                },
+                                ClassTime {
+                                    times: TimeSlots {
+                                        start: 108,
+                                        length: 22,
+                                        days: Days(4),
+                                        weeks: Weeks(2),
+                                    },
+                                    penalty: 0,
+                                },
+                            ],
+                        }],
+                    },
+                ],
+            }],
+        }]);
+
         assert_eq!(
             problem,
             Problem {
@@ -130,45 +282,8 @@ mod tests {
                     distribution: 1,
                     student: 2
                 },
-                rooms: Rooms(vec![
-                    Room {
-                        id: RoomId(1),
-                        capacity: 50,
-                        travels: vec![],
-                        unavailabilities: vec![],
-                    },
-                    Room {
-                        id: RoomId(2),
-                        capacity: 100,
-                        travels: vec![Travel {
-                            room: RoomId(1),
-                            value: 2,
-                        }],
-                        unavailabilities: vec![],
-                    },
-                    Room {
-                        id: RoomId(3),
-                        capacity: 80,
-                        travels: vec![Travel {
-                            room: RoomId(2),
-                            value: 3,
-                        }],
-                        unavailabilities: vec![
-                            Unavailable {
-                                start: 102,
-                                length: 24,
-                                days: Days(3),
-                                weeks: Weeks(u16::from_str_radix("1111111111111", 2).unwrap()),
-                            },
-                            Unavailable {
-                                start: 144,
-                                length: 144,
-                                days: Days(8),
-                                weeks: Weeks(u16::from_str_radix("1010101010101", 2).unwrap()),
-                            }
-                        ],
-                    },
-                ]),
+                rooms,
+                courses,
             }
         );
     }
