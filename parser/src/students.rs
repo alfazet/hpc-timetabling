@@ -125,22 +125,9 @@ impl Students {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::prepare;
+
     use super::*;
-    use quick_xml::{Reader, events::Event};
-
-    fn prepare(xml: &str) -> (Reader<&[u8]>, BytesStart<'static>, Vec<u8>) {
-        let mut reader = Reader::from_str(xml);
-        reader.config_mut().trim_text(true);
-
-        let mut buf = Vec::new();
-
-        let start = match reader.read_event_into(&mut buf).unwrap() {
-            Event::Start(e) => e.to_owned(),
-            _ => panic!("expected start element"),
-        };
-
-        (reader, start, Vec::new())
-    }
 
     #[test]
     fn students() {

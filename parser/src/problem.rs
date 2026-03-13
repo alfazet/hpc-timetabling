@@ -4,8 +4,8 @@ use quick_xml::{
 };
 
 use crate::{
-    courses::Courses, error::ParseError, optimization::Optimization, rooms::Rooms,
-    students::Students, utils::parse_value,
+    courses::Courses, distributions::Distributions, error::ParseError, optimization::Optimization,
+    rooms::Rooms, students::Students, utils::parse_value,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +21,7 @@ pub struct Problem {
     pub optimization: Optimization,
     pub rooms: Rooms,
     pub courses: Courses,
+    pub distributions: Distributions,
     pub students: Students,
 }
 
@@ -35,6 +36,7 @@ impl Problem {
         let mut optimization = None;
         let mut rooms = None;
         let mut courses = None;
+        let mut distributions = None;
         let mut students = None;
 
         loop {
@@ -56,6 +58,11 @@ impl Problem {
                 Event::Start(e) if e.name().as_ref() == b"courses" => {
                     let e = e.to_owned();
                     courses = Some(Courses::parse(&mut reader, &e, &mut buf)?);
+                }
+
+                Event::Start(e) if e.name().as_ref() == b"distributions" => {
+                    let e = e.to_owned();
+                    distributions = Some(Distributions::parse(&mut reader, &e, &mut buf)?);
                 }
 
                 Event::Start(e) if e.name().as_ref() == b"students" => {
@@ -82,6 +89,7 @@ impl Problem {
             optimization: optimization.ok_or(ParseError::MissingElement("optimization"))?,
             rooms: rooms.ok_or(ParseError::MissingElement("rooms"))?,
             courses: courses.ok_or(ParseError::MissingElement("courses"))?,
+            distributions: distributions.ok_or(ParseError::MissingElement("distributions"))?,
             // `students` is just a single closing tag in some instances
             students: students.unwrap_or(Students(vec![])),
         })
@@ -123,7 +131,7 @@ impl Problem {
 #[cfg(test)]
 mod tests {
     use crate::{
-        courses::*, days::Days, rooms::*, students::*, timeslots::TimeSlots, weeks::Weeks,
+        courses::*, days::Days, distributions::{Distribution, DistributionKind}, rooms::*, students::*, timeslots::TimeSlots, weeks::Weeks
     };
 
     use super::*;
@@ -279,6 +287,28 @@ mod tests {
                 ],
             }],
         }]);
+        let distributions = Distributions(vec![
+            Distribution {
+                kind: DistributionKind::NotOverlap,
+                classes: vec![ClassId(1), ClassId(2)],
+                penalty: None,
+            },
+            Distribution {
+                kind: DistributionKind::Precedence,
+                classes: vec![ClassId(1), ClassId(3), ClassId(5)],
+                penalty: Some(2),
+            },
+            Distribution {
+                kind: DistributionKind::SameAttendees,
+                classes: vec![ClassId(1), ClassId(12)],
+                penalty: None,
+            },
+            Distribution {
+                kind: DistributionKind::MaxDays(2),
+                classes: vec![ClassId(5), ClassId(8), ClassId(15)],
+                penalty: None,
+            },
+        ]);
         let students = Students(vec![
             Student {
                 id: StudentId(1),
@@ -305,6 +335,7 @@ mod tests {
                 },
                 rooms,
                 courses,
+                distributions,
                 students,
             }
         );

@@ -7,6 +7,7 @@ pub mod weeks;
 pub mod timeslots;
 pub mod courses;
 pub mod students;
+pub mod distributions;
 mod utils;
 
 pub use problem::Problem;

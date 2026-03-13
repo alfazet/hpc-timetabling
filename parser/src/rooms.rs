@@ -163,24 +163,8 @@ impl Rooms {
 
 #[cfg(test)]
 mod tests {
-    use crate::{days::Days, timeslots::TimeSlots, weeks::Weeks};
-
     use super::*;
-    use quick_xml::{Reader, events::Event};
-
-    fn prepare(xml: &str) -> (Reader<&[u8]>, BytesStart<'static>, Vec<u8>) {
-        let mut reader = Reader::from_str(xml);
-        reader.config_mut().trim_text(true);
-
-        let mut buf = Vec::new();
-
-        let start = match reader.read_event_into(&mut buf).unwrap() {
-            Event::Start(e) => e.to_owned(),
-            other => panic!("expected <rooms> start event, got {:?}", other),
-        };
-
-        (reader, start, buf)
-    }
+    use crate::{days::Days, timeslots::TimeSlots, utils::prepare, weeks::Weeks};
 
     #[test]
     fn empty_rooms() {
