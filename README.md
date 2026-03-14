@@ -1,7 +1,7 @@
 # Problem układania planu zajęć
 
 ## Etap 1. (2-3 tygodnie)
-### Parsowanie danych i podstawyw algortym jednowątkowy
+### Parsowanie danych i podstawowy algortym jednowątkowy
 Dane pobieramy ze zbiorów udostępnionych podczas [ITC 2019](https://www.itc2019.org/instances/all) (International Timetabling Competition).
 Format danych opisany jest [pod tym linkiem](https://www.itc2019.org/format) ([przykładowy input](data/itc2019/data/itc2019/sample.xml)).
 
@@ -41,13 +41,13 @@ wszystkie te częściowe sumy są sumowane redukcją aby otrzymać całkowitą k
 - Optymalna dla GPU reprezentacja danych
 TODO
 
-# Etap 4. (1 tydzień)
+## Etap 4. (1 tydzień)
 ### Testy
 Jakości planu w zależności od czasu obliczeń, jak parametryzacja algortymu wpływa na wynik itp.
 - Porównanie z innymi algorytmami z ITC2019.
 - Czy poprawa w jakości planu jest warta większej mocy obliczeniowej/czasu obliczeń?
 
-# Etap 5. (2-3 tygodnie)
+## Etap 5. (2-3 tygodnie)
 ### Inne podejścia
 Testy innych metod rozwiązujących problem, niekoniecznie na GPU.
 Porównanie tych innych metod do algortymu genetycznego.
@@ -55,7 +55,7 @@ Porównanie tych innych metod do algortymu genetycznego.
 - Algorytm powinien działać real-time.
 - Dodatkowa kara przy fitness za każdą zmianę.
 
-# Etap 6. (do deadline'u)
+## Etap 6. (do deadline'u)
 ### Podsumowanie
 - Zebranie całej pracy w jeden raport.
 - Prezentacja?
