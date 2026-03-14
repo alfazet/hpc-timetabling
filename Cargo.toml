@@ -1,3 +1,14 @@
 [workspace]
+members = ["parser", "cpu-naive"]
 resolver = "3"
-members = ["parser"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+anyhow = "1.0.102"
+quick-xml = "0.39.2"
+thiserror = "2.0.18"
+
+parser = { path = "parser" }

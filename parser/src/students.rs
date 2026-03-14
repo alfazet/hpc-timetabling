@@ -202,7 +202,10 @@ mod tests {
 
         let (mut reader, start, mut buf) = prepare(xml);
 
-        matches!(Students::parse(&mut reader, &start, &mut buf), Err(ParseError::MissingAttr("id")));
+        matches!(
+            Students::parse(&mut reader, &start, &mut buf),
+            Err(ParseError::MissingAttr("id"))
+        );
     }
 
     #[test]
@@ -217,6 +220,9 @@ mod tests {
 
         let (mut reader, start, mut buf) = prepare(xml);
 
-        matches!(Students::parse(&mut reader, &start, &mut buf), Err(ParseError::MissingAttr("id")));
+        matches!(
+            Students::parse(&mut reader, &start, &mut buf),
+            Err(ParseError::MissingAttr("id"))
+        );
     }
 }

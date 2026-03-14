@@ -26,8 +26,8 @@ pub struct Problem {
 }
 
 impl Problem {
-    pub fn parse(xml: &str) -> Result<Self, ParseError> {
-        let mut reader = Reader::from_str(xml);
+    pub fn parse(xml: impl AsRef<str>) -> Result<Self, ParseError> {
+        let mut reader = Reader::from_str(xml.as_ref());
         reader.config_mut().trim_text(true);
 
         let mut buf = Vec::new();
@@ -131,7 +131,13 @@ impl Problem {
 #[cfg(test)]
 mod tests {
     use crate::{
-        courses::*, days::Days, distributions::{Distribution, DistributionKind}, rooms::*, students::*, timeslots::TimeSlots, weeks::Weeks
+        courses::*,
+        days::Days,
+        distributions::{Distribution, DistributionKind},
+        rooms::*,
+        students::*,
+        timeslots::TimeSlots,
+        weeks::Weeks,
     };
 
     use super::*;

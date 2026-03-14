@@ -1,8 +1,8 @@
 [package]
 name = "parser"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
 
 [dependencies]
-quick-xml = "0.39.2"
-thiserror = "2.0.18"
+quick-xml = { workspace = true }
+thiserror = { workspace = true }

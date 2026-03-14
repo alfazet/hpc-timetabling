@@ -1,0 +1,9 @@
+[package]
+name = "cpu-naive"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+
+parser = { workspace = true }
