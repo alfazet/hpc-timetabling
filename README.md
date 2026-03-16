@@ -6,7 +6,16 @@ Dane pobieramy ze zbiorów udostępnionych podczas [ITC 2019](https://www.itc201
 Format danych opisany jest [pod tym linkiem](https://www.itc2019.org/format) ([przykładowy input](data/itc2019/data/itc2019/sample.xml)).
 
 ### Algorytm genetyczny
-TODO
+Zarys podstawowoych kroków algorytmu:
+```
+population = init_population(SIZE) // inicjalizacja losowa, populacja = zbiór planów
+for generations in 0..N_GENERATIONS {
+    evaluate_population_fitness(...) // obliczamy fitness dla każdego planu
+    tournament_selection(...) // wybór jednostek, które zostaną ze sobą "skrzyżowane"
+    crossover(...) // tworzymy nową populację ze skrzyżowania wybranych wcześniej jednostek między sobą
+    apply_mutations(...) // losowe zmiany w planach aby "odblokować" więcej potencjalnych ścieżek ewolucji
+}
+```
 
 ### Fitness
 Dla każdego planu można policzyć *karę* na którą składają się:
@@ -16,7 +25,7 @@ nieprawidłowy. W praktyce w takich przypadkach po prostu dodajemy do kary duż�
 Przykładowo, dwa zajęcia nie mogą jednocześnie używać tej samej sali
 
 Tzw. *soft constraints* - za ich złamanie obowiązuje kara. W itc2019 każdy problem
-ma osobne wagi dla różnych kategorii kar, porzykładowo:
+ma osobne wagi dla różnych kategorii kar, przykładowo:
 ```xml
 <optimization time="2" room="1" student="2" distribution="1"/>
 ```
