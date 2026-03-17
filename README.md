@@ -3,7 +3,7 @@
 ## Etap 1. (2-3 tygodnie)
 ### Parsowanie danych i podstawowy algortym jednowątkowy
 Dane pobieramy ze zbiorów udostępnionych podczas [ITC 2019](https://www.itc2019.org/instances/all) (International Timetabling Competition).
-Format danych opisany jest [pod tym linkiem](https://www.itc2019.org/format) ([przykładowy input](data/itc2019/data/itc2019/sample.xml)).
+Format danych opisany jest [pod tym linkiem](https://www.itc2019.org/format) ([przykładowy input](data/itc2019/sample.xml)).
 
 ### Algorytm genetyczny
 Zarys podstawowoych kroków algorytmu:
