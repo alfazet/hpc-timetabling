@@ -1,6 +1,5 @@
-use rand::Rng;
-use parser::Problem;
 use crate::model::{Solution, TimetableData};
+use rand::Rng;
 
 pub trait Solver {
     fn solve(&mut self) -> Solution;
@@ -29,8 +28,18 @@ impl Solver for NaiveSolver {
 }
 
 impl NaiveSolver {
-    pub fn new(rng: Box<dyn Rng>, population_size: usize, generations: usize, problem: Problem) -> Self {
-        Self { rng, population_size, generations, data: TimetableData::new(&problem) }
+    pub fn new(
+        rng: Box<dyn Rng>,
+        population_size: usize,
+        generations: usize,
+        data: TimetableData,
+    ) -> Self {
+        Self {
+            rng,
+            population_size,
+            generations,
+            data,
+        }
     }
 
     fn initialize_solutions(&mut self) -> Vec<Solution> {
@@ -42,26 +51,31 @@ impl NaiveSolver {
     }
 
     fn evaluate_solutions_fitness(&self, solutions: &[Solution]) -> Vec<f64> {
-        todo!()
+        // TODO
+        vec![1.0; solutions.len()]
     }
 
     fn tournament_selection(&self, solutions: &[Solution], fitness: &[f64]) -> Vec<usize> {
-        todo!()
+        // TODO
+        vec![0; solutions.len()]
     }
 
     fn crossover(&self, solutions: &mut [Solution], selected: Vec<usize>) {
-        todo!()
+        // TODO
     }
 
     fn apply_mutations(&self, solutions: &mut [Solution]) {
-        todo!()
+        // TODO
     }
 
     fn final_fitness_evaluation(&self, solutions: Vec<Solution>) -> Solution {
         let fitness = self.evaluate_solutions_fitness(&solutions);
-        let index_of_max = fitness.iter().enumerate()
+        let index_of_max = fitness
+            .iter()
+            .enumerate()
             .max_by(|(_, value0), (_, value1)| value0.partial_cmp(value1).unwrap())
-            .unwrap().0;
+            .unwrap()
+            .0;
         solutions[index_of_max].clone()
     }
 }

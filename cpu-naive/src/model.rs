@@ -112,7 +112,7 @@ pub struct StudentData {
 /// one particular assignment of courses (a unit in the genetic algorithm's population)
 #[derive(Debug, Clone)]
 pub struct Solution {
-    /// i-th item of this vec = the choice for the i-th course in Timetable::courses
+    /// i-th item of this vec = the choice for the i-th course in [TimetableData::courses]
     pub course_choices: Vec<CourseChoice>,
 }
 
@@ -127,12 +127,12 @@ pub struct CourseChoice {
 #[derive(Debug, Clone)]
 pub struct SubpartChoice {
     /// index into this subparts's class range, offset from [SubpartData::classes_start]
-    pub class_offset: usize,
+    pub class_offset: Vec<usize>,
     /// index into the chosen class' time options range, offset from [ClassData::times_start]
-    pub time_offset: usize,
+    pub time_offset: Vec<usize>,
     /// index into the chosen class' room options range, offset from [ClassData::rooms_start]
     /// None if the class requires no room
-    pub room_offset: Option<usize>,
+    pub room_offset: Vec<Option<usize>>,
 }
 
 impl ClassData {
@@ -353,9 +353,9 @@ impl Solution {
                     .needs_room()
                     .then(|| rng.random_range(0..class.n_room_options()));
                 subpart_choices.push(SubpartChoice {
-                    class_offset,
-                    time_offset,
-                    room_offset,
+                    class_offset: vec![class_offset],
+                    time_offset: vec![time_offset],
+                    room_offset: vec![room_offset],
                 });
             }
             course_choices.push(CourseChoice {
@@ -441,13 +441,13 @@ mod tests {
             for (sc_idx, subpart_choice) in choice.subpart_choices.iter().enumerate() {
                 let subpart = &data.subparts[config.subparts_start + sc_idx];
                 let n_classes = subpart.classes_end - subpart.classes_start;
-                assert!(subpart_choice.class_offset < n_classes);
-                let class = &data.classes[subpart.classes_start + subpart_choice.class_offset];
-                assert!(subpart_choice.time_offset < class.n_time_options());
+                assert!(subpart_choice.class_offset[0] < n_classes);
+                let class = &data.classes[subpart.classes_start + subpart_choice.class_offset[0]];
+                assert!(subpart_choice.time_offset[0] < class.n_time_options());
                 if class.needs_room() {
-                    assert!(subpart_choice.room_offset.unwrap() < class.n_room_options());
+                    assert!(subpart_choice.room_offset[0].unwrap() < class.n_room_options());
                 } else {
-                    assert!(subpart_choice.room_offset.is_none());
+                    assert!(subpart_choice.room_offset[0].is_none());
                 }
             }
         }

@@ -2,11 +2,12 @@ use anyhow::{Result, bail};
 use std::{env, fs};
 use rand::rng;
 use parser::problem::Problem;
-use crate::solver::{NaiveSolver, Solver};
+use crate::{model::TimetableData, output::Output, solver::{NaiveSolver, Solver}};
 
 mod model;
 mod assigner;
 mod solver;
+mod output;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
@@ -18,9 +19,13 @@ fn main() -> Result<()> {
     let problem = Problem::parse(input)?;
     // println!("{:#?}", problem);
     
-    let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, problem);
+    let data = TimetableData::new(&problem);
+    let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
     let solution = solver.solve();
-    dbg!(solution);
+    dbg!(&solution);
+
+    let output = Output::new(solution, data);
+    dbg!(output);
 
     Ok(())
 }

@@ -2,8 +2,8 @@
 //!
 //! 1) student chooses some courses
 //! 2) algorithm is free to choose on of each the courses' configs
-//! 3) within each subpart of the config the algorithm must choose exactly
-//!    one class (such that the parent constraint is satisfied)
+//! 3) within each subpart of the config the student is assigned to exactly
+//!    one class(such that the parent constraint is satisfied)
 //! 4) within each class the algorithm must choose exactly one time and one room,
 //!    except it is possible for a class to have no rooms
 
