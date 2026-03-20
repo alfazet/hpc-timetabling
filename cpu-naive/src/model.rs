@@ -29,7 +29,7 @@ pub struct TimetableData {
 
 #[derive(Debug, Clone)]
 pub struct TravelData {
-    /// index into TimetableData::rooms
+    /// index into [TimetableData::rooms]
     pub dest_room_idx: usize,
     pub travel_time: u32,
 }
@@ -89,7 +89,7 @@ pub struct TimeOption {
 
 #[derive(Debug, Clone)]
 pub struct RoomOption {
-    /// index into TimetableData::rooms
+    /// index into [TimetableData::rooms]
     pub room_idx: usize,
     pub penalty: i32,
 }
@@ -105,7 +105,7 @@ pub struct DistributionData {
 #[derive(Debug, Clone)]
 pub struct StudentData {
     pub id: i32,
-    /// indices into TimetableData::courses
+    /// indices into [TimetableData::courses]
     pub course_indices: Vec<usize>,
 }
 
@@ -118,7 +118,7 @@ pub struct Solution {
 
 #[derive(Debug, Clone)]
 pub struct CourseChoice {
-    /// index into this course's config range, offset from CourseData::configs_start
+    /// index into this course's config range, offset from [CourseData::configs_start]
     pub config_offset: usize,
     /// one choice per subpart of the selected config.
     pub subpart_choices: Vec<SubpartChoice>,
@@ -126,11 +126,11 @@ pub struct CourseChoice {
 
 #[derive(Debug, Clone)]
 pub struct SubpartChoice {
-    /// index into this subparts's class range, offset from SubpartData::classes_start
+    /// index into this subparts's class range, offset from [SubpartData::classes_start]
     pub class_offset: usize,
-    /// index into the chosen class' time options range, offset from ClassData::times_start
+    /// index into the chosen class' time options range, offset from [ClassData::times_start]
     pub time_offset: usize,
-    /// index into the chosen class' room options range, offset from ClassData::rooms_start
+    /// index into the chosen class' room options range, offset from [ClassData::rooms_start]
     /// None if the class requires no room
     pub room_offset: Option<usize>,
 }

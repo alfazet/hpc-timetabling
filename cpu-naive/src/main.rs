@@ -4,6 +4,7 @@ use std::{env, fs};
 use parser::problem::Problem;
 
 mod model;
+mod assigner;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
