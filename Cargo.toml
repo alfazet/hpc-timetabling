@@ -10,5 +10,6 @@ edition = "2024"
 anyhow = "1.0.102"
 quick-xml = "0.39.2"
 thiserror = "2.0.18"
+rand = "0.10.0"
 
 parser = { path = "parser" }
