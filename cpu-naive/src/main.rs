@@ -3,6 +3,8 @@ use std::{env, fs};
 
 use parser::problem::Problem;
 
+mod model;
+
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
     if args.len() < 2 {
