@@ -1,0 +1,11 @@
+[package]
+name = "serializer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+quick-xml = { workspace = true }
+parser = { workspace = true }
+

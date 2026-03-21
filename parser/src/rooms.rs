@@ -8,7 +8,7 @@ use crate::{ParseError, timeslots::TimeSlots, utils::parse_value};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rooms(pub Vec<Room>);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct RoomId(pub i32);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
