@@ -1,4 +1,7 @@
-use crate::model::{Solution, TimetableData};
+use crate::{
+    assigner::{self, ClassStudents},
+    model::{Solution, TimetableData},
+};
 use rand::Rng;
 
 pub trait Solver {
@@ -15,15 +18,21 @@ pub struct NaiveSolver {
 impl Solver for NaiveSolver {
     fn solve(&mut self) -> Solution {
         let mut solutions = self.initialize_solutions();
-
         for generation in 0..self.generations {
             let fitness = self.evaluate_solutions_fitness(&solutions);
             let selected = self.tournament_selection(&solutions, &fitness);
             self.crossover(&mut solutions, selected);
             self.apply_mutations(&mut solutions);
         }
+        let final_fitness = self.evaluate_solutions_fitness(&solutions);
+        let max_idx = final_fitness
+            .into_iter()
+            .enumerate()
+            .max_by(|(_, f1), (_, f2)| f1.partial_cmp(f2).unwrap())
+            .expect("solutions vec shouldn't be empty")
+            .0;
 
-        self.final_fitness_evaluation(solutions)
+        solutions[max_idx].clone()
     }
 }
 
@@ -44,15 +53,40 @@ impl NaiveSolver {
 
     fn initialize_solutions(&mut self) -> Vec<Solution> {
         let mut solutions = Vec::with_capacity(self.population_size);
-        for i in 0..self.population_size {
+        for _ in 0..self.population_size {
             solutions.push(Solution::new(&self.data, &mut self.rng));
         }
+
         solutions
     }
 
+    fn student_assignment_penalty(&self, sol: &Solution) -> f64 {
+        let Some(assignment) = assigner::assign_students(&self.data, sol) else {
+            // ITC docs: "A student needs to be sectioned into one class [...] for each course from his or her list of courses"
+            // so this is a hard constraint
+            return 1000000.0;
+        };
+        // calculate the penalty of this assignment
+
+        0.0
+    }
+
+    fn solution_fitness(&self, sol: &Solution) -> f64 {
+        let mut penalty = 0.0;
+        penalty += self.student_assignment_penalty(sol);
+
+        // returned fitness will be some function of penalty
+        // (small penalty -> huge fitness, more than small penalty -> low fitness)
+
+        penalty
+    }
+
     fn evaluate_solutions_fitness(&self, solutions: &[Solution]) -> Vec<f64> {
-        // TODO
-        vec![1.0; solutions.len()]
+        // parallelizing this will be a change from `iter` to `par_iter`
+        solutions
+            .iter()
+            .map(|sol| self.solution_fitness(sol))
+            .collect()
     }
 
     fn tournament_selection(&self, solutions: &[Solution], fitness: &[f64]) -> Vec<usize> {
@@ -66,16 +100,5 @@ impl NaiveSolver {
 
     fn apply_mutations(&self, solutions: &mut [Solution]) {
         // TODO
-    }
-
-    fn final_fitness_evaluation(&self, solutions: Vec<Solution>) -> Solution {
-        let fitness = self.evaluate_solutions_fitness(&solutions);
-        let index_of_max = fitness
-            .iter()
-            .enumerate()
-            .max_by(|(_, value0), (_, value1)| value0.partial_cmp(value1).unwrap())
-            .unwrap()
-            .0;
-        solutions[index_of_max].clone()
     }
 }
