@@ -8,8 +8,8 @@ use crate::{
     model::{Solution, TimetableData},
 };
 
-pub fn output(solution: Solution, data: TimetableData) -> Output {
-    let class_students = assign_students(&data, &solution).unwrap();
+pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
+    let class_students = assign_students(&data, &solution)?;
 
     // helper: class_idx -> (time_option_idx, room_option_idx)
     let mut class_assignment: HashMap<usize, (usize, Option<usize>)> = HashMap::new();
@@ -50,11 +50,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Output {
 
         let time = &data.time_options[time_option_idx];
 
-        let (days, weeks, start) = (
-            time.times.days,
-            time.times.weeks,
-            time.times.start,
-        );
+        let (days, weeks, start) = (time.times.days, time.times.weeks, time.times.start);
 
         let room = room_option_idx.map(|r| {
             let idx = data.room_options[r].room_idx;
@@ -78,7 +74,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Output {
         });
     }
 
-    Output {
+    Some(Output {
         classes: classes_out,
-    }
+    })
 }

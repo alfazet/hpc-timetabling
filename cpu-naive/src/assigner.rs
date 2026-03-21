@@ -1,14 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::model::{Solution, TimetableData};
 
+pub type ClassStudents = HashMap<usize, HashSet<usize>>;
+
 /// returns class_idx -> list of student indices, `None` if a subpart of the
 /// chosen config is too small for all students
-pub fn assign_students(
-    data: &TimetableData,
-    solution: &Solution,
-) -> Option<HashMap<usize, Vec<usize>>> {
-    let mut class_students: HashMap<usize, Vec<usize>> = HashMap::new();
+pub fn assign_students(data: &TimetableData, solution: &Solution) -> Option<ClassStudents> {
+    let mut class_students: HashMap<usize, HashSet<usize>> = HashMap::new();
     for (student_idx, student) in data.students.iter().enumerate() {
         for &course_idx in &student.course_indices {
             let course = &data.courses[course_idx];
@@ -32,15 +31,7 @@ pub fn assign_students(
 
                 let subpart = &data.subparts[subpart_idx];
                 for class_idx in subpart.classes_start..subpart.classes_end {
-                    let class = &data.classes[class_idx];
-                    let current_size = class_students.get(&class_idx).map(|v| v.len()).unwrap_or(0);
-
-                    let is_full = match class.limit {
-                        Some(limit) => current_size as u32 >= limit,
-                        None => false,
-                    };
-
-                    if !is_full {
+                    if !class_full(data, &class_students, class_idx) {
                         chosen_class_idx = Some(class_idx);
                         break;
                     }
@@ -52,10 +43,14 @@ pub fn assign_students(
 
                 // assign to class + all ancestors
                 loop {
+                    if class_full(data, &class_students, class_idx) {
+                        return None;
+                    }
+
                     class_students
                         .entry(class_idx)
                         .or_default()
-                        .push(student_idx);
+                        .insert(student_idx);
 
                     let mut class_subpart_idx = None;
                     for subpart_idx in config.subparts_start..config.subparts_end {
@@ -78,7 +73,21 @@ pub fn assign_students(
         }
     }
 
-    class_students.retain(|_, students| !students.is_empty());
+    // actually, all classes need to be assigned!
+    // class_students.retain(|_, students| !students.is_empty());
 
     Some(class_students)
+}
+
+fn class_full(data: &TimetableData, class_students: &ClassStudents, class_idx: usize) -> bool {
+    let class = &data.classes[class_idx];
+    let current_size = class_students
+        .get(&class_idx)
+        .map(HashSet::len)
+        .unwrap_or(0);
+
+    match class.limit {
+        Some(limit) => current_size as u32 >= limit,
+        None => false,
+    }
 }

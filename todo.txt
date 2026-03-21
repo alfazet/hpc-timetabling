@@ -1,0 +1,3 @@
+- consider Room::unavailable in generating a random chromosome
+- fix empty output when the <students> tag is empty in problem statement
+- fix some students not assigned to courses in random chromosome

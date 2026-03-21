@@ -30,6 +30,10 @@ fn main() -> Result<()> {
 
     let output = output::output(solution, data);
     dbg!(&output);
+    let Some(output) = output else {
+        eprintln!("No valid solution found!");
+        return Ok(());
+    };
 
     let xml_solution = output.serialize(output_metadata);
 
