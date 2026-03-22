@@ -428,9 +428,11 @@ mod tests {
     #[test]
     fn time_and_room_ranges() {
         let data = sample_data();
+        dbg!(&data);
         let class = &data.classes[2 - 1];
         assert_eq!(class.times_end - class.times_start, 2);
-        assert_eq!(class.rooms_end - class.rooms_start, 1);
+        // there is a room with id=4 in class2, but that room doesn't exist
+        assert_eq!(class.rooms_end - class.rooms_start, 0);
         assert!(!data.classes[3 - 1].needs_room());
     }
 }
