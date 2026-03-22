@@ -1,3 +1,4 @@
+use parser::{courses::ClassId, rooms::RoomId, students::StudentId};
 use serde::Serialize;
 
 use crate::{
@@ -29,7 +30,7 @@ pub(crate) struct XmlOutput {
 #[derive(Serialize)]
 pub(crate) struct XmlClass {
     #[serde(rename = "@id")]
-    id: i32,
+    id: ClassId,
 
     #[serde(rename = "@days")]
     days: String,
@@ -41,7 +42,7 @@ pub(crate) struct XmlClass {
     start: u32,
 
     #[serde(rename = "@room", skip_serializing_if = "Option::is_none")]
-    room: Option<i32>,
+    room: Option<RoomId>,
 
     #[serde(rename = "student")]
     students: Vec<XmlStudent>,
@@ -50,15 +51,15 @@ pub(crate) struct XmlClass {
 impl XmlClass {
     pub(crate) fn from_domain(c: &Class, ctx: &OutputMetadata) -> Self {
         Self {
-            id: c.id.0,
+            id: c.id,
             days: bit_string_u8(c.days.0, ctx.nr_days),
             weeks: bit_string_u16(c.weeks.0, ctx.nr_weeks),
             start: c.start,
-            room: c.room.map(|r| r.0),
+            room: c.room,
             students: c
                 .students
                 .iter()
-                .map(|s| XmlStudent { id: s.id.0 })
+                .map(|s| XmlStudent { id: s.id })
                 .collect(),
         }
     }
@@ -67,5 +68,5 @@ impl XmlClass {
 #[derive(Serialize)]
 pub(crate) struct XmlStudent {
     #[serde(rename = "@id")]
-    id: i32,
+    id: StudentId,
 }

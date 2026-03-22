@@ -1,4 +1,4 @@
-use crate::model::{Solution, TimetableData};
+use crate::{model::TimetableData, solution::Solution};
 use rand::Rng;
 
 pub trait Solver {

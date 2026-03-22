@@ -1,9 +1,9 @@
 //! This is the most complex part.
 //!
 //! 1) student chooses some courses
-//! 2) algorithm is free to choose on of each the courses' configs
-//! 3) within each subpart of the config the student is assigned to exactly
-//!    one class(such that the parent constraint is satisfied)
+//! 2) algorithm is free to choose on of each the courses' configs PER STUDENT
+//! 3) within each subpart of the choosen config, the student is assigned to
+//!    exactly one class (not already full)
 //! 4) within each class the algorithm must choose exactly one time and one room,
 //!    except it is possible for a class to have no rooms
 
@@ -12,13 +12,17 @@ use quick_xml::{
     events::{BytesStart, Event},
 };
 
-use crate::{ParseError, rooms::RoomId, timeslots::TimeSlots, utils::parse_value};
+use crate::{
+    ParseError,
+    rooms::RoomId,
+    timeslots::TimeSlots,
+    utils::{define_id, parse_value},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Courses(pub Vec<Course>);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CourseId(pub i32);
+define_id!(CourseId);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Course {
@@ -26,8 +30,7 @@ pub struct Course {
     pub configs: Vec<Config>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ConfigId(pub i32);
+define_id!(ConfigId);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
@@ -35,8 +38,7 @@ pub struct Config {
     pub subparts: Vec<Subpart>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SubpartId(pub i32);
+define_id!(SubpartId);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Subpart {
@@ -44,8 +46,7 @@ pub struct Subpart {
     pub classes: Vec<Class>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ClassId(pub i32);
+define_id!(ClassId);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Class {
@@ -64,14 +65,14 @@ pub struct Class {
 pub struct ClassRoom {
     pub room: RoomId,
     /// score penalty for picking this room for the class
-    pub penalty: i32,
+    pub penalty: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClassTime {
     pub times: TimeSlots,
     /// score penalty for picking this time slot for the class
-    pub penalty: i32,
+    pub penalty: u32,
 }
 
 impl ClassRoom {
@@ -85,7 +86,7 @@ impl ClassRoom {
             let val = std::str::from_utf8(&attr.value)?;
 
             match key {
-                b"id" => room = Some(RoomId(parse_value("id", val)?)),
+                b"id" => room = Some(RoomId::new(parse_value("id", val)?)),
                 b"penalty" => penalty = Some(parse_value("penalty", val)?),
                 _ => {
                     return Err(ParseError::UnexpectedAttr(
@@ -214,7 +215,7 @@ impl Subpart {
             let val = std::str::from_utf8(&attr.value)?;
 
             match key {
-                b"id" => id = Some(SubpartId(parse_value("id", val)?)),
+                b"id" => id = Some(SubpartId::new(parse_value("id", val)?)),
                 _ => {
                     return Err(ParseError::UnexpectedAttr(
                         std::str::from_utf8(key)?.to_string(),
@@ -263,7 +264,7 @@ impl Config {
             let val = std::str::from_utf8(&attr.value)?;
 
             match key {
-                b"id" => id = Some(ConfigId(parse_value("id", val)?)),
+                b"id" => id = Some(ConfigId::new(parse_value("id", val)?)),
                 _ => {
                     return Err(ParseError::UnexpectedAttr(
                         std::str::from_utf8(key)?.to_string(),
@@ -450,7 +451,7 @@ mod tests {
         let class = &courses.0[0].configs[0].subparts[0].classes[0];
 
         assert_eq!(class.rooms.len(), 1);
-        assert_eq!(class.rooms[0].room, RoomId(5));
+        assert_eq!(class.rooms[0].room, RoomId::new(5));
         assert_eq!(class.rooms[0].penalty, 2);
     }
 

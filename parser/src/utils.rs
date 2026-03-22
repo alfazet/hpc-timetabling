@@ -9,11 +9,29 @@ pub(crate) fn parse_value<T: FromStr>(attr: &'static str, value: &str) -> Result
     })
 }
 
+macro_rules! define_id {
+    ($name:ident) => {
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
+        #[serde(transparent)]
+        pub struct $name(pub usize);
+
+        impl $name {
+            pub fn new(id: usize) -> Self {
+                assert!(id >= 1);
+                Self(id)
+            }
+        }
+    };
+}
+
+pub(crate) use define_id;
+
 #[cfg(test)]
 use quick_xml::{
     Reader,
     events::{BytesStart, Event},
 };
+
 #[cfg(test)]
 pub(crate) fn prepare(xml: &str) -> (Reader<&[u8]>, BytesStart<'static>, Vec<u8>) {
     let mut reader = Reader::from_str(xml);

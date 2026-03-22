@@ -150,25 +150,25 @@ mod tests {
 
         let rooms = Rooms(vec![
             Room {
-                id: RoomId(1),
+                id: RoomId::new(1),
                 capacity: 50,
                 travels: vec![],
                 unavailabilities: vec![],
             },
             Room {
-                id: RoomId(2),
+                id: RoomId::new(2),
                 capacity: 100,
                 travels: vec![Travel {
-                    room: RoomId(1),
+                    room: RoomId::new(1),
                     value: 2,
                 }],
                 unavailabilities: vec![],
             },
             Room {
-                id: RoomId(3),
+                id: RoomId::new(3),
                 capacity: 80,
                 travels: vec![Travel {
-                    room: RoomId(2),
+                    room: RoomId::new(2),
                     value: 3,
                 }],
                 unavailabilities: vec![
@@ -188,24 +188,24 @@ mod tests {
             },
         ]);
         let courses = Courses(vec![Course {
-            id: CourseId(1),
+            id: CourseId::new(1),
             configs: vec![Config {
-                id: ConfigId(1),
+                id: ConfigId::new(1),
                 subparts: vec![
                     Subpart {
-                        id: SubpartId(1),
+                        id: SubpartId::new(1),
                         classes: vec![
                             Class {
-                                id: ClassId(1),
+                                id: ClassId::new(1),
                                 limit: Some(20),
                                 parent: None,
                                 rooms: vec![
                                     ClassRoom {
-                                        room: RoomId(1),
+                                        room: RoomId::new(1),
                                         penalty: 0,
                                     },
                                     ClassRoom {
-                                        room: RoomId(2),
+                                        room: RoomId::new(2),
                                         penalty: 10,
                                     },
                                 ],
@@ -231,11 +231,11 @@ mod tests {
                                 ],
                             },
                             Class {
-                                id: ClassId(2),
+                                id: ClassId::new(2),
                                 limit: Some(20),
                                 parent: None,
                                 rooms: vec![ClassRoom {
-                                    room: RoomId(4),
+                                    room: RoomId::new(4),
                                     penalty: 0,
                                 }],
                                 times: vec![
@@ -262,11 +262,11 @@ mod tests {
                         ],
                     },
                     Subpart {
-                        id: SubpartId(2),
+                        id: SubpartId::new(2),
                         classes: vec![Class {
-                            id: ClassId(3),
+                            id: ClassId::new(3),
                             limit: None,
-                            parent: Some(ClassId(1)),
+                            parent: Some(ClassId::new(1)),
                             rooms: vec![],
                             times: vec![
                                 ClassTime {
@@ -296,33 +296,33 @@ mod tests {
         let distributions = Distributions(vec![
             Distribution {
                 kind: DistributionKind::NotOverlap,
-                classes: vec![ClassId(1), ClassId(2)],
+                classes: vec![ClassId::new(1), ClassId::new(2)],
                 penalty: None,
             },
             Distribution {
                 kind: DistributionKind::Precedence,
-                classes: vec![ClassId(1), ClassId(3), ClassId(5)],
+                classes: vec![ClassId::new(1), ClassId::new(3), ClassId::new(5)],
                 penalty: Some(2),
             },
             Distribution {
                 kind: DistributionKind::SameAttendees,
-                classes: vec![ClassId(1), ClassId(12)],
+                classes: vec![ClassId::new(1), ClassId::new(12)],
                 penalty: None,
             },
             Distribution {
                 kind: DistributionKind::MaxDays(2),
-                classes: vec![ClassId(5), ClassId(8), ClassId(15)],
+                classes: vec![ClassId::new(5), ClassId::new(8), ClassId::new(15)],
                 penalty: None,
             },
         ]);
         let students = Students(vec![
             Student {
-                id: StudentId(1),
-                courses: vec![CourseId(1), CourseId(5)],
+                id: StudentId::new(1),
+                courses: vec![CourseId::new(1), CourseId::new(5)],
             },
             Student {
-                id: StudentId(2),
-                courses: vec![CourseId(1), CourseId(3), CourseId(4)],
+                id: StudentId::new(2),
+                courses: vec![CourseId::new(1), CourseId::new(3), CourseId::new(4)],
             },
         ]);
 

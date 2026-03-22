@@ -2,6 +2,7 @@ pub mod courses;
 pub mod days;
 pub mod distributions;
 pub mod error;
+pub mod indexable;
 pub mod optimization;
 pub mod problem;
 pub mod rooms;

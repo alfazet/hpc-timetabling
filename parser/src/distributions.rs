@@ -18,7 +18,7 @@ pub struct Distributions(pub Vec<Distribution>);
 pub struct Distribution {
     pub kind: DistributionKind,
     pub classes: Vec<ClassId>,
-    pub penalty: Option<i32>,
+    pub penalty: Option<u32>,
 }
 
 impl Distribution {
@@ -256,7 +256,7 @@ impl Distribution {
             let val = std::str::from_utf8(&attr.value)?;
 
             match key {
-                b"id" => id = Some(ClassId(parse_value("id", val)?)),
+                b"id" => id = Some(ClassId::new(parse_value("id", val)?)),
                 _ => {
                     return Err(ParseError::UnexpectedAttr(
                         std::str::from_utf8(key)?.to_string(),
@@ -406,8 +406,8 @@ mod tests {
         assert_eq!(dist.kind, DistributionKind::NotOverlap);
         assert_eq!(dist.penalty, Some(5));
         assert_eq!(dist.classes.len(), 2);
-        assert_eq!(dist.classes[0], ClassId(1));
-        assert_eq!(dist.classes[1], ClassId(2));
+        assert_eq!(dist.classes[0], ClassId::new(1));
+        assert_eq!(dist.classes[1], ClassId::new(2));
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests {
 
         assert_eq!(dist.kind, DistributionKind::MaxDays(2));
         assert_eq!(dist.penalty, None);
-        assert_eq!(dist.classes, vec![ClassId(3), ClassId(5)]);
+        assert_eq!(dist.classes, vec![ClassId::new(3), ClassId::new(5)]);
     }
 
     #[test]

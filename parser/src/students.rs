@@ -6,13 +6,12 @@ use quick_xml::{
     events::{BytesStart, Event},
 };
 
-use crate::{ParseError, courses::CourseId, utils::parse_value};
+use crate::{ParseError, courses::CourseId, utils::{define_id, parse_value}};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Students(pub Vec<Student>);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct StudentId(pub i32);
+define_id!(StudentId);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Student {
@@ -76,7 +75,7 @@ impl Student {
             let val = std::str::from_utf8(&attr.value)?;
 
             match key {
-                b"id" => id = Some(CourseId(parse_value("id", val)?)),
+                b"id" => id = Some(CourseId::new(parse_value("id", val)?)),
                 _ => {
                     return Err(ParseError::UnexpectedAttr(
                         std::str::from_utf8(key)?.to_string(),
@@ -152,12 +151,12 @@ mod tests {
         assert_eq!(students.0.len(), 2);
 
         assert_eq!(students.0[0].id, StudentId(1));
-        assert_eq!(students.0[0].courses, vec![CourseId(1), CourseId(5)]);
+        assert_eq!(students.0[0].courses, vec![CourseId::new(1), CourseId::new(5)]);
 
         assert_eq!(students.0[1].id, StudentId(2));
         assert_eq!(
             students.0[1].courses,
-            vec![CourseId(1), CourseId(3), CourseId(4)]
+            vec![CourseId::new(1), CourseId::new(3), CourseId::new(4)]
         );
     }
 

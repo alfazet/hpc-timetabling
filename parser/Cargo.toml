@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 quick-xml = { workspace = true }
 thiserror = { workspace = true }
+serde = { workspace = true }

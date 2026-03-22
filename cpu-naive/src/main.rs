@@ -12,6 +12,7 @@ mod assigner;
 mod model;
 mod output;
 mod solver;
+mod solution;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
@@ -23,12 +24,12 @@ fn main() -> Result<()> {
     let problem = Problem::parse(input)?;
     let output_metadata = OutputMetadata::from_problem(&problem);
 
-    let data = TimetableData::new(&problem);
+    let data = TimetableData::new(problem);
     let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
     let solution = solver.solve();
     dbg!(&solution);
 
-    let output = output::output(solution, data);
+    let output = output::output(&solution, &data);
     dbg!(&output);
     let Some(output) = output else {
         eprintln!("No valid solution found!");
