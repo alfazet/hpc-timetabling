@@ -73,7 +73,7 @@ mod tests {
     }
 
     #[test]
-    fn valid_timeslot_costom_name() {
+    fn valid_timeslot_custom_name() {
         let e =
             element(r#"<helloworld start="90" length="10" days="1010100" weeks="1111111111111"/>"#);
 

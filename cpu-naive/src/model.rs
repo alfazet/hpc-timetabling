@@ -10,6 +10,8 @@ use parser::{
     timeslots::TimeSlots,
 };
 
+const ID_BOUND: usize = 32768; // not the tightest upper bound
+
 #[derive(Debug, Clone)]
 pub struct TimetableData {
     pub n_days: u32,

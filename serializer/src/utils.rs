@@ -13,4 +13,3 @@ pub(crate) fn bit_string_u16(value: u16, len: u32) -> String {
     }
     s
 }
-

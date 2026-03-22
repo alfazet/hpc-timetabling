@@ -38,4 +38,7 @@ pub fn output(solution: &Solution, data: &TimetableData) -> Option<Output> {
     Some(Output {
         classes: classes_out,
     })
+    */
+
+    None
 }
