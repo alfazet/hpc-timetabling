@@ -18,7 +18,7 @@ use crate::{ParseError, rooms::RoomId, timeslots::TimeSlots, utils::parse_value}
 pub struct Courses(pub Vec<Course>);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CourseId(pub i32);
+pub struct CourseId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Course {
@@ -27,7 +27,7 @@ pub struct Course {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ConfigId(pub i32);
+pub struct ConfigId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
@@ -36,7 +36,7 @@ pub struct Config {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SubpartId(pub i32);
+pub struct SubpartId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Subpart {
@@ -45,7 +45,7 @@ pub struct Subpart {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ClassId(pub i32);
+pub struct ClassId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Class {
@@ -64,14 +64,14 @@ pub struct Class {
 pub struct ClassRoom {
     pub room: RoomId,
     /// score penalty for picking this room for the class
-    pub penalty: i32,
+    pub penalty: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClassTime {
     pub times: TimeSlots,
     /// score penalty for picking this time slot for the class
-    pub penalty: i32,
+    pub penalty: u32,
 }
 
 impl ClassRoom {

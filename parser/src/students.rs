@@ -12,7 +12,7 @@ use crate::{ParseError, courses::CourseId, utils::parse_value};
 pub struct Students(pub Vec<Student>);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct StudentId(pub i32);
+pub struct StudentId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Student {

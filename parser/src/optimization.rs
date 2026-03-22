@@ -6,13 +6,13 @@ use crate::{error::ParseError, utils::parse_value};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Optimization {
     /// penalty for assigned times
-    pub time: i32,
+    pub time: u32,
     /// penalty for assigned rooms
-    pub room: i32,
+    pub room: u32,
     /// penalty for violated soft distribution constraints
-    pub distribution: i32,
+    pub distribution: u32,
     /// penalty for student conflicts
-    pub student: i32,
+    pub student: u32,
 }
 
 impl Optimization {

@@ -9,6 +9,7 @@ use crate::{
 };
 
 pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
+    /*
     let class_students = assign_students(&data, &solution)?;
 
     // helper: class_idx -> (time_option_idx, room_option_idx)
@@ -53,7 +54,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
         let (days, weeks, start) = (time.times.days, time.times.weeks, time.times.start);
 
         let room = room_option_idx.map(|r| {
-            let idx = data.room_options[r].room_idx;
+            let idx = data.room_options[r].room_id;
             RoomId(data.rooms[idx].id)
         });
 
@@ -65,7 +66,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
             .collect();
 
         classes_out.push(Class {
-            id: ClassId(class_data.original_id),
+            id: ClassId(class_data.id),
             days,
             weeks,
             start,
@@ -77,4 +78,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
     Some(Output {
         classes: classes_out,
     })
+    */
+
+    None
 }

@@ -7,6 +7,7 @@ pub type ClassStudents = HashMap<usize, HashSet<usize>>;
 /// returns class_idx -> list of student indices, `None` if a subpart of the
 /// chosen config is too small for all students
 pub fn assign_students(data: &TimetableData, solution: &Solution) -> Option<ClassStudents> {
+    /*
     let mut class_students: HashMap<usize, HashSet<usize>> = HashMap::new();
     for (student_idx, student) in data.students.iter().enumerate() {
         for &course_idx in &student.course_indices {
@@ -77,6 +78,9 @@ pub fn assign_students(data: &TimetableData, solution: &Solution) -> Option<Clas
     // class_students.retain(|_, students| !students.is_empty());
 
     Some(class_students)
+    */
+
+    None
 }
 
 fn class_full(data: &TimetableData, class_students: &ClassStudents, class_idx: usize) -> bool {

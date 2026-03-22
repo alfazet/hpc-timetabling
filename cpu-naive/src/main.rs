@@ -23,21 +23,23 @@ fn main() -> Result<()> {
     let problem = Problem::parse(input)?;
     let output_metadata = OutputMetadata::from_problem(&problem);
 
-    let data = TimetableData::new(&problem);
-    let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
-    let solution = solver.solve();
-    dbg!(&solution);
+    let data = TimetableData::new(problem);
+    dbg!(data);
 
-    let output = output::output(solution, data);
-    dbg!(&output);
-    let Some(output) = output else {
-        eprintln!("No valid solution found!");
-        return Ok(());
-    };
-
-    let xml_solution = output.serialize(output_metadata);
-
-    println!("{}", xml_solution);
+    // let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
+    // let solution = solver.solve();
+    // dbg!(&solution);
+    //
+    // let output = output::output(solution, data);
+    // dbg!(&output);
+    // let Some(output) = output else {
+    //     eprintln!("No valid solution found!");
+    //     return Ok(());
+    // };
+    //
+    // let xml_solution = output.serialize(output_metadata);
+    //
+    // println!("{}", xml_solution);
 
     Ok(())
 }
