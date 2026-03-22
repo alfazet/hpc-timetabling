@@ -23,7 +23,7 @@ fn main() -> Result<()> {
     let problem = Problem::parse(input)?;
     let output_metadata = OutputMetadata::from_problem(&problem);
 
-    let data = TimetableData::new(&problem);
+    let data = TimetableData::new(problem);
     let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
     let solution = solver.solve();
     dbg!(&solution);

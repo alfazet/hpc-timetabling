@@ -18,7 +18,7 @@ pub struct Distributions(pub Vec<Distribution>);
 pub struct Distribution {
     pub kind: DistributionKind,
     pub classes: Vec<ClassId>,
-    pub penalty: Option<i32>,
+    pub penalty: Option<u32>,
 }
 
 impl Distribution {

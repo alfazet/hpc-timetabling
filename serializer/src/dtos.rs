@@ -29,7 +29,7 @@ pub(crate) struct XmlOutput {
 #[derive(Serialize)]
 pub(crate) struct XmlClass {
     #[serde(rename = "@id")]
-    id: i32,
+    id: usize,
 
     #[serde(rename = "@days")]
     days: String,
@@ -41,7 +41,7 @@ pub(crate) struct XmlClass {
     start: u32,
 
     #[serde(rename = "@room", skip_serializing_if = "Option::is_none")]
-    room: Option<i32>,
+    room: Option<usize>,
 
     #[serde(rename = "student")]
     students: Vec<XmlStudent>,
@@ -67,5 +67,5 @@ impl XmlClass {
 #[derive(Serialize)]
 pub(crate) struct XmlStudent {
     #[serde(rename = "@id")]
-    id: i32,
+    id: usize,
 }

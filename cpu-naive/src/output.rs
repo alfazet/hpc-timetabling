@@ -53,7 +53,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
         let (days, weeks, start) = (time.times.days, time.times.weeks, time.times.start);
 
         let room = room_option_idx.map(|r| {
-            let idx = data.room_options[r].room_idx;
+            let idx = data.room_options[r].room_id;
             RoomId(data.rooms[idx].id)
         });
 
@@ -65,7 +65,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
             .collect();
 
         classes_out.push(Class {
-            id: ClassId(class_data.original_id),
+            id: ClassId(class_data.id),
             days,
             weeks,
             start,
