@@ -197,7 +197,7 @@ impl TimetableData {
                         let rooms_end = room_options.len();
 
                         classes.push(ClassData::new(
-                            class.id.0,
+                            class.id.0 - 1,
                             class.limit,
                             class.parent.map(|p| p.0 - 1),
                             times_start,
@@ -242,7 +242,33 @@ impl TimetableData {
     }
 }
 
-impl Solution {}
+impl Solution {
+    /// generates a random (quite possibly useless) solution
+    /// by assigning to each class a random time slot and a random room
+    /// out of its TimeOptions and RoomOptions
+    pub fn new(data: &TimetableData, rng: &mut impl Rng) -> Self {
+        let times: Vec<_> = data
+            .classes
+            .iter()
+            .map(|class| {
+                let i = rng.random_range(class.times_start..class.times_end);
+                data.time_options[i].clone()
+            })
+            .collect();
+        let rooms: Vec<_> = data
+            .classes
+            .iter()
+            .map(|class| {
+                class.needs_room().then(|| {
+                    let i = rng.random_range(class.rooms_start..class.rooms_end);
+                    data.room_options[i].clone()
+                })
+            })
+            .collect();
+
+        Self { times, rooms }
+    }
+}
 
 impl RoomData {
     pub fn new(
@@ -339,14 +365,6 @@ impl ClassData {
     pub fn needs_room(&self) -> bool {
         self.rooms_start != self.rooms_end
     }
-
-    pub fn n_time_options(&self) -> usize {
-        self.times_end - self.times_start
-    }
-
-    pub fn n_room_options(&self) -> usize {
-        self.rooms_end - self.rooms_start
-    }
 }
 
 impl TimeOption {
@@ -369,7 +387,7 @@ mod tests {
         let xml = include_str!("../../data/itc2019/sample.xml");
         let problem = Problem::parse(xml).unwrap();
 
-        TimetableData::new(&problem)
+        TimetableData::new(problem)
     }
 
     #[test]
@@ -399,50 +417,25 @@ mod tests {
     }
 
     #[test]
-    fn parent_resolved() {
+    fn has_parent() {
         let data = sample_data();
-        let idx3 = data.class_id_to_idx[&3];
-        let parent_idx = data.classes[idx3].parent.unwrap();
-        assert_eq!(data.classes[parent_idx].original_id, 1);
+        let parent_idx = data.classes[3 - 1].parent.unwrap();
+        assert_eq!(data.classes[parent_idx].id, 1 - 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn no_parent() {
+        let data = sample_data();
+        let _ = data.classes[2 - 1].parent.unwrap();
     }
 
     #[test]
     fn time_and_room_ranges() {
         let data = sample_data();
-        let idx1 = data.class_id_to_idx[&1];
-        let class = &data.classes[idx1];
-        assert_eq!(class.n_time_options(), 2);
-        assert_eq!(class.n_room_options(), 2);
-        let idx3 = data.class_id_to_idx[&3];
-        assert!(!data.classes[idx3].needs_room());
-    }
-
-    #[test]
-    fn random_solution_is_consistent() {
-        let data = sample_data();
-        let mut rng = rand::rng();
-        let sol = Solution::new(&data, &mut rng);
-        assert_eq!(sol.course_choices.len(), data.courses.len());
-        for (cc_idx, course) in data.courses.iter().enumerate() {
-            let choice = &sol.course_choices[cc_idx];
-            let n_configs = course.configs_end - course.configs_start;
-            assert!(choice.config_offset < n_configs);
-            let config = &data.configs[course.configs_start + choice.config_offset];
-            let n_subparts = config.subparts_end - config.subparts_start;
-            assert_eq!(choice.subpart_choices.len(), n_subparts);
-
-            for (sc_idx, subpart_choice) in choice.subpart_choices.iter().enumerate() {
-                let subpart = &data.subparts[config.subparts_start + sc_idx];
-                let n_classes = subpart.classes_end - subpart.classes_start;
-                assert!(subpart_choice.class_offset[0] < n_classes);
-                let class = &data.classes[subpart.classes_start + subpart_choice.class_offset[0]];
-                assert!(subpart_choice.time_offset[0] < class.n_time_options());
-                if class.needs_room() {
-                    assert!(subpart_choice.room_offset[0].unwrap() < class.n_room_options());
-                } else {
-                    assert!(subpart_choice.room_offset[0].is_none());
-                }
-            }
-        }
+        let class = &data.classes[2 - 1];
+        assert_eq!(class.times_end - class.times_start, 2);
+        assert_eq!(class.rooms_end - class.rooms_start, 1);
+        assert!(!data.classes[3 - 1].needs_room());
     }
 }

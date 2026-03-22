@@ -9,6 +9,7 @@ use crate::{
 };
 
 pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
+    /*
     let class_students = assign_students(&data, &solution)?;
 
     // helper: class_idx -> (time_option_idx, room_option_idx)
@@ -77,4 +78,7 @@ pub fn output(solution: Solution, data: TimetableData) -> Option<Output> {
     Some(Output {
         classes: classes_out,
     })
+    */
+
+    None
 }
