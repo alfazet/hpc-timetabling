@@ -5,6 +5,8 @@ use parser::{
     timeslots::TimeSlots,
 };
 
+const ID_BOUND: usize = 32768; // not the tightest upper bound
+
 #[derive(Debug, Clone)]
 pub struct TimetableData {
     pub n_days: u32,
@@ -47,7 +49,7 @@ pub struct RoomData {
 #[derive(Debug, Clone)]
 pub struct TravelData {
     /// index into [TimetableData::rooms]
-    pub dest_room_id: usize,
+    pub dest_room_idx: usize,
     pub travel_time: u32,
 }
 
@@ -116,15 +118,17 @@ pub struct TimeOption {
 #[derive(Debug, Clone)]
 pub struct RoomOption {
     /// index into [TimetableData::rooms]
-    pub room_id: usize,
+    pub room_idx: usize,
     pub penalty: u32,
 }
 
 impl TimetableData {
     /// flattens the problem structure into a bunch of arrays
-    /// ALL IDS OF EVERYTHING ARE DECREMENTED BY 1 so that they can be directly used as array indexes,
-    /// remember about incrementing them back when returning the solution
     pub fn new(p: Problem) -> Self {
+        let mut room_id_to_idx: [usize; ID_BOUND] = [ID_BOUND + 1; ID_BOUND];
+        for (idx, r) in p.rooms.0.iter().enumerate() {
+            room_id_to_idx[r.id.0] = idx;
+        }
         let rooms: Vec<_> = p
             .rooms
             .0
@@ -133,35 +137,10 @@ impl TimetableData {
                 let travels: Vec<_> = r
                     .travels
                     .iter()
-                    .map(|t| TravelData::new(t.room.0 - 1, t.value))
+                    .map(|t| TravelData::new(room_id_to_idx[t.room.0], t.value))
                     .collect();
 
-                RoomData::new(r.id.0 - 1, r.capacity, travels, r.unavailabilities)
-            })
-            .collect();
-
-        let students: Vec<_> = p
-            .students
-            .0
-            .into_iter()
-            .map(|s| {
-                StudentData::new(
-                    s.id.0 - 1,
-                    s.courses.into_iter().map(|id| id.0 - 1).collect(),
-                )
-            })
-            .collect();
-
-        let distributions: Vec<_> = p
-            .distributions
-            .0
-            .into_iter()
-            .map(|d| {
-                DistributionData::new(
-                    d.kind,
-                    d.classes.into_iter().map(|id| id.0 - 1).collect(),
-                    d.penalty,
-                )
+                RoomData::new(r.id.0, r.capacity, travels, r.unavailabilities)
             })
             .collect();
 
@@ -171,19 +150,21 @@ impl TimetableData {
         let mut classes = Vec::new();
         let mut time_options = Vec::new();
         let mut room_options = Vec::new();
-        for course in p.courses.0 {
+        let mut class_id_to_idx: [usize; ID_BOUND] = [ID_BOUND + 1; ID_BOUND];
+        for course in p.courses.0.iter() {
             let configs_start = configs.len();
-            for config in course.configs {
+            for config in course.configs.iter() {
                 let subparts_start = subparts.len();
-                for subpart in config.subparts {
+                for subpart in config.subparts.iter() {
                     let classes_start = classes.len();
-                    for class in subpart.classes {
+                    for class in subpart.classes.iter() {
+                        class_id_to_idx[class.id.0] = classes.len();
                         let times_start = time_options.len();
                         time_options.extend(
                             class
                                 .times
-                                .into_iter()
-                                .map(|t| TimeOption::new(t.times, t.penalty)),
+                                .iter()
+                                .map(|t| TimeOption::new(t.times.clone(), t.penalty)),
                         );
                         let times_end = time_options.len();
 
@@ -191,15 +172,15 @@ impl TimetableData {
                         room_options.extend(
                             class
                                 .rooms
-                                .into_iter()
-                                .map(|r| RoomOption::new(r.room.0 - 1, r.penalty)),
+                                .iter()
+                                .map(|r| RoomOption::new(room_id_to_idx[r.room.0], r.penalty)),
                         );
                         let rooms_end = room_options.len();
 
                         classes.push(ClassData::new(
-                            class.id.0 - 1,
+                            class.id.0,
                             class.limit,
-                            class.parent.map(|p| p.0 - 1),
+                            None, // parents are resolved below
                             times_start,
                             times_end,
                             rooms_start,
@@ -207,22 +188,61 @@ impl TimetableData {
                         ));
                     }
                     let classes_end = classes.len();
-                    subparts.push(SubpartData::new(
-                        subpart.id.0 - 1,
-                        classes_start,
-                        classes_end,
-                    ));
+                    subparts.push(SubpartData::new(subpart.id.0, classes_start, classes_end));
                 }
                 let subparts_end = subparts.len();
-                configs.push(ConfigData::new(
-                    config.id.0 - 1,
-                    subparts_start,
-                    subparts_end,
-                ));
+                configs.push(ConfigData::new(config.id.0, subparts_start, subparts_end));
             }
             let configs_end = configs.len();
-            courses.push(CourseData::new(course.id.0 - 1, configs_start, configs_end));
+            courses.push(CourseData::new(course.id.0, configs_start, configs_end));
         }
+        for course in &p.courses.0 {
+            for config in &course.configs {
+                for subpart in &config.subparts {
+                    for class in &subpart.classes {
+                        if let Some(ref parent_id) = class.parent {
+                            let class_idx = class_id_to_idx[class.id.0];
+                            let parent_idx = class_id_to_idx[parent_id.0];
+                            classes[class_idx].parent = Some(parent_idx);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut course_id_to_idx: [usize; ID_BOUND] = [ID_BOUND + 1; ID_BOUND];
+        for (idx, c) in p.courses.0.iter().enumerate() {
+            course_id_to_idx[c.id.0] = idx;
+        }
+        let students: Vec<_> = p
+            .students
+            .0
+            .into_iter()
+            .map(|s| {
+                StudentData::new(
+                    s.id.0,
+                    s.courses
+                        .into_iter()
+                        .map(|id| course_id_to_idx[id.0])
+                        .collect(),
+                )
+            })
+            .collect();
+        let distributions: Vec<_> = p
+            .distributions
+            .0
+            .into_iter()
+            .map(|d| {
+                DistributionData::new(
+                    d.kind,
+                    d.classes
+                        .into_iter()
+                        .map(|id| class_id_to_idx[id.0])
+                        .collect(),
+                    d.penalty,
+                )
+            })
+            .collect();
 
         Self {
             n_days: p.nr_days,
@@ -289,7 +309,7 @@ impl RoomData {
 impl TravelData {
     pub fn new(dest_room_id: usize, travel_time: u32) -> Self {
         Self {
-            dest_room_id,
+            dest_room_idx: dest_room_id,
             travel_time,
         }
     }
@@ -375,7 +395,10 @@ impl TimeOption {
 
 impl RoomOption {
     pub fn new(room_id: usize, penalty: u32) -> Self {
-        Self { room_id, penalty }
+        Self {
+            room_idx: room_id,
+            penalty,
+        }
     }
 }
 
@@ -419,23 +442,23 @@ mod tests {
     #[test]
     fn has_parent() {
         let data = sample_data();
-        let parent_idx = data.classes[3 - 1].parent.unwrap();
-        assert_eq!(data.classes[parent_idx].id, 1 - 1);
+        let parent_idx = data.classes[2].parent.unwrap();
+        assert_eq!(data.classes[parent_idx].id, 1);
     }
 
     #[test]
     #[should_panic]
     fn no_parent() {
         let data = sample_data();
-        let _ = data.classes[2 - 1].parent.unwrap();
+        let _ = data.classes[1].parent.unwrap();
     }
 
     #[test]
     fn time_and_room_ranges() {
         let data = sample_data();
-        let class = &data.classes[2 - 1];
+        let class = &data.classes[1];
         assert_eq!(class.times_end - class.times_start, 2);
         assert_eq!(class.rooms_end - class.rooms_start, 1);
-        assert!(!data.classes[3 - 1].needs_room());
+        assert!(!data.classes[2].needs_room());
     }
 }
