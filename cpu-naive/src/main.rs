@@ -8,11 +8,10 @@ use rand::rng;
 use serializer::output::OutputMetadata;
 use std::{env, fs};
 
-mod assigner;
 mod model;
 mod output;
-mod solver;
 mod solution;
+mod solver;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();

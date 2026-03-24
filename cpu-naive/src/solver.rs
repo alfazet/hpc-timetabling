@@ -1,4 +1,4 @@
-use crate::{assigner, model::TimetableData, solution::Solution};
+use crate::{model::TimetableData, solution::Solution};
 use rand::Rng;
 
 pub trait Solver {
@@ -58,13 +58,6 @@ impl NaiveSolver {
     }
 
     fn student_assignment_penalty(&self, sol: &Solution) -> f64 {
-        let Some(assignment) = assigner::assign_students(&self.data, sol) else {
-            // ITC docs: "A student needs to be sectioned into one class [...] for each course from his or her list of courses"
-            // so this is a hard constraint
-            return 1000000.0;
-        };
-        // calculate the penalty of this assignment
-
         0.0
     }
 
