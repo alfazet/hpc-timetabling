@@ -26,7 +26,7 @@ fn main() -> Result<()> {
     let data = TimetableData::new(problem);
     let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
     let solution = solver.solve();
-    dbg!(&solution);
+    // dbg!(&solution);
 
     let output = output::output(&solution, &data);
     dbg!(&output);

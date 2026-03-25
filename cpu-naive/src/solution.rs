@@ -56,27 +56,34 @@ impl Solution {
                         rng.random_range(subpart.classes_start..subpart.classes_end);
                     let mut class = &data.classes[class_idx];
                     // assign this student to this class and all of its ancestors
+                    // traversal_... because this idx changes as we traverse the dependency tree
+                    let mut traversal_subpart_idx = subpart_idx;
                     loop {
                         // this might overwrite a previously taken class with another one from the same
                         // subpart to satisfy the parent constraint
-                        // TODO: moving up through ancestors can move us to different subparts
-                        // and/or courses
-
-                        // class_taken_in_subpart should be declared per student, not per course
-
-                        class_taken_in_subpart[subpart_idx - config.subparts_start] = class_idx;
+                        class_taken_in_subpart[traversal_subpart_idx - config.subparts_start] =
+                            class_idx;
                         match class.parent {
                             Some(parent_idx) => {
                                 class_idx = parent_idx;
                                 class = &data.classes[class_idx];
+                                traversal_subpart_idx = class.subpart_idx;
                             }
                             None => break,
                         }
                     }
                 }
                 for subpart_idx in config.subparts_start..config.subparts_end {
+                    // eprintln!(
+                    //     "resolving subpart {:?} for student {:?}",
+                    //     data.subparts[subpart_idx].id, student.id
+                    // );
                     let taken_class_idx =
                         class_taken_in_subpart[subpart_idx - config.subparts_start];
+                    // eprintln!(
+                    //     "taken class from this subpart: {:?}",
+                    //     data.classes[taken_class_idx].id
+                    // );
                     students_in_classes[taken_class_idx].push(student_idx);
                 }
             }

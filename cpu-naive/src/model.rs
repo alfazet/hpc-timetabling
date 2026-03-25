@@ -99,7 +99,7 @@ pub struct ClassData {
     pub rooms_start: usize,
     pub rooms_end: usize,
     /// index into [TimetableData::subparts] for faster access
-    pub subpart_id: usize,
+    pub subpart_idx: usize,
 }
 
 /// describes when a class will meet
@@ -349,7 +349,7 @@ impl ClassData {
             times_end,
             rooms_start,
             rooms_end,
-            subpart_id,
+            subpart_idx: subpart_id,
         }
     }
 
