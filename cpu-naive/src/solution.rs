@@ -47,20 +47,24 @@ impl Solution {
             for course in student.course_indices.iter().map(|i| &data.courses[*i]) {
                 let config_idx = rng.random_range(course.configs_start..course.configs_end);
                 let config = &data.configs[config_idx];
+                // indexing into this vec is shifted by config.subparts_start
+                let mut class_taken_in_subpart =
+                    vec![0; config.subparts_end - config.subparts_start];
                 for subpart_idx in config.subparts_start..config.subparts_end {
                     let subpart = &data.subparts[subpart_idx];
                     let mut class_idx =
                         rng.random_range(subpart.classes_start..subpart.classes_end);
                     let mut class = &data.classes[class_idx];
                     // assign this student to this class and all of its ancestors
-                    // ISSUE: this can add a student to a class that is an alternative to another
-                    // one that they're already taking within the same subpart
-                    // POSSIBLE FIX?: save which class was chosen in each subpart (in a map)
-                    // and then if we're forced to take a class in subpart X (because it's a parent of some
-                    // other one), we remove this student from the other class of subpart X they
-                    // were assigned to previously
                     loop {
-                        students_in_classes[class_idx].push(student_idx);
+                        // this might overwrite a previously taken class with another one from the same
+                        // subpart to satisfy the parent constraint
+                        // TODO: moving up through ancestors can move us to different subparts
+                        // and/or courses
+
+                        // class_taken_in_subpart should be declared per student, not per course
+
+                        class_taken_in_subpart[subpart_idx - config.subparts_start] = class_idx;
                         match class.parent {
                             Some(parent_idx) => {
                                 class_idx = parent_idx;
@@ -69,6 +73,11 @@ impl Solution {
                             None => break,
                         }
                     }
+                }
+                for subpart_idx in config.subparts_start..config.subparts_end {
+                    let taken_class_idx =
+                        class_taken_in_subpart[subpart_idx - config.subparts_start];
+                    students_in_classes[taken_class_idx].push(student_idx);
                 }
             }
         }
