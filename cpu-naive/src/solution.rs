@@ -74,16 +74,8 @@ impl Solution {
                     }
                 }
                 for subpart_idx in config.subparts_start..config.subparts_end {
-                    // eprintln!(
-                    //     "resolving subpart {:?} for student {:?}",
-                    //     data.subparts[subpart_idx].id, student.id
-                    // );
                     let taken_class_idx =
                         class_taken_in_subpart[subpart_idx - config.subparts_start];
-                    // eprintln!(
-                    //     "taken class from this subpart: {:?}",
-                    //     data.classes[taken_class_idx].id
-                    // );
                     students_in_classes[taken_class_idx].push(student_idx);
                 }
             }

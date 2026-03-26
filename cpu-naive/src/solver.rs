@@ -1,8 +1,17 @@
-use crate::{model::TimetableData, solution::Solution};
+use crate::{
+    model::{RoomData, TimetableData},
+    solution::Solution,
+};
+use parser::timeslots::TimeSlots;
 use rand::Rng;
 
 pub trait Solver {
-    fn solve(&mut self) -> Solution;
+    fn solve(&mut self) -> EvaluatedSolution;
+}
+
+pub struct EvaluatedSolution {
+    pub inner: Solution,
+    pub fitness: f64,
 }
 
 pub struct NaiveSolver {
@@ -13,7 +22,7 @@ pub struct NaiveSolver {
 }
 
 impl Solver for NaiveSolver {
-    fn solve(&mut self) -> Solution {
+    fn solve(&mut self) -> EvaluatedSolution {
         let mut solutions = self.initialize_solutions();
         for generation in 0..self.generations {
             let fitness = self.evaluate_solutions_fitness(&solutions);
@@ -23,13 +32,16 @@ impl Solver for NaiveSolver {
         }
         let final_fitness = self.evaluate_solutions_fitness(&solutions);
         let max_idx = final_fitness
-            .into_iter()
+            .iter()
             .enumerate()
             .max_by(|(_, f1), (_, f2)| f1.partial_cmp(f2).unwrap())
             .expect("solutions vec shouldn't be empty")
             .0;
 
-        solutions[max_idx].clone()
+        EvaluatedSolution {
+            inner: solutions[max_idx].clone(),
+            fitness: final_fitness[max_idx],
+        }
     }
 }
 
@@ -57,22 +69,95 @@ impl NaiveSolver {
         solutions
     }
 
-    fn student_assignment_penalty(&self, sol: &Solution) -> f64 {
-        0.0
+    fn student_assignment_penalty(&self, sol: &Solution) -> u64 {
+        let mut n_conflicts: u64 = 0;
+        let mut classes_per_student = vec![Vec::new(); self.data.students.len()];
+        for (class_idx, student_list) in sol.students_in_classes.iter().enumerate() {
+            for &student_idx in student_list {
+                classes_per_student[student_idx].push(class_idx);
+            }
+        }
+        for student_classes in &classes_per_student {
+            for i in 0..student_classes.len() {
+                for j in (i + 1)..student_classes.len() {
+                    let ci = student_classes[i];
+                    let cj = student_classes[j];
+                    let time_a = &sol.times[ci].times;
+                    let time_b = &sol.times[cj].times;
+                    if Self::timeslots_overlap(time_a, time_b) {
+                        n_conflicts += 1;
+                    } else {
+                        let travel = match (&sol.rooms[ci], &sol.rooms[cj]) {
+                            (Some(room_a), Some(room_b)) => Self::travel_time_between(
+                                &self.data.rooms,
+                                room_a.room_idx,
+                                room_b.room_idx,
+                            ),
+                            _ => 0,
+                        };
+                        if travel > 0 && Self::insufficient_travel_time(time_a, time_b, travel) {
+                            n_conflicts += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        n_conflicts * self.data.optimization.student as u64
+    }
+
+    fn timeslots_overlap(a: &TimeSlots, b: &TimeSlots) -> bool {
+        let shared_weeks = a.weeks.0 & b.weeks.0;
+        let shared_days = a.days.0 & b.days.0;
+        if shared_weeks == 0 || shared_days == 0 {
+            return false;
+        }
+
+        a.start < b.start + b.length && b.start < a.start + a.length
+    }
+
+    fn travel_time_between(rooms: &[RoomData], room_a: usize, room_b: usize) -> u32 {
+        if room_a == room_b {
+            return 0;
+        }
+
+        rooms[room_a]
+            .travels
+            .iter()
+            .find(|t| t.dest_room_idx == room_b)
+            .map(|t| t.travel_time)
+            .unwrap_or(0)
+    }
+
+    fn insufficient_travel_time(a: &TimeSlots, b: &TimeSlots, travel: u32) -> bool {
+        let shared_weeks = a.weeks.0 & b.weeks.0;
+        let shared_days = a.days.0 & b.days.0;
+        if shared_weeks == 0 || shared_days == 0 {
+            return false;
+        }
+        let a_end = a.start + a.length;
+        let b_end = b.start + b.length;
+        let gap = if a_end <= b.start {
+            b.start - a_end
+        } else if b_end <= a.start {
+            a.start - b_end
+        } else {
+            return false;
+        };
+
+        gap < travel
     }
 
     fn solution_fitness(&self, sol: &Solution) -> f64 {
-        let mut penalty = 0.0;
+        let mut penalty = 0;
         penalty += self.student_assignment_penalty(sol);
 
-        // returned fitness will be some function of penalty
-        // (small penalty -> huge fitness, more than small penalty -> low fitness)
-
-        penalty
+        // TODO: this should probably be some fancier function
+        1.0 / (penalty as f64 + 1.0)
     }
 
     fn evaluate_solutions_fitness(&self, solutions: &[Solution]) -> Vec<f64> {
-        // parallelizing this will be a change from `iter` to `par_iter`
+        // parallelizing this should be a change from `iter` to `par_iter`
         solutions
             .iter()
             .map(|sol| self.solution_fitness(sol))
