@@ -8,11 +8,10 @@ use rand::rng;
 use serializer::output::OutputMetadata;
 use std::{env, fs};
 
-mod assigner;
 mod model;
 mod output;
-mod solver;
 mod solution;
+mod solver;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
@@ -27,9 +26,8 @@ fn main() -> Result<()> {
     let data = TimetableData::new(problem);
     let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
     let solution = solver.solve();
-    dbg!(&solution);
 
-    let output = output::output(&solution, &data);
+    let output = output::output(&solution.inner, &data);
     dbg!(&output);
     let Some(output) = output else {
         eprintln!("No valid solution found!");
@@ -39,6 +37,7 @@ fn main() -> Result<()> {
     let xml_solution = output.serialize(output_metadata);
 
     println!("{}", xml_solution);
+    println!("best fitness: {}", solution.fitness);
 
     Ok(())
 }

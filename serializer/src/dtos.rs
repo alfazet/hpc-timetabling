@@ -56,11 +56,7 @@ impl XmlClass {
             weeks: bit_string_u16(c.weeks.0, ctx.nr_weeks),
             start: c.start,
             room: c.room,
-            students: c
-                .students
-                .iter()
-                .map(|s| XmlStudent { id: s.id })
-                .collect(),
+            students: c.students.iter().map(|s| XmlStudent { id: s.id }).collect(),
         }
     }
 }

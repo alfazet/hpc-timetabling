@@ -6,7 +6,11 @@ use quick_xml::{
     events::{BytesStart, Event},
 };
 
-use crate::{ParseError, courses::CourseId, utils::{define_id, parse_value}};
+use crate::{
+    ParseError,
+    courses::CourseId,
+    utils::{define_id, parse_value},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Students(pub Vec<Student>);
@@ -151,7 +155,10 @@ mod tests {
         assert_eq!(students.0.len(), 2);
 
         assert_eq!(students.0[0].id, StudentId(1));
-        assert_eq!(students.0[0].courses, vec![CourseId::new(1), CourseId::new(5)]);
+        assert_eq!(
+            students.0[0].courses,
+            vec![CourseId::new(1), CourseId::new(5)]
+        );
 
         assert_eq!(students.0[1].id, StudentId(2));
         assert_eq!(

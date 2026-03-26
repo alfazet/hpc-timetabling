@@ -3,7 +3,11 @@ use quick_xml::{
     events::{BytesStart, Event},
 };
 
-use crate::{ParseError, timeslots::TimeSlots, utils::{define_id, parse_value}};
+use crate::{
+    ParseError,
+    timeslots::TimeSlots,
+    utils::{define_id, parse_value},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rooms(pub Vec<Room>);
