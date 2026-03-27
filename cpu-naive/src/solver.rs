@@ -69,43 +69,6 @@ impl NaiveSolver {
         solutions
     }
 
-    fn student_assignment_penalty(&self, sol: &Solution) -> u64 {
-        let mut n_conflicts: u64 = 0;
-        let mut classes_per_student = vec![Vec::new(); self.data.students.len()];
-        for (class_idx, student_list) in sol.students_in_classes.iter().enumerate() {
-            for &student_idx in student_list {
-                classes_per_student[student_idx].push(class_idx);
-            }
-        }
-        for student_classes in &classes_per_student {
-            for i in 0..student_classes.len() {
-                for j in (i + 1)..student_classes.len() {
-                    let ci = student_classes[i];
-                    let cj = student_classes[j];
-                    let time_a = &sol.times[ci].times;
-                    let time_b = &sol.times[cj].times;
-                    if Self::timeslots_overlap(time_a, time_b) {
-                        n_conflicts += 1;
-                    } else {
-                        let travel = match (&sol.rooms[ci], &sol.rooms[cj]) {
-                            (Some(room_a), Some(room_b)) => Self::travel_time_between(
-                                &self.data.rooms,
-                                room_a.room_idx,
-                                room_b.room_idx,
-                            ),
-                            _ => 0,
-                        };
-                        if travel > 0 && Self::insufficient_travel_time(time_a, time_b, travel) {
-                            n_conflicts += 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        n_conflicts * self.data.optimization.student as u64
-    }
-
     fn timeslots_overlap(a: &TimeSlots, b: &TimeSlots) -> bool {
         let shared_weeks = a.weeks.0 & b.weeks.0;
         let shared_days = a.days.0 & b.days.0;
@@ -148,9 +111,57 @@ impl NaiveSolver {
         gap < travel
     }
 
+    fn student_assignment_penalty(&self, sol: &Solution) -> u64 {
+        let mut n_conflicts: u64 = 0;
+        let mut classes_per_student = vec![Vec::new(); self.data.students.len()];
+        for (class_idx, student_list) in sol.students_in_classes.iter().enumerate() {
+            for &student_idx in student_list {
+                classes_per_student[student_idx].push(class_idx);
+            }
+        }
+        for student_classes in &classes_per_student {
+            for i in 0..student_classes.len() {
+                for j in (i + 1)..student_classes.len() {
+                    let ci = student_classes[i];
+                    let cj = student_classes[j];
+                    let time_a = &sol.times[ci].times;
+                    let time_b = &sol.times[cj].times;
+                    if Self::timeslots_overlap(time_a, time_b) {
+                        n_conflicts += 1;
+                    } else {
+                        let travel = match (&sol.rooms[ci], &sol.rooms[cj]) {
+                            (Some(room_a), Some(room_b)) => Self::travel_time_between(
+                                &self.data.rooms,
+                                room_a.room_idx,
+                                room_b.room_idx,
+                            ),
+                            _ => 0,
+                        };
+                        if travel > 0 && Self::insufficient_travel_time(time_a, time_b, travel) {
+                            n_conflicts += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        n_conflicts * self.data.optimization.student as u64
+    }
+
+    /// add up all the penalties for classes:
+    /// - having more students than allowed by their limit
+    /// - taking place in rooms that don't have enough capacity
+    /// - taking place in rooms that are unavailable in chosen timeslots
+    /// - time intervals of two classes overlap in the same room
+    /// - distribution constraints: SameStart, SameTime, ...
+    fn class_assignment_penalty(&self, sol: &Solution) -> u64 {
+        0
+    }
+
     fn solution_fitness(&self, sol: &Solution) -> f64 {
         let mut penalty = 0;
         penalty += self.student_assignment_penalty(sol);
+        penalty += self.class_assignment_penalty(sol);
 
         // TODO: this should probably be some fancier function
         1.0 / (penalty as f64 + 1.0)
