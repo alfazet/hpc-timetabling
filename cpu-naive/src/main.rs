@@ -28,7 +28,7 @@ fn main() -> Result<()> {
     let solution = solver.solve();
 
     let output = output::output(&solution.inner, &data);
-    dbg!(&output);
+    // dbg!(&output);
     let Some(output) = output else {
         eprintln!("No valid solution found!");
         return Ok(());
@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     let xml_solution = output.serialize(output_metadata);
 
     println!("{}", xml_solution);
-    println!("best fitness: {}", solution.fitness);
+    eprintln!("best fitness: {}", solution.fitness);
 
     Ok(())
 }
