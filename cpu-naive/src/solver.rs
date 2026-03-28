@@ -3,7 +3,7 @@ use crate::{
     solution::Solution,
 };
 use parser::timeslots::TimeSlots;
-use rand::Rng;
+use rand::{Rng, seq::index};
 
 pub trait Solver {
     fn solve(&mut self) -> EvaluatedSolution;
@@ -23,10 +23,12 @@ pub struct NaiveSolver {
 
 impl Solver for NaiveSolver {
     fn solve(&mut self) -> EvaluatedSolution {
+        let tournament_size = 5; // TODO: parametrize the function
+
         let mut solutions = self.initialize_solutions();
         for generation in 0..self.generations {
             let fitness = self.evaluate_solutions_fitness(&solutions);
-            let selected = self.tournament_selection(&solutions, &fitness);
+            let selected = self.tournament_selection(&solutions, &fitness, tournament_size);
             self.crossover(&mut solutions, selected);
             self.apply_mutations(&mut solutions);
         }
@@ -175,9 +177,25 @@ impl NaiveSolver {
             .collect()
     }
 
-    fn tournament_selection(&self, solutions: &[Solution], fitness: &[f64]) -> Vec<usize> {
-        // TODO
-        vec![0; solutions.len()]
+    fn tournament_selection(
+        &mut self,
+        solutions: &[Solution],
+        fitness: &[f64],
+        tournament_size: usize,
+    ) -> Vec<usize> {
+        let n = solutions.len();
+        let tournament_size = tournament_size.min(n);
+        let mut selected = Vec::new();
+        for _ in 0..n {
+            let cand_idxs = index::sample(&mut self.rng, n, tournament_size);
+            let best_idx = cand_idxs
+                .iter()
+                .max_by(|&i, &j| fitness[i].partial_cmp(&fitness[j]).unwrap())
+                .unwrap_or(0);
+            selected.push(best_idx);
+        }
+
+        selected
     }
 
     fn crossover(&self, solutions: &mut [Solution], selected: Vec<usize>) {
