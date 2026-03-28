@@ -1,18 +1,19 @@
 use crate::{
     model::TimetableData,
+    selection::TournamentSelection,
     solver::{NaiveSolver, Solver},
 };
 use anyhow::{Result, bail};
 use parser::problem::Problem;
-use rand::rng;
 use serializer::output::OutputMetadata;
 use std::{env, fs};
 
+mod fitness;
 mod model;
 mod output;
+mod selection;
 mod solution;
 mod solver;
-mod fitness;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
@@ -27,7 +28,14 @@ fn main() -> Result<()> {
     let data = TimetableData::new(problem);
     let population_size = 16000;
     let generations = 40;
-    let mut solver = NaiveSolver::new(Box::new(rng()), population_size, generations, data.clone());
+    let rng = Box::new(rand::rng());
+    let mut solver = NaiveSolver::new(
+        rng.clone(),
+        population_size,
+        generations,
+        data.clone(),
+        TournamentSelection::new(5, rng),
+    );
     let solution = solver.solve();
 
     let output = output::output(&solution.inner, &data);

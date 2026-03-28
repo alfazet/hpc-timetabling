@@ -1,6 +1,7 @@
 use crate::{
     fitness::Fitness,
     model::{RoomData, TimetableData},
+    selection::Selection,
     solution::Solution,
 };
 use parser::timeslots::TimeSlots;
@@ -18,23 +19,29 @@ pub struct EvaluatedSolution {
     pub fitness: Fitness,
 }
 
-pub struct NaiveSolver {
+pub struct NaiveSolver<S>
+where
+    S: Selection,
+{
     rng: Box<dyn Rng>,
     population_size: usize,
     generations: usize,
     data: TimetableData,
+    selection: S,
 }
 
-impl Solver for NaiveSolver {
+impl<S> Solver for NaiveSolver<S>
+where
+    S: Selection,
+{
     fn solve(&mut self) -> EvaluatedSolution {
         // TODO: parametrize the solver
-        let tournament_size = 5;
         let mutation_prob = 0.03;
 
         let mut solutions = self.initialize_solutions();
         for generation in 0..self.generations {
             let fitness = self.evaluate_solutions_fitness(&solutions);
-            let selected = self.tournament_selection(&solutions, &fitness, tournament_size);
+            let selected = self.selection.select(&solutions, &fitness);
             self.crossover(&mut solutions, selected);
             self.apply_mutations(&mut solutions, mutation_prob);
             // TODO: preserve top X% of solutions to prevent global min fitness from increasing
@@ -62,18 +69,23 @@ impl Solver for NaiveSolver {
     }
 }
 
-impl NaiveSolver {
+impl<S> NaiveSolver<S>
+where
+    S: Selection,
+{
     pub fn new(
         rng: Box<dyn Rng>,
         population_size: usize,
         generations: usize,
         data: TimetableData,
+        selection: S,
     ) -> Self {
         Self {
             rng,
             population_size,
             generations,
             data,
+            selection,
         }
     }
 
@@ -217,27 +229,6 @@ impl NaiveSolver {
             .iter()
             .map(|sol| self.solution_fitness(sol))
             .collect()
-    }
-
-    fn tournament_selection(
-        &mut self,
-        solutions: &[Solution],
-        fitness: &[Fitness],
-        tournament_size: usize,
-    ) -> Vec<usize> {
-        let n = solutions.len();
-        let tournament_size = tournament_size.min(n);
-        let mut selected = Vec::with_capacity(n);
-        for _ in 0..n {
-            let cand_idxs = index::sample(&mut self.rng, n, tournament_size);
-            let best_idx = cand_idxs
-                .iter()
-                .min_by(|&i, &j| fitness[i].cmp(&fitness[j]))
-                .expect("solutions vec shouldn't be empty");
-            selected.push(best_idx);
-        }
-
-        selected
     }
 
     fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: Vec<usize>) {

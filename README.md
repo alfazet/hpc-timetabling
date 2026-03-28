@@ -11,7 +11,7 @@ Zarys podstawowoych kroków algorytmu:
 population = init_population(SIZE) // inicjalizacja losowa, populacja = zbiór planów
 for generations in 0..N_GENERATIONS {
     evaluate_population_fitness(...) // obliczamy fitness dla każdego planu
-    tournament_selection(...) // wybór jednostek, które zostaną ze sobą "skrzyżowane"
+    selection(...) // wybór jednostek, które zostaną ze sobą "skrzyżowane"
     crossover(...) // tworzymy nową populację ze skrzyżowania wybranych wcześniej jednostek między sobą
     apply_mutations(...) // losowe zmiany w planach aby "odblokować" więcej potencjalnych ścieżek ewolucji
 }
