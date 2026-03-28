@@ -26,14 +26,26 @@ pub struct NaiveSolver {
 
 impl Solver for NaiveSolver {
     fn solve(&mut self) -> EvaluatedSolution {
-        let tournament_size = 5; // TODO: parametrize the function
+        // TODO: parametrize the solver
+        let tournament_size = 5;
+        let mutation_prob = 0.03;
 
         let mut solutions = self.initialize_solutions();
         for generation in 0..self.generations {
             let fitness = self.evaluate_solutions_fitness(&solutions);
             let selected = self.tournament_selection(&solutions, &fitness, tournament_size);
             self.crossover(&mut solutions, selected);
-            self.apply_mutations(&mut solutions);
+            self.apply_mutations(&mut solutions, mutation_prob);
+            // TODO: preserve top X% of solutions to prevent global max fitness from decreasing
+
+            let max_fitness = fitness
+                .iter()
+                .max_by(|&x, &y| x.partial_cmp(&y).unwrap())
+                .unwrap_or(&0.0);
+            println!(
+                "max fitness after {} generations: {}",
+                generation, max_fitness
+            );
         }
         let final_fitness = self.evaluate_solutions_fitness(&solutions);
         let max_idx = final_fitness
@@ -244,7 +256,25 @@ impl NaiveSolver {
         *solutions = new_solutions;
     }
 
-    fn apply_mutations(&self, solutions: &mut [Solution]) {
-        // TODO
+    fn apply_mutations(&mut self, solutions: &mut [Solution], mutation_prob: f64) {
+        let n_classes = self.data.classes.len();
+        for sol in solutions.iter_mut() {
+            for class_idx in 0..n_classes {
+                if self.rng.random_range(0.0..1.0) <= mutation_prob {
+                    let class = &self.data.classes[class_idx];
+                    let time_range = class.times_start..class.times_end;
+                    if !time_range.is_empty() {
+                        let new_time_idx = self.rng.random_range(time_range);
+                        sol.times[class_idx] = self.data.time_options[new_time_idx].clone();
+                    }
+                    if class.needs_room() {
+                        let room_range = class.rooms_start..class.rooms_end;
+                        let new_room_idx = self.rng.random_range(room_range);
+                        sol.rooms[class_idx] = Some(self.data.room_options[new_room_idx].clone());
+                    }
+                }
+            }
+            // TODO: mutations on students
+        }
     }
 }

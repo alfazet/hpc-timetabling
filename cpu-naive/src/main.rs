@@ -24,7 +24,9 @@ fn main() -> Result<()> {
     let output_metadata = OutputMetadata::from_problem(&problem);
 
     let data = TimetableData::new(problem);
-    let mut solver = NaiveSolver::new(Box::new(rng()), 1, 1, data.clone());
+    let population_size = 16000;
+    let generations = 40;
+    let mut solver = NaiveSolver::new(Box::new(rng()), population_size, generations, data.clone());
     let solution = solver.solve();
 
     let output = output::output(&solution.inner, &data);
@@ -36,7 +38,7 @@ fn main() -> Result<()> {
 
     let xml_solution = output.serialize(output_metadata);
 
-    println!("{}", xml_solution);
+    // println!("{}", xml_solution);
     eprintln!("best fitness: {}", solution.fitness);
 
     Ok(())
