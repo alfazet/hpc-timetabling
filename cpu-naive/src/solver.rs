@@ -1,4 +1,5 @@
 use crate::{
+    fitness::Fitness,
     model::{RoomData, TimetableData},
     solution::Solution,
 };
@@ -14,7 +15,7 @@ pub trait Solver {
 
 pub struct EvaluatedSolution {
     pub inner: Solution,
-    pub fitness: f64,
+    pub fitness: Fitness,
 }
 
 pub struct NaiveSolver {
@@ -36,28 +37,27 @@ impl Solver for NaiveSolver {
             let selected = self.tournament_selection(&solutions, &fitness, tournament_size);
             self.crossover(&mut solutions, selected);
             self.apply_mutations(&mut solutions, mutation_prob);
-            // TODO: preserve top X% of solutions to prevent global max fitness from decreasing
-
-            let max_fitness = fitness
+            // TODO: preserve top X% of solutions to prevent global min fitness from increasing
+            let min_fitness = fitness
                 .iter()
-                .max_by(|&x, &y| x.partial_cmp(&y).unwrap())
-                .unwrap_or(&0.0);
-            println!(
-                "max fitness after {} generations: {}",
-                generation, max_fitness
+                .min()
+                .expect("solutions vec shouldn't be empty");
+            eprintln!(
+                "min fitness after {} generations: {}",
+                generation, min_fitness
             );
         }
         let final_fitness = self.evaluate_solutions_fitness(&solutions);
-        let max_idx = final_fitness
+        let min_idx = final_fitness
             .iter()
             .enumerate()
-            .max_by(|(_, f1), (_, f2)| f1.partial_cmp(f2).unwrap())
+            .min_by(|(_, f1), (_, f2)| f1.cmp(f2))
             .expect("solutions vec shouldn't be empty")
             .0;
 
         EvaluatedSolution {
-            inner: solutions[max_idx].clone(),
-            fitness: final_fitness[max_idx],
+            inner: solutions[min_idx].clone(),
+            fitness: final_fitness[min_idx],
         }
     }
 }
@@ -128,8 +128,8 @@ impl NaiveSolver {
         gap < travel
     }
 
-    fn student_assignment_penalty(&self, sol: &Solution) -> u64 {
-        let mut n_conflicts: u64 = 0;
+    fn student_assignment_conflicts(&self, sol: &Solution) -> u32 {
+        let mut n_conflicts = 0;
         let mut classes_per_student = vec![Vec::new(); self.data.students.len()];
         for (class_idx, student_list) in sol.students_in_classes.iter().enumerate() {
             for &student_idx in student_list {
@@ -162,29 +162,56 @@ impl NaiveSolver {
             }
         }
 
-        n_conflicts * self.data.optimization.student as u64
+        n_conflicts
     }
 
-    /// add up all the penalties for classes:
+    /// add up all the hard violations for classes:
     /// - having more students than allowed by their limit
     /// - taking place in rooms that don't have enough capacity
     /// - taking place in rooms that are unavailable in chosen timeslots
     /// - time intervals of two classes overlap in the same room
-    /// - distribution constraints: SameStart, SameTime, ...
-    fn class_assignment_penalty(&self, sol: &Solution) -> u64 {
+    /// - TODO: sf else?
+    fn classes_hard_penalties(&self, sol: &Solution) -> u32 {
         0
     }
 
-    fn solution_fitness(&self, sol: &Solution) -> f64 {
-        let mut penalty = 0;
-        penalty += self.student_assignment_penalty(sol);
-        penalty += self.class_assignment_penalty(sol);
-
-        // TODO: this should probably be some fancier function
-        1.0 / (penalty as f64 + 1.0)
+    fn rooms_penalty(&self, sol: &Solution) -> u32 {
+        sol.rooms.iter().flatten().map(|r| r.penalty).sum()
     }
 
-    fn evaluate_solutions_fitness(&self, solutions: &[Solution]) -> Vec<f64> {
+    fn times_penalty(&self, sol: &Solution) -> u32 {
+        sol.times.iter().map(|t| t.penalty).sum()
+    }
+
+    /// returns [Fitness], because there can be both soft and hard constraints
+    fn distributions_penalty(&self, sol: &Solution) -> Fitness {
+        // TODO: add up all the distributions
+        Fitness::new()
+    }
+
+    fn solution_fitness(&self, sol: &Solution) -> Fitness {
+        let mut fitness = Fitness::new();
+
+        let clas = self.classes_hard_penalties(sol);
+        fitness.hard += clas;
+
+        let stud = self.student_assignment_conflicts(sol);
+        fitness.soft += stud * self.data.optimization.student;
+
+        let room = self.rooms_penalty(sol);
+        fitness.soft += room * self.data.optimization.room;
+
+        let time = self.times_penalty(sol);
+        fitness.soft += time * self.data.optimization.time;
+
+        let dist = self.distributions_penalty(sol);
+        fitness.hard += dist.hard;
+        fitness.soft += dist.soft * self.data.optimization.distribution;
+
+        fitness
+    }
+
+    fn evaluate_solutions_fitness(&self, solutions: &[Solution]) -> Vec<Fitness> {
         // parallelizing this should be a change from `iter` to `par_iter`
         solutions
             .iter()
@@ -195,7 +222,7 @@ impl NaiveSolver {
     fn tournament_selection(
         &mut self,
         solutions: &[Solution],
-        fitness: &[f64],
+        fitness: &[Fitness],
         tournament_size: usize,
     ) -> Vec<usize> {
         let n = solutions.len();
@@ -205,8 +232,8 @@ impl NaiveSolver {
             let cand_idxs = index::sample(&mut self.rng, n, tournament_size);
             let best_idx = cand_idxs
                 .iter()
-                .max_by(|&i, &j| fitness[i].partial_cmp(&fitness[j]).unwrap())
-                .unwrap_or(0);
+                .min_by(|&i, &j| fitness[i].cmp(&fitness[j]))
+                .expect("solutions vec shouldn't be empty");
             selected.push(best_idx);
         }
 

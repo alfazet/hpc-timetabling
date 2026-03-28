@@ -6,22 +6,23 @@ use crate::model::{RoomOption, TimeOption, TimetableData};
 #[derive(Debug, Clone)]
 pub struct Solution {
     /// time slot assignments
-    /// times[i] = assignment for the i-th class
+    /// `times[i]` = assignment for the `i`-th class
     pub times: Vec<TimeOption>,
     /// room assignments
-    /// rooms[i] = assignment for the i-th class,
+    /// `rooms[i]` = assignment for the `i`-th class,
     /// None if the class doesn't require a room
     pub rooms: Vec<Option<RoomOption>>,
     /// student assignment
-    /// students[i] = vec of indices of students who will attend the i-th class
+    /// `students[i]` = vec of indices of students who will attend the `i`-th class
     pub students_in_classes: Vec<Vec<usize>>,
 }
 
 impl Solution {
     /// generates a random (quite possibly useless) solution
     /// by assigning to each class a random time slot and a random room
-    /// out of its TimeOptions and RoomOptions
-    /// and chooses a random config for every course they want to attend
+    /// out of its [TimeOption]s and [RoomOption]s
+    ///
+    /// also assigns students randomly, respecting class limits
     pub fn new(data: &TimetableData, rng: &mut impl Rng) -> Self {
         let times: Vec<_> = data
             .classes

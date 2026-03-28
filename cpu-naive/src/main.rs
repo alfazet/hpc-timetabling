@@ -12,6 +12,7 @@ mod model;
 mod output;
 mod solution;
 mod solver;
+mod fitness;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
@@ -38,7 +39,9 @@ fn main() -> Result<()> {
 
     let xml_solution = output.serialize(output_metadata);
 
-    // println!("{}", xml_solution);
+    // keep only xml in stdout, debug info in stderr to allow for uses like
+    // `cargo r problem.xml > solution.xml`
+    println!("{}", xml_solution);
     eprintln!("best fitness: {}", solution.fitness);
 
     Ok(())
