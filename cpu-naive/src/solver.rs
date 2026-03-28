@@ -3,7 +3,10 @@ use crate::{
     solution::Solution,
 };
 use parser::timeslots::TimeSlots;
-use rand::{Rng, seq::index};
+use rand::{
+    Rng, RngExt,
+    seq::{SliceRandom, index},
+};
 
 pub trait Solver {
     fn solve(&mut self) -> EvaluatedSolution;
@@ -185,7 +188,7 @@ impl NaiveSolver {
     ) -> Vec<usize> {
         let n = solutions.len();
         let tournament_size = tournament_size.min(n);
-        let mut selected = Vec::new();
+        let mut selected = Vec::with_capacity(n);
         for _ in 0..n {
             let cand_idxs = index::sample(&mut self.rng, n, tournament_size);
             let best_idx = cand_idxs
@@ -198,8 +201,47 @@ impl NaiveSolver {
         selected
     }
 
-    fn crossover(&self, solutions: &mut [Solution], selected: Vec<usize>) {
-        // TODO
+    fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: Vec<usize>) {
+        let n_classes = self.data.classes.len();
+        let n_solutions = solutions.len();
+        let mut new_solutions = Vec::with_capacity(n_solutions);
+        for pair in selected.chunks(2) {
+            let parent_a = &solutions[pair[0]];
+            let parent_b = if pair.len() == 2 {
+                &solutions[pair[1]]
+            } else {
+                // edge case: odd population size
+                new_solutions.push(solutions[pair[0]].clone());
+                break;
+            };
+
+            // the child takes a random proportion of values from both parents
+            let cut_point = self.rng.random_range(1..n_classes);
+            let child1 = Solution {
+                times: [&parent_a.times[..cut_point], &parent_b.times[cut_point..]].concat(),
+                rooms: [&parent_a.rooms[..cut_point], &parent_b.rooms[cut_point..]].concat(),
+                students_in_classes: [
+                    &parent_a.students_in_classes[..cut_point],
+                    &parent_b.students_in_classes[cut_point..],
+                ]
+                .concat(),
+            };
+            let child2 = Solution {
+                times: [&parent_b.times[..cut_point], &parent_a.times[cut_point..]].concat(),
+                rooms: [&parent_b.rooms[..cut_point], &parent_a.rooms[cut_point..]].concat(),
+                students_in_classes: [
+                    &parent_b.students_in_classes[..cut_point],
+                    &parent_a.students_in_classes[cut_point..],
+                ]
+                .concat(),
+            };
+            new_solutions.push(child1);
+            new_solutions.push(child2);
+        }
+        new_solutions.shuffle(&mut self.rng);
+        new_solutions.truncate(n_solutions);
+
+        *solutions = new_solutions;
     }
 
     fn apply_mutations(&self, solutions: &mut [Solution]) {
