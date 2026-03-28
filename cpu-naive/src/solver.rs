@@ -1,4 +1,5 @@
 use crate::{
+    crossover::Crossover,
     fitness::Fitness,
     model::{RoomData, TimetableData},
     mutation::Mutation,
@@ -6,7 +7,7 @@ use crate::{
     solution::Solution,
 };
 use parser::timeslots::TimeSlots;
-use rand::{Rng, RngExt, seq::SliceRandom};
+use rand::Rng;
 
 pub trait Solver {
     fn solve(&mut self) -> EvaluatedSolution;
@@ -17,9 +18,10 @@ pub struct EvaluatedSolution {
     pub fitness: Fitness,
 }
 
-pub struct NaiveSolver<S, M>
+pub struct NaiveSolver<S, C, M>
 where
     S: Selection,
+    C: Crossover,
     M: Mutation,
 {
     rng: Box<dyn Rng>,
@@ -27,12 +29,14 @@ where
     generations: usize,
     data: TimetableData,
     selection: S,
+    crossover: C,
     mutation: M,
 }
 
-impl<S, M> Solver for NaiveSolver<S, M>
+impl<S, C, M> Solver for NaiveSolver<S, C, M>
 where
     S: Selection,
+    C: Crossover,
     M: Mutation,
 {
     fn solve(&mut self) -> EvaluatedSolution {
@@ -40,7 +44,7 @@ where
         for generation in 0..self.generations {
             let fitness = self.evaluate_solutions_fitness(&solutions);
             let selected = self.selection.select(&solutions, &fitness);
-            self.crossover(&mut solutions, selected);
+            self.crossover.crossover(&mut solutions, &selected);
             self.mutation.mutate(&mut solutions, &self.data);
             // TODO: preserve top X% of solutions to prevent global min fitness from increasing
             let min_fitness = fitness
@@ -67,9 +71,10 @@ where
     }
 }
 
-impl<S, M> NaiveSolver<S, M>
+impl<S, C, M> NaiveSolver<S, C, M>
 where
     S: Selection,
+    C: Crossover,
     M: Mutation,
 {
     pub fn new(
@@ -78,6 +83,7 @@ where
         generations: usize,
         data: TimetableData,
         selection: S,
+        crossover: C,
         mutation: M,
     ) -> Self {
         Self {
@@ -86,6 +92,7 @@ where
             generations,
             data,
             selection,
+            crossover,
             mutation,
         }
     }
@@ -230,48 +237,5 @@ where
             .iter()
             .map(|sol| self.solution_fitness(sol))
             .collect()
-    }
-
-    fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: Vec<usize>) {
-        let n_classes = self.data.classes.len();
-        let n_solutions = solutions.len();
-        let mut new_solutions = Vec::with_capacity(n_solutions);
-        for pair in selected.chunks(2) {
-            let parent_a = &solutions[pair[0]];
-            let parent_b = if pair.len() == 2 {
-                &solutions[pair[1]]
-            } else {
-                // edge case: odd population size
-                new_solutions.push(solutions[pair[0]].clone());
-                break;
-            };
-
-            // the child takes a random proportion of values from both parents
-            let cut_point = self.rng.random_range(1..n_classes);
-            let child1 = Solution {
-                times: [&parent_a.times[..cut_point], &parent_b.times[cut_point..]].concat(),
-                rooms: [&parent_a.rooms[..cut_point], &parent_b.rooms[cut_point..]].concat(),
-                students_in_classes: [
-                    &parent_a.students_in_classes[..cut_point],
-                    &parent_b.students_in_classes[cut_point..],
-                ]
-                .concat(),
-            };
-            let child2 = Solution {
-                times: [&parent_b.times[..cut_point], &parent_a.times[cut_point..]].concat(),
-                rooms: [&parent_b.rooms[..cut_point], &parent_a.rooms[cut_point..]].concat(),
-                students_in_classes: [
-                    &parent_b.students_in_classes[..cut_point],
-                    &parent_a.students_in_classes[cut_point..],
-                ]
-                .concat(),
-            };
-            new_solutions.push(child1);
-            new_solutions.push(child2);
-        }
-        new_solutions.shuffle(&mut self.rng);
-        new_solutions.truncate(n_solutions);
-
-        *solutions = new_solutions;
     }
 }

@@ -1,11 +1,16 @@
 use crate::{
-    model::TimetableData, mutation::BasicMutation, selection::TournamentSelection, solver::{NaiveSolver, Solver}
+    crossover::UniformCrossover,
+    model::TimetableData,
+    mutation::BasicMutation,
+    selection::TournamentSelection,
+    solver::{NaiveSolver, Solver},
 };
 use anyhow::{Result, bail};
 use parser::problem::Problem;
 use serializer::output::OutputMetadata;
 use std::{env, fs};
 
+mod crossover;
 mod fitness;
 mod model;
 mod mutation;
@@ -34,6 +39,7 @@ fn main() -> Result<()> {
         generations,
         data.clone(),
         TournamentSelection::new(rng.clone(), 5),
+        UniformCrossover::new(rng.clone()),
         BasicMutation::new(rng, 0.03),
     );
     let solution = solver.solve();
