@@ -1,7 +1,5 @@
 use crate::{
-    model::TimetableData,
-    selection::TournamentSelection,
-    solver::{NaiveSolver, Solver},
+    model::TimetableData, mutation::BasicMutation, selection::TournamentSelection, solver::{NaiveSolver, Solver}
 };
 use anyhow::{Result, bail};
 use parser::problem::Problem;
@@ -10,6 +8,7 @@ use std::{env, fs};
 
 mod fitness;
 mod model;
+mod mutation;
 mod output;
 mod selection;
 mod solution;
@@ -34,14 +33,14 @@ fn main() -> Result<()> {
         population_size,
         generations,
         data.clone(),
-        TournamentSelection::new(5, rng),
+        TournamentSelection::new(rng.clone(), 5),
+        BasicMutation::new(rng, 0.03),
     );
     let solution = solver.solve();
 
     let output = output::output(&solution.inner, &data);
-    // dbg!(&output);
     let Some(output) = output else {
-        eprintln!("No valid solution found!");
+        eprintln!("no valid solution found!");
         return Ok(());
     };
 

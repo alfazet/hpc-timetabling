@@ -7,15 +7,15 @@ pub trait Selection {
 }
 
 pub struct TournamentSelection {
-    tournament_size: usize,
     rng: Box<dyn Rng>,
+    tournament_size: usize,
 }
 
 impl TournamentSelection {
-    pub fn new(tournament_size: usize, rng: Box<dyn Rng>) -> Self {
+    pub fn new(rng: Box<dyn Rng>, tournament_size: usize) -> Self {
         Self {
-            tournament_size,
             rng,
+            tournament_size,
         }
     }
 }

@@ -1,14 +1,12 @@
 use crate::{
     fitness::Fitness,
     model::{RoomData, TimetableData},
+    mutation::Mutation,
     selection::Selection,
     solution::Solution,
 };
 use parser::timeslots::TimeSlots;
-use rand::{
-    Rng, RngExt,
-    seq::{SliceRandom, index},
-};
+use rand::{Rng, RngExt, seq::SliceRandom};
 
 pub trait Solver {
     fn solve(&mut self) -> EvaluatedSolution;
@@ -19,31 +17,31 @@ pub struct EvaluatedSolution {
     pub fitness: Fitness,
 }
 
-pub struct NaiveSolver<S>
+pub struct NaiveSolver<S, M>
 where
     S: Selection,
+    M: Mutation,
 {
     rng: Box<dyn Rng>,
     population_size: usize,
     generations: usize,
     data: TimetableData,
     selection: S,
+    mutation: M,
 }
 
-impl<S> Solver for NaiveSolver<S>
+impl<S, M> Solver for NaiveSolver<S, M>
 where
     S: Selection,
+    M: Mutation,
 {
     fn solve(&mut self) -> EvaluatedSolution {
-        // TODO: parametrize the solver
-        let mutation_prob = 0.03;
-
         let mut solutions = self.initialize_solutions();
         for generation in 0..self.generations {
             let fitness = self.evaluate_solutions_fitness(&solutions);
             let selected = self.selection.select(&solutions, &fitness);
             self.crossover(&mut solutions, selected);
-            self.apply_mutations(&mut solutions, mutation_prob);
+            self.mutation.mutate(&mut solutions, &self.data);
             // TODO: preserve top X% of solutions to prevent global min fitness from increasing
             let min_fitness = fitness
                 .iter()
@@ -69,9 +67,10 @@ where
     }
 }
 
-impl<S> NaiveSolver<S>
+impl<S, M> NaiveSolver<S, M>
 where
     S: Selection,
+    M: Mutation,
 {
     pub fn new(
         rng: Box<dyn Rng>,
@@ -79,6 +78,7 @@ where
         generations: usize,
         data: TimetableData,
         selection: S,
+        mutation: M,
     ) -> Self {
         Self {
             rng,
@@ -86,6 +86,7 @@ where
             generations,
             data,
             selection,
+            mutation,
         }
     }
 
@@ -272,27 +273,5 @@ where
         new_solutions.truncate(n_solutions);
 
         *solutions = new_solutions;
-    }
-
-    fn apply_mutations(&mut self, solutions: &mut [Solution], mutation_prob: f64) {
-        let n_classes = self.data.classes.len();
-        for sol in solutions.iter_mut() {
-            for class_idx in 0..n_classes {
-                if self.rng.random_range(0.0..1.0) <= mutation_prob {
-                    let class = &self.data.classes[class_idx];
-                    let time_range = class.times_start..class.times_end;
-                    if !time_range.is_empty() {
-                        let new_time_idx = self.rng.random_range(time_range);
-                        sol.times[class_idx] = self.data.time_options[new_time_idx].clone();
-                    }
-                    if class.needs_room() {
-                        let room_range = class.rooms_start..class.rooms_end;
-                        let new_room_idx = self.rng.random_range(room_range);
-                        sol.rooms[class_idx] = Some(self.data.room_options[new_room_idx].clone());
-                    }
-                }
-            }
-            // TODO: mutations on students
-        }
     }
 }
