@@ -11,6 +11,7 @@ use parser::problem::Problem;
 use serializer::output::OutputMetadata;
 use std::{env, fs};
 
+mod assigner;
 mod crossover;
 mod distribution;
 mod elitism;

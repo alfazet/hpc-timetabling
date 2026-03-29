@@ -1,5 +1,5 @@
-use std::{cmp::Ordering, fmt::Display};
 use std::ops::{Add, AddAssign};
+use std::{cmp::Ordering, fmt::Display};
 
 /// individual fitness as the number of hard and soft violations,
 /// lower value indicates a better solution

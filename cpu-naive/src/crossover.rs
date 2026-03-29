@@ -38,20 +38,10 @@ impl Crossover for OnePointCrossover {
             let child1 = Solution {
                 times: [&parent_a.times[..cut_point], &parent_b.times[cut_point..]].concat(),
                 rooms: [&parent_a.rooms[..cut_point], &parent_b.rooms[cut_point..]].concat(),
-                students_in_classes: [
-                    &parent_a.students_in_classes[..cut_point],
-                    &parent_b.students_in_classes[cut_point..],
-                ]
-                .concat(),
             };
             let child2 = Solution {
                 times: [&parent_b.times[..cut_point], &parent_a.times[cut_point..]].concat(),
                 rooms: [&parent_b.rooms[..cut_point], &parent_a.rooms[cut_point..]].concat(),
-                students_in_classes: [
-                    &parent_b.students_in_classes[..cut_point],
-                    &parent_a.students_in_classes[cut_point..],
-                ]
-                .concat(),
             };
             new_solutions.push(child1);
             new_solutions.push(child2);

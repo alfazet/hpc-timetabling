@@ -12,12 +12,15 @@ pub fn output(solution: &Solution, data: &TimetableData) -> Option<Output> {
         let (days, weeks, start) = (time.times.days, time.times.weeks, time.times.start);
         let room = room.as_ref().map(|r| data.rooms[r.room_idx].id);
 
-        let students_in_this_class = solution.students_in_classes[class_idx]
-            .iter()
-            .map(|&idx| Student {
-                id: data.students[idx].id,
-            })
-            .collect();
+        // let students_in_this_class = solution.students_in_classes[class_idx]
+        //     .iter()
+        //     .map(|&idx| Student {
+        //         id: data.students[idx].id,
+        //     })
+        //     .collect();
+
+        // TODO: assign
+        let students = Vec::new();
 
         let class = Class {
             id: class_data.id,
@@ -25,7 +28,7 @@ pub fn output(solution: &Solution, data: &TimetableData) -> Option<Output> {
             weeks,
             start,
             room,
-            students: students_in_this_class,
+            students,
         };
         classes_out.push(class);
     }
