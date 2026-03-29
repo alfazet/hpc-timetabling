@@ -1,4 +1,5 @@
 ﻿use parser::distributions::DistributionKind;
+use parser::timeslots::TimeSlots;
 use crate::fitness::Fitness;
 use crate::model::{DistributionData, TimetableData};
 use crate::solution::Solution;
@@ -168,12 +169,41 @@ impl<'a> Distribution<'a> {
         fitness
     }
 
+    fn does_overlap(c_i: &TimeSlots, c_j: &TimeSlots) -> bool {
+        (c_j.start < c_i.start + c_i.length) && (c_i.start < c_j.start + c_j.length)
+            && ((c_i.days.0 & c_j.days.0) != 0) && ((c_i.weeks.0 & c_j.weeks.0) != 0)
+    }
+
     fn overlap(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = &self.sol.times[*class_index].times;
+            for i in index + 1..dist.class_indices.len() {
+                let i_class = &self.sol.times[dist.class_indices[i]].times;
+                if !Self::does_overlap(class, i_class) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            }
+        });
+
+        fitness
     }
 
     fn not_overlap(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = &self.sol.times[*class_index].times;
+            for i in index + 1..dist.class_indices.len() {
+                let i_class = &self.sol.times[dist.class_indices[i]].times;
+                if Self::does_overlap(class, i_class) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            }
+        });
+
+        fitness
     }
 
     fn same_room(&self, dist: &DistributionData) -> Fitness {
