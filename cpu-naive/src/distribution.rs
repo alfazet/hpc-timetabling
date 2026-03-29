@@ -8,6 +8,15 @@ pub(crate) struct Distribution<'a> {
     sol: &'a Solution,
 }
 
+impl Fitness {
+    fn apply_penalty(&mut self, penalty: &Option<u32>) {
+        match penalty {
+            Some(penalty) => self.soft += penalty,
+            None => self.hard += 1,
+        }
+    }
+}
+
 impl<'a> Distribution<'a> {
     pub fn new(data: &'a TimetableData, sol: &'a Solution) -> Self {
         Self { data, sol }
@@ -45,7 +54,18 @@ impl<'a> Distribution<'a> {
     }
 
     fn same_start(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            for i in index + 1..dist.class_indices.len() {
+                let i_class_index = dist.class_indices[i];
+                if self.sol.times[*class_index].times.start != self.sol.times[i_class_index].times.start {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            }
+        });
+
+        fitness
     }
 
     fn same_time(&self, dist: &DistributionData) -> Fitness {
