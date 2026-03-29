@@ -69,7 +69,20 @@ impl<'a> Distribution<'a> {
     }
 
     fn same_time(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = &self.sol.times[*class_index].times;
+            for i in index + 1..dist.class_indices.len() {
+                let i_class = &self.sol.times[dist.class_indices[i]].times;
+                if !((i_class.start <= class.start && class.start + class.length <= i_class.start + i_class.length)
+                    || (class.start <= i_class.start && i_class.start + i_class.length <= class.start + class.length)) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            }
+        });
+
+        fitness
     }
 
     fn different_time(&self, dist: &DistributionData) -> Fitness {
