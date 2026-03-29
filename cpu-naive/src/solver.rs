@@ -238,7 +238,18 @@ where
     /// counts the hard violations for classes taking place
     /// in rooms that are unavailable in chosen timeslots
     fn classes_in_unavailable_rooms_penalty(&self, sol: &Solution) -> u32 {
-        todo!()
+        sol.times.iter().enumerate().map(|(index, time_option)| {
+            if let Some(room_option) = &sol.rooms[index] {
+                let unavailabilities = &self.data.rooms[room_option.room_idx].unavailabilities;
+                let times = &time_option.times;
+                if unavailabilities.iter().any(|unavailability| {
+                    Self::timeslots_overlap(unavailability, times)
+                }) {
+                    return 1;
+                }
+            }
+            0
+        }).sum()
     }
 
     /// counts the hard violations -- time intervals of two
