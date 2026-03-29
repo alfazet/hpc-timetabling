@@ -202,12 +202,12 @@ where
     fn classes_hard_penalties(&self, sol: &Solution) -> u32 {
         let mut n_violations = 0;
 
-        n_violations += self.classes_student_limits_penalty(&sol);
-        n_violations += self.students_not_all_subparts_penalty(&sol);
-        n_violations += self.students_not_enrolled_in_parent_penalty(&sol);
-        n_violations += self.rooms_capacity_limits_penalty(&sol);
-        n_violations += self.classes_in_unavailable_rooms_penalty(&sol);
-        n_violations += self.time_intervals_overlap_penalty(&sol);
+        n_violations += self.classes_student_limits_penalty(sol);
+        n_violations += self.students_not_all_subparts_penalty(sol);
+        n_violations += self.students_not_enrolled_in_parent_penalty(sol);
+        n_violations += self.rooms_capacity_limits_penalty(sol);
+        n_violations += self.classes_in_unavailable_rooms_penalty(sol);
+        n_violations += self.time_intervals_overlap_penalty(sol);
 
         n_violations
     }

@@ -18,7 +18,7 @@ impl OnePointCrossover {
 
 impl Crossover for OnePointCrossover {
     fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: &[usize]) {
-        debug_assert!(solutions.len() > 0);
+        debug_assert!(!solutions.is_empty());
         debug_assert!(selected.len() <= solutions.len());
 
         let n_classes = solutions[0].times.len();
