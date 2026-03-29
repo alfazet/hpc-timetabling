@@ -120,15 +120,52 @@ impl<'a> Distribution<'a> {
     }
 
     fn different_days(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = &self.sol.times[*class_index].times.days;
+            for i in index + 1..dist.class_indices.len() {
+                let i_class = &self.sol.times[dist.class_indices[i]].times.days;
+                if (i_class.0 & class.0) != 0 {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            }
+        });
+
+        fitness
     }
 
     fn same_weeks(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = &self.sol.times[*class_index].times.weeks;
+            for i in index + 1..dist.class_indices.len() {
+                let i_class = &self.sol.times[dist.class_indices[i]].times.weeks;
+                if !(((i_class.0 | class.0) == i_class.0)
+                    || ((i_class.0 | class.0) == class.0)) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            }
+        });
+
+        fitness
     }
 
     fn different_weeks(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = &self.sol.times[*class_index].times.weeks;
+            for i in index + 1..dist.class_indices.len() {
+                let i_class = &self.sol.times[dist.class_indices[i]].times.weeks;
+                if (i_class.0 & class.0) != 0 {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            }
+        });
+
+        fitness
     }
 
     fn overlap(&self, dist: &DistributionData) -> Fitness {
