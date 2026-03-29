@@ -1,4 +1,5 @@
-﻿use parser::distributions::DistributionKind;
+﻿use std::ops::{Div, Mul};
+use parser::distributions::DistributionKind;
 use parser::timeslots::TimeSlots;
 use crate::fitness::Fitness;
 use crate::model::{DistributionData, RoomOption, TimetableData};
@@ -286,7 +287,23 @@ impl<'a> Distribution<'a> {
     }
 
     fn precedence(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(i, class_index)| {
+            let c_i = &self.sol.times[*class_index].times;
+            (i + 1..dist.class_indices.len()).for_each(|j| { // i < j
+                let c_j = &self.sol.times[dist.class_indices[j]].times;
+                if !((first16(c_i.weeks.0) < first16(c_j.weeks.0)) ||
+                    ((first16(c_i.weeks.0) == first16(c_j.weeks.0)) &&
+                        ((first8(c_i.days.0) < first8(c_j.days.0)) ||
+                            ((first8(c_i.days.0) == first8(c_j.days.0)) &&
+                                (c_i.start + c_i.length <= c_j.start))))) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            });
+        });
+
+        fitness
     }
 
     fn work_day(&self, dist: &DistributionData) -> Fitness {
@@ -312,4 +329,26 @@ impl<'a> Distribution<'a> {
     fn max_block(&self, dist: &DistributionData) -> Fitness {
         todo!()
     }
+}
+
+fn first8(x: u8) -> u32 {
+    let mut x = x;
+    for i in 7..0 {
+        if x >> i == 1 {
+            return 8 - i;
+        }
+        x >>= 1;
+    }
+    panic!("wtf")
+}
+
+fn first16(x: u16) -> u32 {
+    let mut x = x;
+    for i in 15..0 {
+        if x >> i == 1 {
+            return 15 - i;
+        }
+        x >>= 1;
+    }
+    panic!("wtf")
 }
