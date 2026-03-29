@@ -345,7 +345,22 @@ impl<'a> Distribution<'a> {
     }
 
     fn max_days(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let DistributionKind::MaxDays(max_days) = dist.kind else { unimplemented!() };
+        let max_days = max_days as u32;
+        let mut fitness = Fitness::new();
+
+        let mut days = 0;
+        dist.class_indices.iter().for_each(|class_idx| {
+            days |= self.sol.times[*class_idx].times.days.0;
+        });
+
+        let nonzero_bits = count_nonzero_bits(days);
+        if nonzero_bits > max_days {
+            fitness.apply_penalty(&dist.penalty);
+            fitness.soft *= nonzero_bits - max_days;
+        }
+
+        fitness
     }
 
     fn max_day_load(&self, dist: &DistributionData) -> Fitness {
@@ -381,4 +396,18 @@ fn first16(x: u16) -> u32 {
         x >>= 1;
     }
     panic!("wtf")
+}
+
+fn count_nonzero_bits(x: u8) -> u32 {
+    let mut x = x;
+    let mut nonzero = 0;
+
+    while x > 0 {
+        if x % 2 != 0 {
+            nonzero += 1;
+        }
+        x >>= 1;
+    }
+
+    nonzero
 }
