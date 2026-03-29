@@ -9,6 +9,7 @@ use crate::{
 };
 use parser::timeslots::TimeSlots;
 use rand::Rng;
+use crate::distribution::Distribution;
 
 pub trait Solver {
     fn solve(&mut self) -> EvaluatedSolution;
@@ -197,14 +198,78 @@ where
         n_conflicts
     }
 
-    /// add up all the hard violations for classes:
-    /// - having more students than allowed by their limit
-    /// - taking place in rooms that don't have enough capacity
-    /// - taking place in rooms that are unavailable in chosen timeslots
-    /// - time intervals of two classes overlap in the same room
     /// - TODO: sf else?
     fn classes_hard_penalties(&self, sol: &Solution) -> u32 {
-        0
+        let mut n_violations = 0;
+
+        n_violations += self.classes_student_limits_penalty(&sol);
+        n_violations += self.rooms_capacity_limits_penalty(&sol);
+        n_violations += self.classes_in_unavailable_rooms_penalty(&sol);
+        n_violations += self.time_intervals_overlap_penalty(&sol);
+
+        n_violations
+    }
+
+    /// counts the hard violations for classes having more students
+    /// than allowed by their limit
+    fn classes_student_limits_penalty(&self, sol: &Solution) -> u32 {
+        sol.students_in_classes.iter().enumerate().map(|(index, class)| {
+            if let Some(limit) = self.data.classes[index].limit {
+                if class.len() > limit as usize {
+                    return 1;
+                }
+            }
+            0
+        }).sum()
+    }
+
+    /// counts the hard violations for classes taking place
+    /// in rooms that don't have enough capacity
+    fn rooms_capacity_limits_penalty(&self, sol: &Solution) -> u32 {
+        sol.students_in_classes.iter().enumerate().map(|(index, class)| {
+            if let Some(room_option) = &sol.rooms[index] {
+                if self.data.rooms[room_option.room_idx].capacity < class.len() as u32 {
+                    return 1;
+                }
+            }
+            0
+        }).sum()
+    }
+
+    /// counts the hard violations for classes taking place
+    /// in rooms that are unavailable in chosen timeslots
+    fn classes_in_unavailable_rooms_penalty(&self, sol: &Solution) -> u32 {
+        sol.times.iter().enumerate().map(|(index, time_option)| {
+            if let Some(room_option) = &sol.rooms[index] {
+                let unavailabilities = &self.data.rooms[room_option.room_idx].unavailabilities;
+                let times = &time_option.times;
+                if unavailabilities.iter().any(|unavailability| {
+                    Self::timeslots_overlap(unavailability, times)
+                }) {
+                    return 1;
+                }
+            }
+            0
+        }).sum()
+    }
+
+    /// counts the hard violations -- time intervals of two
+    /// classes overlap in the same room
+    fn time_intervals_overlap_penalty(&self, sol: &Solution) -> u32 {
+        sol.rooms.iter().enumerate().map(|(index, room_option)| {
+            if let Some(room_idx) = room_option.as_ref().map(|r| r.room_idx) {
+                for i in index + 1..sol.rooms.len() {
+                    if let Some(i_room_idx) = sol.rooms[i].as_ref().map(|r| r.room_idx) {
+                        if room_idx == i_room_idx {
+                            if Self::timeslots_overlap(&sol.times[index].times, &sol.times[i].times) {
+                                return 1;
+                            }
+                        }
+                    }
+                }
+            }
+            0
+        }).sum()
     }
 
     fn rooms_penalty(&self, sol: &Solution) -> u32 {
@@ -213,12 +278,6 @@ where
 
     fn times_penalty(&self, sol: &Solution) -> u32 {
         sol.times.iter().map(|t| t.penalty).sum()
-    }
-
-    /// returns [Fitness], because there can be both soft and hard constraints
-    fn distributions_penalty(&self, sol: &Solution) -> Fitness {
-        // TODO: add up all the distributions
-        Fitness::new()
     }
 
     fn solution_fitness(&self, sol: &Solution) -> Fitness {
@@ -236,7 +295,7 @@ where
         let time = self.times_penalty(sol);
         fitness.soft += time * self.data.optimization.time;
 
-        let dist = self.distributions_penalty(sol);
+        let dist = Distribution::new(&self.data, sol).calculate_penalty();
         fitness.hard += dist.hard;
         fitness.soft += dist.soft * self.data.optimization.distribution;
 

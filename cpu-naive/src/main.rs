@@ -20,6 +20,7 @@ mod output;
 mod selection;
 mod solution;
 mod solver;
+mod distribution;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
