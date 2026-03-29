@@ -326,7 +326,22 @@ impl<'a> Distribution<'a> {
     }
 
     fn min_gap(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let DistributionKind::MinGap(min_gap) = dist.kind else { unimplemented!() };
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(i, class_index)| {
+            let c_i = &self.sol.times[*class_index].times;
+            (i + 1..dist.class_indices.len()).for_each(|j| {
+                let c_j = &self.sol.times[dist.class_indices[j]].times;
+                if !(((c_i.days.0 & c_j.days.0) == 0) || ((c_i.weeks.0 & c_j.weeks.0) == 0) ||
+                    (c_i.start + c_i.length + min_gap as u32 <= c_j.start) ||
+                    (c_j.start + c_j.length + min_gap as u32 <= c_i.start)) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            });
+        });
+
+        fitness
     }
 
     fn max_days(&self, dist: &DistributionData) -> Fitness {
