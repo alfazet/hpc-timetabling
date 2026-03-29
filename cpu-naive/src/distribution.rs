@@ -255,7 +255,6 @@ impl<'a> Distribution<'a> {
 
     fn same_attendees(&self, dist: &DistributionData) -> Fitness {
         const AMBIGUOUS_MSG: &str = "Ambiguous situation: considering travel time when one of classes is None.";
-        const TRAVEL_MSG: &str = "Should have travel time between distributed classes.";
 
         let mut fitness = Fitness::new();
 
@@ -267,15 +266,17 @@ impl<'a> Distribution<'a> {
                 let i_class_room = (&self.sol.rooms[dist.class_indices[i]]).as_ref().expect(AMBIGUOUS_MSG);
                 let i_class_time = &self.sol.times[dist.class_indices[i]].times;
 
-                let i_j_travel_time = self.data.rooms[i_class_room.room_idx].travels.iter().find(|td| {
-                    td.dest_room_idx == class_room.room_idx
-                }).expect(TRAVEL_MSG).travel_time;
-                let j_i_travel_time = self.data.rooms[class_room.room_idx].travels.iter().find(|td| {
-                    td.dest_room_idx == i_class_room.room_idx
-                }).expect(TRAVEL_MSG).travel_time;
+                let travel_time = max(
+                    self.data.rooms[i_class_room.room_idx].travels.iter().find(|td| {
+                        td.dest_room_idx == class_room.room_idx
+                    }).map(|td| td.travel_time).unwrap_or(0),
+                    self.data.rooms[class_room.room_idx].travels.iter().find(|td| {
+                        td.dest_room_idx == i_class_room.room_idx
+                    }).map(|td| td.travel_time).unwrap_or(0),
+                );
 
-                if !((i_class_time.start + i_class_time.length + i_j_travel_time <= class_time.start)
-                || (class_time.start + class_time.length + j_i_travel_time <= i_class_time.start)
+                if !((i_class_time.start + i_class_time.length + travel_time <= class_time.start)
+                || (class_time.start + class_time.length + travel_time <= i_class_time.start)
                 || ((i_class_time.days.0 & class_time.days.0) == 0)
                 || ((i_class_time.weeks.0 & class_time.weeks.0) == 0)) {
                     fitness.apply_penalty(&dist.penalty);
