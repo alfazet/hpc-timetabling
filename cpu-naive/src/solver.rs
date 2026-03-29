@@ -215,7 +215,7 @@ where
     fn classes_student_limits_penalty(&self, sol: &Solution) -> u32 {
         sol.students_in_classes.iter().enumerate().map(|(index, class)| {
             if let Some(limit) = self.data.classes[index].limit {
-                if class.iter().count() > limit as usize {
+                if class.len() > limit as usize {
                     return 1;
                 }
             }
@@ -228,7 +228,7 @@ where
     fn rooms_capacity_limits_penalty(&self, sol: &Solution) -> u32 {
         sol.students_in_classes.iter().enumerate().map(|(index, class)| {
             if let Some(room_option) = &sol.rooms[index] {
-                if self.data.rooms[room_option.room_idx].capacity < class.iter().count() as u32 {
+                if self.data.rooms[room_option.room_idx].capacity < class.len() as u32 {
                     return 1;
                 }
             }
