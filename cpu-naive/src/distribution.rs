@@ -61,10 +61,10 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
+            .for_each(|(index, &class_index)| {
                 for i in index + 1..dist.class_indices.len() {
                     let i_class_index = dist.class_indices[i];
-                    if self.sol.times[*class_index].times.start
+                    if self.sol.times[class_index].times.start
                         != self.sol.times[i_class_index].times.start
                     {
                         fitness.apply_penalty(dist.penalty);
@@ -81,8 +81,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times;
                     if !((i_class.start <= class.start
@@ -104,8 +104,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times;
                     if !((i_class.start + i_class.length <= class.start)
@@ -125,8 +125,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times.days;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times.days;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times.days;
                     if !(((i_class.0 | class.0) == i_class.0) || ((i_class.0 | class.0) == class.0))
@@ -145,8 +145,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times.days;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times.days;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times.days;
                     if (i_class.0 & class.0) != 0 {
@@ -164,8 +164,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times.weeks;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times.weeks;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times.weeks;
                     if !(((i_class.0 | class.0) == i_class.0) || ((i_class.0 | class.0) == class.0))
@@ -184,8 +184,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times.weeks;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times.weeks;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times.weeks;
                     if (i_class.0 & class.0) != 0 {
@@ -210,8 +210,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times;
                     if !Self::does_overlap(class, i_class) {
@@ -229,8 +229,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = &self.sol.times[*class_index].times;
+            .for_each(|(index, &class_index)| {
+                let class = &self.sol.times[class_index].times;
                 for i in index + 1..dist.class_indices.len() {
                     let i_class = &self.sol.times[dist.class_indices[i]].times;
                     if Self::does_overlap(class, i_class) {
@@ -260,8 +260,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = self.sol.rooms[*class_index].as_ref();
+            .for_each(|(index, &class_index)| {
+                let class = self.sol.rooms[class_index].as_ref();
                 (index + 1..dist.class_indices.len()).for_each(|i| {
                     let i_class = self.sol.rooms[dist.class_indices[i]].as_ref();
                     if !Self::in_same_room(class, i_class) {
@@ -279,8 +279,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(index, class_index)| {
-                let class = self.sol.rooms[*class_index].as_ref();
+            .for_each(|(index, &class_index)| {
+                let class = self.sol.rooms[class_index].as_ref();
                 (index + 1..dist.class_indices.len()).for_each(|i| {
                     let i_class = self.sol.rooms[dist.class_indices[i]].as_ref();
                     if Self::in_same_room(class, i_class) {
@@ -293,50 +293,52 @@ impl<'a> Distribution<'a> {
     }
 
     fn same_attendees(&self, dist: &DistributionData) -> Fitness {
-        const AMBIGUOUS_MSG: &str =
-            "Ambiguous situation: considering travel time when one of classes is None.";
-
         let mut fitness = Fitness::new();
 
-        dist.class_indices
-            .iter()
-            .enumerate()
-            .for_each(|(index, class_index)| {
-                let class_room = self.sol.rooms[*class_index].as_ref().expect(AMBIGUOUS_MSG);
-                let class_time = &self.sol.times[*class_index].times;
+        for (index, &class_index) in dist.class_indices.iter().enumerate() {
+            let class_room = self.sol.rooms[class_index].as_ref();
+            let Some(class_room) = class_room else {
+                continue;
+            };
 
-                (index + 1..dist.class_indices.len()).for_each(|i| {
-                    let i_class_room = self.sol.rooms[dist.class_indices[i]]
-                        .as_ref()
-                        .expect(AMBIGUOUS_MSG);
-                    let i_class_time = &self.sol.times[dist.class_indices[i]].times;
+            let class_time = &self.sol.times[class_index].times;
 
-                    let travel_time = max(
-                        self.data.rooms[i_class_room.room_idx]
-                            .travels
-                            .iter()
-                            .find(|td| td.dest_room_idx == class_room.room_idx)
-                            .map(|td| td.travel_time)
-                            .unwrap_or(0),
-                        self.data.rooms[class_room.room_idx]
-                            .travels
-                            .iter()
-                            .find(|td| td.dest_room_idx == i_class_room.room_idx)
-                            .map(|td| td.travel_time)
-                            .unwrap_or(0),
-                    );
+            for i in index + 1..dist.class_indices.len() {
+                let i_class_room = self.sol.rooms[dist.class_indices[i]].as_ref();
+                let Some(i_class_room) = i_class_room else {
+                    continue;
+                };
 
-                    if !((i_class_time.start + i_class_time.length + travel_time
-                        <= class_time.start)
-                        || (class_time.start + class_time.length + travel_time
-                            <= i_class_time.start)
-                        || ((i_class_time.days.0 & class_time.days.0) == 0)
-                        || ((i_class_time.weeks.0 & class_time.weeks.0) == 0))
-                    {
-                        fitness.apply_penalty(dist.penalty);
-                    }
-                });
-            });
+                let i_class_time = &self.sol.times[dist.class_indices[i]].times;
+
+                let days_overlap = i_class_time.days.0 & class_time.days.0 != 0;
+                let weeks_overlap = i_class_time.days.0 & class_time.days.0 != 0;
+                if !days_overlap || !weeks_overlap {
+                    continue;
+                }
+
+                let travel_time = max(
+                    self.data.rooms[i_class_room.room_idx]
+                        .travels
+                        .iter()
+                        .find(|td| td.dest_room_idx == class_room.room_idx)
+                        .map(|td| td.travel_time)
+                        .unwrap_or(0),
+                    self.data.rooms[class_room.room_idx]
+                        .travels
+                        .iter()
+                        .find(|td| td.dest_room_idx == i_class_room.room_idx)
+                        .map(|td| td.travel_time)
+                        .unwrap_or(0),
+                );
+
+                if !((i_class_time.start + i_class_time.length + travel_time <= class_time.start)
+                    || (class_time.start + class_time.length + travel_time <= i_class_time.start))
+                {
+                    fitness.apply_penalty(dist.penalty);
+                }
+            }
+        }
 
         fitness
     }
@@ -347,8 +349,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(i, class_index)| {
-                let c_i = &self.sol.times[*class_index].times;
+            .for_each(|(i, &class_index)| {
+                let c_i = &self.sol.times[class_index].times;
                 (i + 1..dist.class_indices.len()).for_each(|j| {
                     // i < j
                     let c_j = &self.sol.times[dist.class_indices[j]].times;
@@ -375,8 +377,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(i, class_index)| {
-                let c_i = &self.sol.times[*class_index].times;
+            .for_each(|(i, &class_index)| {
+                let c_i = &self.sol.times[class_index].times;
                 (i + 1..dist.class_indices.len()).for_each(|j| {
                     let c_j = &self.sol.times[dist.class_indices[j]].times;
                     if !(((c_i.days.0 & c_j.days.0) == 0)
@@ -402,8 +404,8 @@ impl<'a> Distribution<'a> {
         dist.class_indices
             .iter()
             .enumerate()
-            .for_each(|(i, class_index)| {
-                let c_i = &self.sol.times[*class_index].times;
+            .for_each(|(i, &class_index)| {
+                let c_i = &self.sol.times[class_index].times;
                 (i + 1..dist.class_indices.len()).for_each(|j| {
                     let c_j = &self.sol.times[dist.class_indices[j]].times;
                     if !(((c_i.days.0 & c_j.days.0) == 0)
@@ -427,8 +429,8 @@ impl<'a> Distribution<'a> {
         let mut fitness = Fitness::new();
 
         let mut days = 0;
-        dist.class_indices.iter().for_each(|class_idx| {
-            days |= self.sol.times[*class_idx].times.days.0;
+        dist.class_indices.iter().for_each(|&class_idx| {
+            days |= self.sol.times[class_idx].times.days.0;
         });
 
         let nonzero_bits = days.count_ones();

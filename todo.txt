@@ -1,1 +1,2 @@
-- fix empty output when the <students> tag is empty in problem statement
+- implement not implemented student penalties (the ones returning 0)
+
