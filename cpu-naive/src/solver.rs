@@ -204,7 +204,24 @@ where
     /// - time intervals of two classes overlap in the same room
     /// - TODO: sf else?
     fn classes_hard_penalties(&self, sol: &Solution) -> u32 {
-        0
+        let mut n_violations = 0;
+
+        n_violations += self.classes_student_limits_penalties(&sol);
+
+        n_violations
+    }
+
+    /// counting hard violations for classes having more students
+    /// than allowed by their limit
+    fn classes_student_limits_penalties(&self, sol: &Solution) -> u32 {
+        sol.students_in_classes.iter().enumerate().map(|(index, class)| {
+            if let Some(limit) = self.data.classes[index].limit {
+                if class.iter().count() > limit as usize {
+                    return 1;
+                }
+            }
+            0
+        }).sum()
     }
 
     fn rooms_penalty(&self, sol: &Solution) -> u32 {
