@@ -6,7 +6,7 @@ use crate::{
     selection::TournamentSelection,
     solver::{NaiveSolver, Solver},
 };
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use parser::problem::Problem;
 use serializer::output::OutputMetadata;
 use std::{env, fs};
@@ -25,7 +25,10 @@ mod solver;
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
     if args.len() < 2 {
-        bail!("usage: {} <problem_data.xml>", args[0]);
+        bail!(
+            "usage: {} <problem_data.xml> [generations] [population_size]",
+            args[0]
+        );
     }
 
     let input = fs::read_to_string(&args[1])?;
@@ -33,8 +36,20 @@ fn main() -> Result<()> {
     let output_metadata = OutputMetadata::from_problem(&problem);
 
     let data = TimetableData::new(problem);
-    let population_size = 8000;
-    let generations = 30;
+
+    let mut generations = 30;
+    let mut population_size = 8000;
+    if args.len() >= 3 {
+        generations = args[2]
+            .parse::<usize>()
+            .with_context(|| format!("invalid generations value '{}'", &args[2]))?;
+    }
+    if args.len() >= 4 {
+        population_size = args[3]
+            .parse::<usize>()
+            .with_context(|| format!("invalid population_size value '{}'", &args[3]))?;
+    }
+
     let rng = Box::new(rand::rng());
     let mut solver = NaiveSolver::new(
         rng.clone(),
@@ -45,6 +60,11 @@ fn main() -> Result<()> {
         TournamentSelection::new(rng.clone(), population_size / 100),
         OnePointCrossover::new(rng.clone()),
         BasicMutation::new(rng, 0.03),
+    );
+
+    eprintln!(
+        "Solving '{}' with {} generations of {} individuals",
+        args[1], generations, population_size
     );
     let solution = solver.solve();
 
