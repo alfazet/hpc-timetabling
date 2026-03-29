@@ -1,5 +1,6 @@
 use crate::{
     crossover::Crossover,
+    elitism::Elitism,
     fitness::Fitness,
     model::{RoomData, TimetableData},
     mutation::Mutation,
@@ -28,6 +29,7 @@ where
     population_size: usize,
     generations: usize,
     data: TimetableData,
+    elitism: Elitism,
     selection: S,
     crossover: C,
     mutation: M,
@@ -42,17 +44,25 @@ where
     fn solve(&mut self) -> EvaluatedSolution {
         let mut solutions = self.initialize_solutions();
         for generation in 0..self.generations {
-            let fitness = self.evaluate_solutions_fitness(&solutions);
-            let selected = self.selection.select(&solutions, &fitness);
-            self.crossover.crossover(&mut solutions, &selected);
-            self.mutation.mutate(&mut solutions, &self.data);
-            // TODO: preserve top X% of solutions to prevent global min fitness from increasing
+            let mut fitness = self.evaluate_solutions_fitness(&solutions);
+            let (top_solutions, top_fitness, mut other_solutions, mut other_fitness) =
+                self.elitism.split(solutions, fitness);
+            let selected = self.selection.select(&other_solutions, &other_fitness);
+            self.crossover.crossover(&mut other_solutions, &selected);
+            self.mutation.mutate(&mut other_solutions, &self.data);
+
+            // merge unchanged top solutions with crossed-over/mutated others
+            other_solutions.extend(top_solutions);
+            solutions = other_solutions;
+            other_fitness.extend(top_fitness);
+            fitness = other_fitness;
+
             let min_fitness = fitness
                 .iter()
                 .min()
                 .expect("solutions vec shouldn't be empty");
             eprintln!(
-                "min fitness after {} generations: {}",
+                "min penalty after {} generations: {}",
                 generation, min_fitness
             );
         }
@@ -82,6 +92,7 @@ where
         population_size: usize,
         generations: usize,
         data: TimetableData,
+        elitism: Elitism,
         selection: S,
         crossover: C,
         mutation: M,
@@ -91,6 +102,7 @@ where
             population_size,
             generations,
             data,
+            elitism,
             selection,
             crossover,
             mutation,

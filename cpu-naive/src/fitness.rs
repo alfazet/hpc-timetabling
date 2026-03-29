@@ -35,7 +35,7 @@ impl Display for Fitness {
         if self.hard > 0 {
             write!(f, "hard violations: {}", self.hard)
         } else {
-            write!(f, "soft violations: {}", self.soft)
+            write!(f, "total soft penalty: {}", self.soft)
         }
     }
 }

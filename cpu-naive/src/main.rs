@@ -1,5 +1,6 @@
 use crate::{
     crossover::UniformCrossover,
+    elitism::Elitism,
     model::TimetableData,
     mutation::BasicMutation,
     selection::TournamentSelection,
@@ -11,6 +12,7 @@ use serializer::output::OutputMetadata;
 use std::{env, fs};
 
 mod crossover;
+mod elitism;
 mod fitness;
 mod model;
 mod mutation;
@@ -30,14 +32,15 @@ fn main() -> Result<()> {
     let output_metadata = OutputMetadata::from_problem(&problem);
 
     let data = TimetableData::new(problem);
-    let population_size = 16000;
-    let generations = 40;
+    let population_size = 8000;
+    let generations = 30;
     let rng = Box::new(rand::rng());
     let mut solver = NaiveSolver::new(
         rng.clone(),
         population_size,
         generations,
         data.clone(),
+        Elitism::new(0.01),
         TournamentSelection::new(rng.clone(), 5),
         UniformCrossover::new(rng.clone()),
         BasicMutation::new(rng, 0.03),
