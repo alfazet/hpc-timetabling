@@ -42,8 +42,7 @@ impl Add for Fitness {
 
 impl AddAssign for Fitness {
     fn add_assign(&mut self, rhs: Self) {
-        self.hard += rhs.hard;
-        self.soft += rhs.soft;
+        *self = *self + rhs;
     }
 }
 
