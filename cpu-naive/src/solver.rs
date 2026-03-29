@@ -197,23 +197,21 @@ where
         n_conflicts
     }
 
-    /// add up all the hard violations for classes:
-    /// - having more students than allowed by their limit
-    /// - taking place in rooms that don't have enough capacity
-    /// - taking place in rooms that are unavailable in chosen timeslots
-    /// - time intervals of two classes overlap in the same room
     /// - TODO: sf else?
     fn classes_hard_penalties(&self, sol: &Solution) -> u32 {
         let mut n_violations = 0;
 
-        n_violations += self.classes_student_limits_penalties(&sol);
+        n_violations += self.classes_student_limits_penalty(&sol);
+        n_violations += self.rooms_capacity_limits_penalty(&sol);
+        n_violations += self.classes_in_unavailable_rooms_penalty(&sol);
+        n_violations += self.time_intervals_overlap_penalty(&sol);
 
         n_violations
     }
 
-    /// counting hard violations for classes having more students
+    /// counts the hard violations for classes having more students
     /// than allowed by their limit
-    fn classes_student_limits_penalties(&self, sol: &Solution) -> u32 {
+    fn classes_student_limits_penalty(&self, sol: &Solution) -> u32 {
         sol.students_in_classes.iter().enumerate().map(|(index, class)| {
             if let Some(limit) = self.data.classes[index].limit {
                 if class.iter().count() > limit as usize {
@@ -222,6 +220,24 @@ where
             }
             0
         }).sum()
+    }
+
+    /// counts the hard violations for classes taking place
+    /// in rooms that don't have enough capacity
+    fn rooms_capacity_limits_penalty(&self, sol: &Solution) -> u32 {
+        todo!()
+    }
+
+    /// counts the hard violations for classes taking place
+    /// in rooms that are unavailable in chosen timeslots
+    fn classes_in_unavailable_rooms_penalty(&self, sol: &Solution) -> u32 {
+        todo!()
+    }
+
+    /// counts the hard violations -- time intervals of two
+    /// classes overlap in the same room
+    fn time_intervals_overlap_penalty(&self, sol: &Solution) -> u32 {
+        todo!()
     }
 
     fn rooms_penalty(&self, sol: &Solution) -> u32 {
