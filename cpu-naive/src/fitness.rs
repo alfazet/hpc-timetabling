@@ -1,4 +1,5 @@
 use std::{cmp::Ordering, fmt::Display};
+use std::ops::{Add, AddAssign};
 
 /// individual fitness as the number of hard and soft violations,
 /// lower value indicates a better solution
@@ -25,6 +26,24 @@ impl Ord for Fitness {
 impl PartialOrd for Fitness {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl Add for Fitness {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            hard: self.hard + rhs.hard,
+            soft: self.soft + rhs.soft,
+        }
+    }
+}
+
+impl AddAssign for Fitness {
+    fn add_assign(&mut self, rhs: Self) {
+        self.hard += rhs.hard;
+        self.soft += rhs.soft;
     }
 }
 

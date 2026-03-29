@@ -9,6 +9,7 @@ use crate::{
 };
 use parser::timeslots::TimeSlots;
 use rand::Rng;
+use crate::distribution::Distribution;
 
 pub trait Solver {
     fn solve(&mut self) -> EvaluatedSolution;
@@ -279,12 +280,6 @@ where
         sol.times.iter().map(|t| t.penalty).sum()
     }
 
-    /// returns [Fitness], because there can be both soft and hard constraints
-    fn distributions_penalty(&self, sol: &Solution) -> Fitness {
-        // TODO: add up all the distributions
-        Fitness::new()
-    }
-
     fn solution_fitness(&self, sol: &Solution) -> Fitness {
         let mut fitness = Fitness::new();
 
@@ -300,9 +295,8 @@ where
         let time = self.times_penalty(sol);
         fitness.soft += time * self.data.optimization.time;
 
-        let dist = self.distributions_penalty(sol);
-        fitness.hard += dist.hard;
-        fitness.soft += dist.soft * self.data.optimization.distribution;
+        let dist = Distribution::new(&self.data, sol).calculate_penalty();
+        fitness += dist;
 
         fitness
     }
