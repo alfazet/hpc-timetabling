@@ -255,7 +255,20 @@ where
     /// counts the hard violations -- time intervals of two
     /// classes overlap in the same room
     fn time_intervals_overlap_penalty(&self, sol: &Solution) -> u32 {
-        todo!()
+        sol.rooms.iter().enumerate().map(|(index, room_option)| {
+            if let Some(room_idx) = room_option.as_ref().map(|r| r.room_idx) {
+                for i in index + 1..sol.rooms.len() {
+                    if let Some(i_room_idx) = sol.rooms[i].as_ref().map(|r| r.room_idx) {
+                        if room_idx == i_room_idx {
+                            if Self::timeslots_overlap(&sol.times[index].times, &sol.times[i].times) {
+                                return 1;
+                            }
+                        }
+                    }
+                }
+            }
+            0
+        }).sum()
     }
 
     fn rooms_penalty(&self, sol: &Solution) -> u32 {
