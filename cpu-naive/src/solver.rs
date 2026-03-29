@@ -1,3 +1,5 @@
+use crate::assigner::{self, StudentAssignment};
+use crate::distribution::Distribution;
 use crate::{
     crossover::Crossover,
     elitism::Elitism,
@@ -9,7 +11,6 @@ use crate::{
 };
 use parser::timeslots::TimeSlots;
 use rand::Rng;
-use crate::distribution::Distribution;
 
 pub trait Solver {
     fn solve(&mut self) -> EvaluatedSolution;
@@ -43,9 +44,11 @@ where
     M: Mutation,
 {
     fn solve(&mut self) -> EvaluatedSolution {
+        // because we don't even use the solution (for now) we can generate it only once
+        let assignment = assigner::assign_students(&self.data);
         let mut solutions = self.initialize_solutions();
         for generation in 0..self.generations {
-            let mut fitness = self.evaluate_solutions_fitness(&solutions);
+            let mut fitness = self.evaluate_solutions_fitness(&solutions, &assignment);
             let (top_solutions, top_fitness, mut other_solutions, mut other_fitness) =
                 self.elitism.split(solutions, fitness);
             let selected = self.selection.select(&other_solutions, &other_fitness);
@@ -67,7 +70,7 @@ where
                 generation, min_fitness
             );
         }
-        let final_fitness = self.evaluate_solutions_fitness(&solutions);
+        let final_fitness = self.evaluate_solutions_fitness(&solutions, &assignment);
         let min_idx = final_fitness
             .iter()
             .enumerate()
@@ -161,10 +164,10 @@ where
         gap < travel
     }
 
-    fn student_assignment_conflicts(&self, sol: &Solution) -> u32 {
+    fn student_assignment_conflicts(&self, sol: &Solution, assignment: &StudentAssignment) -> u32 {
         let mut n_conflicts = 0;
         let mut classes_per_student = vec![Vec::new(); self.data.students.len()];
-        for (class_idx, student_list) in sol.students_in_classes.iter().enumerate() {
+        for (class_idx, student_list) in assignment.students_in_classes.iter().enumerate() {
             for &student_idx in student_list {
                 classes_per_student[student_idx].push(class_idx);
             }
@@ -199,13 +202,13 @@ where
     }
 
     /// - TODO: sf else?
-    fn classes_hard_penalties(&self, sol: &Solution) -> u32 {
+    fn classes_hard_penalties(&self, sol: &Solution, assignment: &StudentAssignment) -> u32 {
         let mut n_violations = 0;
 
-        n_violations += self.classes_student_limits_penalty(sol);
+        n_violations += self.classes_student_limits_penalty(assignment);
         n_violations += self.students_not_all_subparts_penalty(sol);
         n_violations += self.students_not_enrolled_in_parent_penalty(sol);
-        n_violations += self.rooms_capacity_limits_penalty(sol);
+        n_violations += self.rooms_capacity_limits_penalty(sol, assignment);
         n_violations += self.classes_in_unavailable_rooms_penalty(sol);
         n_violations += self.time_intervals_overlap_penalty(sol);
 
@@ -235,64 +238,82 @@ where
 
     /// counts the hard violations for classes having more students
     /// than allowed by their limit
-    fn classes_student_limits_penalty(&self, sol: &Solution) -> u32 {
-        sol.students_in_classes.iter().enumerate().map(|(index, class)| {
-            if let Some(limit) = self.data.classes[index].limit {
-                if class.len() > limit as usize {
+    fn classes_student_limits_penalty(&self, assignment: &StudentAssignment) -> u32 {
+        assignment
+            .students_in_classes
+            .iter()
+            .enumerate()
+            .map(|(index, class)| {
+                if let Some(limit) = self.data.classes[index].limit
+                    && class.len() > limit as usize
+                {
                     return 1;
                 }
-            }
-            0
-        }).sum()
+                0
+            })
+            .sum()
     }
 
     /// counts the hard violations for classes taking place
     /// in rooms that don't have enough capacity
-    fn rooms_capacity_limits_penalty(&self, sol: &Solution) -> u32 {
-        sol.students_in_classes.iter().enumerate().map(|(index, class)| {
-            if let Some(room_option) = &sol.rooms[index] {
-                if self.data.rooms[room_option.room_idx].capacity < class.len() as u32 {
+    fn rooms_capacity_limits_penalty(&self, sol: &Solution, assignment: &StudentAssignment) -> u32 {
+        assignment
+            .students_in_classes
+            .iter()
+            .enumerate()
+            .map(|(index, class)| {
+                if let Some(room_option) = &sol.rooms[index]
+                    && self.data.rooms[room_option.room_idx].capacity < class.len() as u32
+                {
                     return 1;
                 }
-            }
-            0
-        }).sum()
+                0
+            })
+            .sum()
     }
 
     /// counts the hard violations for classes taking place
     /// in rooms that are unavailable in chosen timeslots
     fn classes_in_unavailable_rooms_penalty(&self, sol: &Solution) -> u32 {
-        sol.times.iter().enumerate().map(|(index, time_option)| {
-            if let Some(room_option) = &sol.rooms[index] {
-                let unavailabilities = &self.data.rooms[room_option.room_idx].unavailabilities;
-                let times = &time_option.times;
-                if unavailabilities.iter().any(|unavailability| {
-                    Self::timeslots_overlap(unavailability, times)
-                }) {
-                    return 1;
+        sol.times
+            .iter()
+            .enumerate()
+            .map(|(index, time_option)| {
+                if let Some(room_option) = &sol.rooms[index] {
+                    let unavailabilities = &self.data.rooms[room_option.room_idx].unavailabilities;
+                    let times = &time_option.times;
+                    if unavailabilities
+                        .iter()
+                        .any(|unavailability| Self::timeslots_overlap(unavailability, times))
+                    {
+                        return 1;
+                    }
                 }
-            }
-            0
-        }).sum()
+                0
+            })
+            .sum()
     }
 
     /// counts the hard violations -- time intervals of two
     /// classes overlap in the same room
     fn time_intervals_overlap_penalty(&self, sol: &Solution) -> u32 {
-        sol.rooms.iter().enumerate().map(|(index, room_option)| {
-            if let Some(room_idx) = room_option.as_ref().map(|r| r.room_idx) {
-                for i in index + 1..sol.rooms.len() {
-                    if let Some(i_room_idx) = sol.rooms[i].as_ref().map(|r| r.room_idx) {
-                        if room_idx == i_room_idx {
-                            if Self::timeslots_overlap(&sol.times[index].times, &sol.times[i].times) {
-                                return 1;
-                            }
+        sol.rooms
+            .iter()
+            .enumerate()
+            .map(|(index, room_option)| {
+                if let Some(room_idx) = room_option.as_ref().map(|r| r.room_idx) {
+                    for i in index + 1..sol.rooms.len() {
+                        if let Some(i_room_idx) = sol.rooms[i].as_ref().map(|r| r.room_idx)
+                            && room_idx == i_room_idx
+                            && Self::timeslots_overlap(&sol.times[index].times, &sol.times[i].times)
+                        {
+                            return 1;
                         }
                     }
                 }
-            }
-            0
-        }).sum()
+                0
+            })
+            .sum()
     }
 
     fn rooms_penalty(&self, sol: &Solution) -> u32 {
@@ -303,13 +324,13 @@ where
         sol.times.iter().map(|t| t.penalty).sum()
     }
 
-    fn solution_fitness(&self, sol: &Solution) -> Fitness {
+    fn solution_fitness(&self, sol: &Solution, assignment: &StudentAssignment) -> Fitness {
         let mut fitness = Fitness::new();
 
-        let clas = self.classes_hard_penalties(sol);
+        let clas = self.classes_hard_penalties(sol, assignment);
         fitness.hard += clas;
 
-        let stud = self.student_assignment_conflicts(sol);
+        let stud = self.student_assignment_conflicts(sol, assignment);
         fitness.soft += stud * self.data.optimization.student;
 
         let room = self.rooms_penalty(sol);
@@ -325,11 +346,15 @@ where
         fitness
     }
 
-    fn evaluate_solutions_fitness(&self, solutions: &[Solution]) -> Vec<Fitness> {
+    fn evaluate_solutions_fitness(
+        &self,
+        solutions: &[Solution],
+        assignment: &StudentAssignment,
+    ) -> Vec<Fitness> {
         // parallelizing this should be a change from `iter` to `par_iter`
         solutions
             .iter()
-            .map(|sol| self.solution_fitness(sol))
+            .map(|sol| self.solution_fitness(sol, assignment))
             .collect()
     }
 }

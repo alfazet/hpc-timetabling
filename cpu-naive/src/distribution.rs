@@ -1,4 +1,4 @@
-﻿use crate::fitness::Fitness;
+use crate::fitness::Fitness;
 use crate::model::{DistributionData, RoomOption, TimetableData};
 use crate::solution::Solution;
 use parser::distributions::DistributionKind;
@@ -474,4 +474,3 @@ impl<'a> Distribution<'a> {
         todo!()
     }
 }
-
