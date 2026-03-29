@@ -1,9 +1,9 @@
-﻿use std::ops::{Div, Mul};
-use parser::distributions::DistributionKind;
-use parser::timeslots::TimeSlots;
+﻿use std::cmp::{max, min};
 use crate::fitness::Fitness;
 use crate::model::{DistributionData, RoomOption, TimetableData};
 use crate::solution::Solution;
+use parser::distributions::DistributionKind;
+use parser::timeslots::TimeSlots;
 
 pub(crate) struct Distribution<'a> {
     data: &'a TimetableData,
@@ -307,7 +307,22 @@ impl<'a> Distribution<'a> {
     }
 
     fn work_day(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let DistributionKind::WorkDay(max_slots) = dist.kind else { unimplemented!() };
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(i, class_index)| {
+            let c_i = &self.sol.times[*class_index].times;
+            (i + 1..dist.class_indices.len()).for_each(|j| {
+                let c_j = &self.sol.times[dist.class_indices[j]].times;
+                if !(((c_i.days.0 & c_j.days.0) == 0) || ((c_i.weeks.0 & c_j.weeks.0) == 0) ||
+                    (max(c_i.start + c_i.length, c_j.start + c_j.length)
+                        - min(c_i.start, c_j.start) <= max_slots as u32)) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            });
+        });
+
+        fitness
     }
 
     fn min_gap(&self, dist: &DistributionData) -> Fitness {
