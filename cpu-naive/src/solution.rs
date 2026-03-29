@@ -93,7 +93,7 @@ impl Solution {
                                     .filter(|&&c| c == opt_c)
                                     .count();
 
-                                if current + extra > data.classes[opt_c].limit.unwrap_or(0) as usize
+                                if current + extra > data.classes[opt_c].limit.unwrap_or(u32::MAX) as usize
                                 {
                                     ok = false;
                                     break;

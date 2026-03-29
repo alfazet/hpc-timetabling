@@ -6,17 +6,17 @@ pub trait Crossover {
     fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: &[usize]);
 }
 
-pub struct UniformCrossover {
+pub struct OnePointCrossover {
     rng: Box<dyn Rng>,
 }
 
-impl UniformCrossover {
+impl OnePointCrossover {
     pub fn new(rng: Box<dyn Rng>) -> Self {
         Self { rng }
     }
 }
 
-impl Crossover for UniformCrossover {
+impl Crossover for OnePointCrossover {
     fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: &[usize]) {
         debug_assert!(solutions.len() > 0);
         debug_assert!(selected.len() <= solutions.len());

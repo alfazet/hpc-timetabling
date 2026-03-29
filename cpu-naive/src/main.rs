@@ -1,5 +1,5 @@
 use crate::{
-    crossover::UniformCrossover,
+    crossover::OnePointCrossover,
     elitism::Elitism,
     model::TimetableData,
     mutation::BasicMutation,
@@ -42,7 +42,7 @@ fn main() -> Result<()> {
         data.clone(),
         Elitism::new(0.01),
         TournamentSelection::new(rng.clone(), 5),
-        UniformCrossover::new(rng.clone()),
+        OnePointCrossover::new(rng.clone()),
         BasicMutation::new(rng, 0.03),
     );
     let solution = solver.solve();
