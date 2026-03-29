@@ -203,11 +203,34 @@ where
         let mut n_violations = 0;
 
         n_violations += self.classes_student_limits_penalty(&sol);
+        n_violations += self.students_not_all_subparts_penalty(&sol);
+        n_violations += self.students_not_enrolled_in_parent_penalty(&sol);
         n_violations += self.rooms_capacity_limits_penalty(&sol);
         n_violations += self.classes_in_unavailable_rooms_penalty(&sol);
         n_violations += self.time_intervals_overlap_penalty(&sol);
 
         n_violations
+    }
+
+    /// counts the hard violations for students enrolled in multiple courses from
+    /// a subpart
+    fn students_enrolled_in_multiple_from_subpart(&self, sol: &Solution) -> u32 {
+        // TODO
+        0
+    }
+
+    /// counts the hard violations for students not enrolled in all subparts of
+    /// a config
+    fn students_not_all_subparts_penalty(&self, sol: &Solution) -> u32 {
+        // TODO
+        0
+    }
+
+    /// counts the hard violations for students not enrolled in a parent of a
+    /// class they're attending
+    fn students_not_enrolled_in_parent_penalty(&self, sol: &Solution) -> u32 {
+        // TODO
+        0
     }
 
     /// counts the hard violations for classes having more students

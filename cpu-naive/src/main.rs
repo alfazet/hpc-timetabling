@@ -12,6 +12,7 @@ use serializer::output::OutputMetadata;
 use std::{env, fs};
 
 mod crossover;
+mod distribution;
 mod elitism;
 mod fitness;
 mod model;
@@ -20,7 +21,6 @@ mod output;
 mod selection;
 mod solution;
 mod solver;
-mod distribution;
 
 fn main() -> Result<()> {
     let args: Vec<_> = env::args().collect();
@@ -42,7 +42,7 @@ fn main() -> Result<()> {
         generations,
         data.clone(),
         Elitism::new(0.01),
-        TournamentSelection::new(rng.clone(), 5),
+        TournamentSelection::new(rng.clone(), population_size / 100),
         OnePointCrossover::new(rng.clone()),
         BasicMutation::new(rng, 0.03),
     );
