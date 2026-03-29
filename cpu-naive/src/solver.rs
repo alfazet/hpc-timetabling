@@ -225,7 +225,14 @@ where
     /// counts the hard violations for classes taking place
     /// in rooms that don't have enough capacity
     fn rooms_capacity_limits_penalty(&self, sol: &Solution) -> u32 {
-        todo!()
+        sol.students_in_classes.iter().enumerate().map(|(index, class)| {
+            if let Some(room_option) = &sol.rooms[index] {
+                if self.data.rooms[room_option.room_idx].capacity < class.iter().count() as u32 {
+                    return 1;
+                }
+            }
+            0
+        }).sum()
     }
 
     /// counts the hard violations for classes taking place
