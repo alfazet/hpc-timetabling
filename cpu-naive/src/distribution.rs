@@ -11,7 +11,7 @@ pub(crate) struct Distribution<'a> {
 }
 
 impl Fitness {
-    fn apply_penalty(&mut self, penalty: &Option<u32>) {
+    fn apply_penalty(&mut self, penalty: Option<u32>) {
         match penalty {
             Some(penalty) => self.soft += penalty,
             None => self.hard += 1,
@@ -62,7 +62,7 @@ impl<'a> Distribution<'a> {
             for i in index + 1..dist.class_indices.len() {
                 let i_class_index = dist.class_indices[i];
                 if self.sol.times[*class_index].times.start != self.sol.times[i_class_index].times.start {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -79,7 +79,7 @@ impl<'a> Distribution<'a> {
                 let i_class = &self.sol.times[dist.class_indices[i]].times;
                 if !((i_class.start <= class.start && class.start + class.length <= i_class.start + i_class.length)
                     || (class.start <= i_class.start && i_class.start + i_class.length <= class.start + class.length)) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -96,7 +96,7 @@ impl<'a> Distribution<'a> {
                 let i_class = &self.sol.times[dist.class_indices[i]].times;
                 if !((i_class.start + i_class.length <= class.start)
                     || (class.start + class.length <= i_class.start)) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -113,7 +113,7 @@ impl<'a> Distribution<'a> {
                 let i_class = &self.sol.times[dist.class_indices[i]].times.days;
                 if !(((i_class.0 | class.0) == i_class.0)
                     || ((i_class.0 | class.0) == class.0)) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -129,7 +129,7 @@ impl<'a> Distribution<'a> {
             for i in index + 1..dist.class_indices.len() {
                 let i_class = &self.sol.times[dist.class_indices[i]].times.days;
                 if (i_class.0 & class.0) != 0 {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -146,7 +146,7 @@ impl<'a> Distribution<'a> {
                 let i_class = &self.sol.times[dist.class_indices[i]].times.weeks;
                 if !(((i_class.0 | class.0) == i_class.0)
                     || ((i_class.0 | class.0) == class.0)) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -162,7 +162,7 @@ impl<'a> Distribution<'a> {
             for i in index + 1..dist.class_indices.len() {
                 let i_class = &self.sol.times[dist.class_indices[i]].times.weeks;
                 if (i_class.0 & class.0) != 0 {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -183,7 +183,7 @@ impl<'a> Distribution<'a> {
             for i in index + 1..dist.class_indices.len() {
                 let i_class = &self.sol.times[dist.class_indices[i]].times;
                 if !Self::does_overlap(class, i_class) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -199,7 +199,7 @@ impl<'a> Distribution<'a> {
             for i in index + 1..dist.class_indices.len() {
                 let i_class = &self.sol.times[dist.class_indices[i]].times;
                 if Self::does_overlap(class, i_class) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             }
         });
@@ -229,7 +229,7 @@ impl<'a> Distribution<'a> {
             (index + 1..dist.class_indices.len()).for_each(|i| {
                 let i_class = (&self.sol.rooms[dist.class_indices[i]]).as_ref();
                 if !Self::in_same_room(class, i_class) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             });
         });
@@ -245,7 +245,7 @@ impl<'a> Distribution<'a> {
             (index + 1..dist.class_indices.len()).for_each(|i| {
                 let i_class = (&self.sol.rooms[dist.class_indices[i]]).as_ref();
                 if Self::in_same_room(class, i_class) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             });
         });
@@ -279,7 +279,7 @@ impl<'a> Distribution<'a> {
                 || (class_time.start + class_time.length + travel_time <= i_class_time.start)
                 || ((i_class_time.days.0 & class_time.days.0) == 0)
                 || ((i_class_time.weeks.0 & class_time.weeks.0) == 0)) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             });
         });
@@ -294,12 +294,12 @@ impl<'a> Distribution<'a> {
             let c_i = &self.sol.times[*class_index].times;
             (i + 1..dist.class_indices.len()).for_each(|j| { // i < j
                 let c_j = &self.sol.times[dist.class_indices[j]].times;
-                if !((first16(c_i.weeks.0) < first16(c_j.weeks.0)) ||
-                    ((first16(c_i.weeks.0) == first16(c_j.weeks.0)) &&
-                        ((first8(c_i.days.0) < first8(c_j.days.0)) ||
-                            ((first8(c_i.days.0) == first8(c_j.days.0)) &&
+                if !((c_i.weeks.0.leading_zeros() < c_j.weeks.0.leading_zeros()) ||
+                    ((c_i.weeks.0.leading_zeros() == c_j.weeks.0.leading_zeros()) &&
+                        ((c_i.days.0.leading_zeros() < c_j.days.0.leading_zeros()) ||
+                            ((c_i.days.0.leading_zeros() == c_j.days.0.leading_zeros()) &&
                                 (c_i.start + c_i.length <= c_j.start))))) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             });
         });
@@ -318,7 +318,7 @@ impl<'a> Distribution<'a> {
                 if !(((c_i.days.0 & c_j.days.0) == 0) || ((c_i.weeks.0 & c_j.weeks.0) == 0) ||
                     (max(c_i.start + c_i.length, c_j.start + c_j.length)
                         - min(c_i.start, c_j.start) <= max_slots as u32)) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             });
         });
@@ -337,7 +337,7 @@ impl<'a> Distribution<'a> {
                 if !(((c_i.days.0 & c_j.days.0) == 0) || ((c_i.weeks.0 & c_j.weeks.0) == 0) ||
                     (c_i.start + c_i.length + min_gap as u32 <= c_j.start) ||
                     (c_j.start + c_j.length + min_gap as u32 <= c_i.start)) {
-                    fitness.apply_penalty(&dist.penalty);
+                    fitness.apply_penalty(dist.penalty);
                 }
             });
         });
@@ -355,9 +355,9 @@ impl<'a> Distribution<'a> {
             days |= self.sol.times[*class_idx].times.days.0;
         });
 
-        let nonzero_bits = count_nonzero_bits(days);
+        let nonzero_bits = days.count_ones();
         if nonzero_bits > max_days {
-            fitness.apply_penalty(&dist.penalty);
+            fitness.apply_penalty(dist.penalty);
             fitness.soft *= nonzero_bits - max_days;
         }
 
@@ -375,40 +375,4 @@ impl<'a> Distribution<'a> {
     fn max_block(&self, dist: &DistributionData) -> Fitness {
         todo!()
     }
-}
-
-fn first8(x: u8) -> u32 {
-    let mut x = x;
-    for i in 7..0 {
-        if x >> i == 1 {
-            return 8 - i;
-        }
-        x >>= 1;
-    }
-    panic!("wtf")
-}
-
-fn first16(x: u16) -> u32 {
-    let mut x = x;
-    for i in 15..0 {
-        if x >> i == 1 {
-            return 15 - i;
-        }
-        x >>= 1;
-    }
-    panic!("wtf")
-}
-
-fn count_nonzero_bits(x: u8) -> u32 {
-    let mut x = x;
-    let mut nonzero = 0;
-
-    while x > 0 {
-        if x % 2 != 0 {
-            nonzero += 1;
-        }
-        x >>= 1;
-    }
-
-    nonzero
 }
