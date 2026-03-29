@@ -296,7 +296,7 @@ where
         fitness.soft += time * self.data.optimization.time;
 
         let dist = Distribution::new(&self.data, sol).calculate_penalty();
-        fitness += dist;
+        fitness += dist * self.data.optimization.distribution;
 
         fitness
     }
