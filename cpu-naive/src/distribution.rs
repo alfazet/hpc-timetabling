@@ -4,6 +4,7 @@ use crate::solution::Solution;
 use parser::distributions::DistributionKind;
 use parser::timeslots::TimeSlots;
 use std::cmp::{max, min};
+use std::collections::HashMap;
 
 pub(crate) struct Distribution<'a> {
     data: &'a TimetableData,
@@ -43,12 +44,12 @@ impl<'a> Distribution<'a> {
                 DistributionKind::DifferentRoom => self.different_room(d),
                 DistributionKind::SameAttendees => self.same_attendees(d),
                 DistributionKind::Precedence => self.precedence(d),
-                DistributionKind::WorkDay(_) => self.work_day(d),
-                DistributionKind::MinGap(_) => self.min_gap(d),
-                DistributionKind::MaxDays(_) => self.max_days(d),
-                DistributionKind::MaxDayLoad(_) => self.max_day_load(d),
-                DistributionKind::MaxBreaks(_, _) => self.max_breaks(d),
-                DistributionKind::MaxBlock(_, _) => self.max_block(d),
+                DistributionKind::WorkDay(s) => self.work_day(d, s),
+                DistributionKind::MinGap(s) => self.min_gap(d, s),
+                DistributionKind::MaxDays(s) => self.max_days(d, s),
+                DistributionKind::MaxDayLoad(s) => self.max_day_load(d, s),
+                DistributionKind::MaxBreaks(r, s) => self.max_breaks(d, r, s),
+                DistributionKind::MaxBlock(m, s) => self.max_block(d, m, s),
             }
         });
 
@@ -368,10 +369,7 @@ impl<'a> Distribution<'a> {
         fitness
     }
 
-    fn work_day(&self, dist: &DistributionData) -> Fitness {
-        let DistributionKind::WorkDay(max_slots) = dist.kind else {
-            unimplemented!()
-        };
+    fn work_day(&self, dist: &DistributionData, max_slots: u16) -> Fitness {
         let mut fitness = Fitness::new();
 
         dist.class_indices
@@ -395,10 +393,7 @@ impl<'a> Distribution<'a> {
         fitness
     }
 
-    fn min_gap(&self, dist: &DistributionData) -> Fitness {
-        let DistributionKind::MinGap(min_gap) = dist.kind else {
-            unimplemented!()
-        };
+    fn min_gap(&self, dist: &DistributionData, min_gap: u16) -> Fitness {
         let mut fitness = Fitness::new();
 
         dist.class_indices
@@ -421,10 +416,7 @@ impl<'a> Distribution<'a> {
         fitness
     }
 
-    fn max_days(&self, dist: &DistributionData) -> Fitness {
-        let DistributionKind::MaxDays(max_days) = dist.kind else {
-            unimplemented!()
-        };
+    fn max_days(&self, dist: &DistributionData, max_days: u8) -> Fitness {
         let max_days = max_days as u32;
         let mut fitness = Fitness::new();
 
@@ -442,15 +434,43 @@ impl<'a> Distribution<'a> {
         fitness
     }
 
-    fn max_day_load(&self, dist: &DistributionData) -> Fitness {
+    fn max_day_load(&self, dist: &DistributionData, s: u16) -> Fitness {
+        let s = s as u32;
+        let mut days: HashMap<(u8, u8), u32> = HashMap::new();
+
+        for &class_idx in &dist.class_indices {
+            let times = &self.sol.times[class_idx].times;
+
+            for w in 0..self.data.n_weeks as u8 {
+                for d in 0..self.data.n_days as u8 {
+                    if !times.weeks.contains(w) || !times.days.contains(d) {
+                        continue;
+                    }
+
+                    *days.entry((w, d)).or_insert(0) += times.length;
+                }
+            }
+        }
+
+        let mut factor = 0;
+        let mut penalty = Fitness::new();
+        for (_, day_load) in days {
+            if day_load > s {
+                factor = day_load - s;
+                penalty.apply_penalty(dist.penalty);
+            }
+        }
+
+        penalty.soft *= factor;
+        penalty.soft /= self.data.n_weeks;
+        penalty
+    }
+
+    fn max_breaks(&self, dist: &DistributionData, r: u16, s: u16) -> Fitness {
         todo!()
     }
 
-    fn max_breaks(&self, dist: &DistributionData) -> Fitness {
-        todo!()
-    }
-
-    fn max_block(&self, dist: &DistributionData) -> Fitness {
+    fn max_block(&self, dist: &DistributionData, m: u16, s: u16) -> Fitness {
         todo!()
     }
 }

@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         generations,
         data.clone(),
         Elitism::new(0.01),
-        TournamentSelection::new(rng.clone(), population_size / 100),
+        TournamentSelection::new(rng.clone(), (population_size / 100).max(1)),
         OnePointCrossover::new(rng.clone()),
         BasicMutation::new(rng, 0.03),
     );
