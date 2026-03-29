@@ -1,7 +1,7 @@
 ﻿use parser::distributions::DistributionKind;
 use parser::timeslots::TimeSlots;
 use crate::fitness::Fitness;
-use crate::model::{DistributionData, TimetableData};
+use crate::model::{DistributionData, RoomOption, TimetableData};
 use crate::solution::Solution;
 
 pub(crate) struct Distribution<'a> {
@@ -206,12 +206,50 @@ impl<'a> Distribution<'a> {
         fitness
     }
 
+    fn in_same_room(r1: Option<&RoomOption>, r2: Option<&RoomOption>) -> bool {
+        match r1 {
+            Some(class_room_option) => match r2 {
+                None => false,
+                Some(i_class_room_option) =>
+                    class_room_option.room_idx == i_class_room_option.room_idx,
+            }
+            None => match r2 {
+                None => true,
+                Some(_) => false,
+            }
+        }
+    }
+
     fn same_room(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = (&self.sol.rooms[*class_index]).as_ref();
+            (index + 1..dist.class_indices.len()).for_each(|i| {
+                let i_class = (&self.sol.rooms[dist.class_indices[i]]).as_ref();
+                if !Self::in_same_room(class, i_class) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            });
+        });
+
+        fitness
     }
 
     fn different_room(&self, dist: &DistributionData) -> Fitness {
-        todo!()
+        let mut fitness = Fitness::new();
+
+        dist.class_indices.iter().enumerate().for_each(|(index, class_index)| {
+            let class = (&self.sol.rooms[*class_index]).as_ref();
+            (index + 1..dist.class_indices.len()).for_each(|i| {
+                let i_class = (&self.sol.rooms[dist.class_indices[i]]).as_ref();
+                if Self::in_same_room(class, i_class) {
+                    fitness.apply_penalty(&dist.penalty);
+                }
+            });
+        });
+
+        fitness
     }
 
     fn same_attendees(&self, dist: &DistributionData) -> Fitness {
