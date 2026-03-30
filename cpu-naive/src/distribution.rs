@@ -477,6 +477,25 @@ impl<'a> Distribution<'a> {
 
 #[cfg(test)]
 mod tests {
+    use crate::distribution::Distribution;
+    use crate::model::TimetableData;
+    use parser::Problem;
+    use crate::solution::Solution;
+
+    static DATA = TimetableData::new(Problem::parse(
+        include_str!("../../data/test-data/distribution-test.xml")).unwrap());
+
+    fn prepare_data<'a>() -> Distribution<'a> {
+        let xml = ;
+        let
+        let sol = Solution{
+            times: vec![],
+            rooms: vec![],
+        };
+
+        Distribution::new(&data, &sol)
+    }
+
     #[test]
     fn same_days() {
         
