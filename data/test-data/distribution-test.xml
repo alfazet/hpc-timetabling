@@ -48,6 +48,8 @@
 					  		penalty="3"/>
 						<time days="1000000" start="76" length="22" weeks="0001000000000"
 					  		penalty="4"/>
+						<time days="1000000" start="66" length="22" weeks="0001000000000"
+						  	penalty="4"/>
 					</class>
 				</subpart>
 			</config>
@@ -64,6 +66,10 @@
 			<class id="3"/>
 		</distribution>
 		<distribution type="SameTime" penalty="10">
+			<class id="1"/>
+			<class id="3"/>
+		</distribution>
+		<distribution type="DifferentTime" required="true">
 			<class id="1"/>
 			<class id="3"/>
 		</distribution>
