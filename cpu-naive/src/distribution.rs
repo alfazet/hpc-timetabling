@@ -474,3 +474,11 @@ impl<'a> Distribution<'a> {
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn same_days() {
+        
+    }
+}

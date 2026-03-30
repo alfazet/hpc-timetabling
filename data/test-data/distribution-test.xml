@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem PUBLIC
+	"-//ITC 2019//DTD Problem Format/EN"
+	"http://www.itc2019.org/competition-format.dtd">
+
+<problem name="unique-instance-name" nrDays="7" nrWeeks="13" slotsPerDay="288">
+	<optimization time="2" room="1" distribution="1" student="2"/>
+
+	<rooms>
+		<room id="1" capacity="50"/>
+		<room id="2" capacity="100">
+			<travel room="1" value="2"/>
+		</room>
+		<room id="3" capacity="80">
+			<travel room="2" value="3"/>
+			<unavailable days="1100000" start="102" length="24" weeks="1111111111111"/>
+			<unavailable days="0001000" start="144" length="144" weeks="1010101010101"/>
+		</room>
+	</rooms>
+
+	<courses>
+		<course id="1">
+			<config id="1">
+				<subpart id="1">
+					<class id="1" limit="20">
+						<room id="1" penalty="0"/>
+						<room id="2" penalty="10"/>
+						<time days="1010100" start="90" length="10" weeks="1111111111111"
+							penalty="0"/>
+						<time days="0101000" start="96" length="15" weeks="1111111111111"
+							penalty="2"/>
+					</class>
+					<class id="2" limit="20">
+						<room id="4" penalty="0"/>
+						<time days="1000000" start="86" length="18" weeks="0101010101010"
+							penalty="0"/>
+						<time days="0100000" start="86" length="18" weeks="0101010101010"
+							penalty="0"/>
+					</class>
+				</subpart>
+				<subpart id="2">
+					<class id="3" parent="1" room="false">
+						<time days="0000100" start="96" length="22" weeks="1000000000000"
+							penalty="2"/>
+						<time days="0010000" start="108" length="22" weeks="0100000000000"
+							penalty="0"/>
+					</class>
+				</subpart>
+			</config>
+		</course>
+	</courses>
+
+	<distributions>
+		<distribution type="NotOverlap" required="true">
+			<class id="1"/>
+			<class id="2"/>
+		</distribution>
+		<distribution type="Precedence" penalty="2">
+			<class id="1"/>
+			<class id="3"/>
+			<class id="5"/>
+		</distribution>
+		<distribution type="SameAttendees" required="true">
+			<class id="1"/>
+			<class id="12"/>
+		</distribution>
+		<distribution type="MaxDays(2)" required="true">
+			<class id="5"/>
+			<class id="8"/>
+			<class id="15"/>
+		</distribution>
+	</distributions>
+
+	<students>
+		<student id="1">
+			<course id="1"/>
+			<course id="5"/>
+		</student>
+		<student id="2">
+			<course id="1"/>
+			<course id="3"/>
+			<course id="4"/>
+		</student>
+	</students>
+</problem>
