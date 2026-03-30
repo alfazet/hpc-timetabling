@@ -663,4 +663,45 @@ mod tests {
             dist.different_time(&dist.data.distributions[3])
         );
     }
+
+    #[test]
+    fn same_days() {
+        // second's days are a subset of first's days -- valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_days(&dist.data.distributions[4]));
+
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[3].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_days(&dist.data.distributions[4]));
+
+        // some days are different -- violation
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[3].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 15 },
+            dist.same_days(&dist.data.distributions[4])
+        );
+    }
 }

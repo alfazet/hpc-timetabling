@@ -73,6 +73,10 @@
 			<class id="1"/>
 			<class id="3"/>
 		</distribution>
+		<distribution type="SameDays" penalty="15">
+			<class id="1"/>
+			<class id="2"/>
+		</distribution>
 <!--		<distribution type="NotOverlap" required="true">-->
 <!--			<class id="1"/>-->
 <!--			<class id="2"/>-->
