@@ -82,6 +82,14 @@
 			<class id="2"/>
 			<class id="3"/>
 		</distribution>
+		<distribution type="SameWeeks" penalty="20">
+			<class id="2"/>
+			<class id="3"/>
+		</distribution>
+		<distribution type="DifferentWeeks" penalty="20">
+			<class id="2"/>
+			<class id="3"/>
+		</distribution>
 <!--		<distribution type="NotOverlap" required="true">-->
 <!--			<class id="1"/>-->
 <!--			<class id="2"/>-->

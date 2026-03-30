@@ -751,4 +751,67 @@ mod tests {
             dist.different_days(&dist.data.distributions[5])
         );
     }
+
+    #[test]
+    fn same_weeks() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_weeks(&dist.data.distributions[6]));
+
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 20 },
+            dist.same_weeks(&dist.data.distributions[6])
+        );
+    }
+
+    #[test]
+    fn different_weeks() {
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 20 },
+            dist.different_weeks(&dist.data.distributions[7])
+        );
+
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness::new(),
+            dist.different_weeks(&dist.data.distributions[7])
+        );
+    }
 }
