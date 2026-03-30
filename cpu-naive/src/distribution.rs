@@ -704,4 +704,51 @@ mod tests {
             dist.same_days(&dist.data.distributions[4])
         );
     }
+
+    #[test]
+    fn different_days() {
+        // three classes do not overlap (in days context) -- valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness::new(),
+            dist.different_days(&dist.data.distributions[5])
+        );
+
+        // overlapping classes -- violation
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 2, soft: 0 },
+            dist.different_days(&dist.data.distributions[5])
+        );
+
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 2, soft: 0 },
+            dist.different_days(&dist.data.distributions[5])
+        );
+    }
 }

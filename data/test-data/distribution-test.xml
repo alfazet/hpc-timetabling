@@ -48,7 +48,7 @@
 					  		penalty="3"/>
 						<time days="1000000" start="76" length="22" weeks="0001000000000"
 					  		penalty="4"/>
-						<time days="1000000" start="66" length="22" weeks="0001000000000"
+						<time days="1100000" start="66" length="22" weeks="0001000000000"
 						  	penalty="4"/>
 					</class>
 				</subpart>
@@ -76,6 +76,11 @@
 		<distribution type="SameDays" penalty="15">
 			<class id="1"/>
 			<class id="2"/>
+		</distribution>
+		<distribution type="DifferentDays" required="true">
+			<class id="1"/>
+			<class id="2"/>
+			<class id="3"/>
 		</distribution>
 <!--		<distribution type="NotOverlap" required="true">-->
 <!--			<class id="1"/>-->
