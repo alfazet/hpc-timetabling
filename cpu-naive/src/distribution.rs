@@ -524,4 +524,55 @@ mod tests {
         assert_eq!(Fitness::new(), dist.same_start(&dist.data.distributions[0]));
         assert_eq!(Fitness::new(), dist.same_start(&dist.data.distributions[1]));
     }
+
+    #[test]
+    fn same_time() {
+        // first starts before second starts and ends before second ends -- violation
+        // 1: |---|
+        // 2:   |----|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 10 },
+            dist.same_time(&dist.data.distributions[2])
+        );
+
+        // first one fits into second one's timespan -- valid
+        // 1:  |---|
+        // 2: |--------|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_time(&dist.data.distributions[2]));
+
+        // first starts after second starts and ends after second ends -- violation
+        // 1:    |----|
+        // 2:  |-----|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[7].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 10 },
+            dist.same_time(&dist.data.distributions[2])
+        );
+    }
 }

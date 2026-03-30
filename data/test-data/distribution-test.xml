@@ -46,6 +46,8 @@
 							penalty="0"/>
 						<time days="0100000" start="86" length="22" weeks="0010000000000"
 					  		penalty="3"/>
+						<time days="1000000" start="76" length="22" weeks="0001000000000"
+					  		penalty="4"/>
 					</class>
 				</subpart>
 			</config>
@@ -59,6 +61,10 @@
 		</distribution>
 		<distribution type="SameStart" penalty="15">
 			<class id="2"/>
+			<class id="3"/>
+		</distribution>
+		<distribution type="SameTime" penalty="10">
+			<class id="1"/>
 			<class id="3"/>
 		</distribution>
 <!--		<distribution type="NotOverlap" required="true">-->
