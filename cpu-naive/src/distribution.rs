@@ -830,7 +830,7 @@ mod tests {
         assert_eq!(Fitness::new(), dist.overlap(&dist.data.distributions[8]));
         assert_eq!(
             Fitness { hard: 1, soft: 0 },
-            dist.not_overlap(&dist.data.distributions[8])
+            dist.not_overlap(&dist.data.distributions[9])
         );
 
         // not overlap
@@ -849,7 +849,48 @@ mod tests {
         );
         assert_eq!(
             Fitness::new(),
-            dist.not_overlap(&dist.data.distributions[8])
+            dist.not_overlap(&dist.data.distributions[9])
+        );
+    }
+
+    #[test]
+    fn same_and_different_room() {
+        // same room (2 classes) and no room (third class)
+        let sol = Solution {
+            times: vec![], // unnecessary
+            rooms: vec![
+                Some(DATA.room_options[1].clone()),
+                Some(DATA.room_options[2].clone()),
+                None,
+            ],
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 2, soft: 0 },
+            dist.same_room(&dist.data.distributions[10])
+        );
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.different_room(&dist.data.distributions[11])
+        );
+
+        // every class in unique room
+        let sol = Solution {
+            times: vec![], // unnecessary
+            rooms: vec![
+                Some(DATA.room_options[0].clone()),
+                Some(DATA.room_options[2].clone()),
+                None,
+            ],
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 3, soft: 0 },
+            dist.same_room(&dist.data.distributions[10])
+        );
+        assert_eq!(
+            Fitness::new(),
+            dist.different_room(&dist.data.distributions[11])
         );
     }
 }
