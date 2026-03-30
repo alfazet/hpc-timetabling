@@ -1,8 +1,12 @@
 use serializer::output::{Class, Output, Student};
 
-use crate::{model::TimetableData, solution::Solution};
+use crate::{assigner::StudentAssignment, model::TimetableData, solution::Solution};
 
-pub fn output(solution: &Solution, data: &TimetableData) -> Option<Output> {
+pub fn output(
+    solution: &Solution,
+    assignment: &StudentAssignment,
+    data: &TimetableData,
+) -> Option<Output> {
     let mut classes_out = Vec::with_capacity(data.classes.len());
 
     for class_idx in 0..data.classes.len() {
@@ -11,16 +15,12 @@ pub fn output(solution: &Solution, data: &TimetableData) -> Option<Output> {
         let time = &solution.times[class_idx];
         let (days, weeks, start) = (time.times.days, time.times.weeks, time.times.start);
         let room = room.as_ref().map(|r| data.rooms[r.room_idx].id);
-
-        // let students_in_this_class = solution.students_in_classes[class_idx]
-        //     .iter()
-        //     .map(|&idx| Student {
-        //         id: data.students[idx].id,
-        //     })
-        //     .collect();
-
-        // TODO: assign
-        let students = Vec::new();
+        let students = assignment.students_in_classes[class_idx]
+            .iter()
+            .map(|&idx| Student {
+                id: data.students[idx].id,
+            })
+            .collect();
 
         let class = Class {
             id: class_data.id,

@@ -19,6 +19,7 @@ pub trait Solver {
 pub struct EvaluatedSolution {
     pub inner: Solution,
     pub fitness: Fitness,
+    pub student_assignment: StudentAssignment,
 }
 
 pub struct NaiveSolver<S, C, M>
@@ -81,6 +82,7 @@ where
         EvaluatedSolution {
             inner: solutions[min_idx].clone(),
             fitness: final_fitness[min_idx],
+            student_assignment: assignment,
         }
     }
 }

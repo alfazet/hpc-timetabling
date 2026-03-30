@@ -1,7 +1,7 @@
 use crate::model::TimetableData;
 
 pub struct StudentAssignment {
-    /// students_in_classes[i] = indices of students taking class `i`
+    /// students_in_classes[i] = indices of students taking the class with index `i`
     pub students_in_classes: Vec<Vec<usize>>,
 }
 
@@ -23,8 +23,7 @@ pub fn assign_students(data: &TimetableData) -> StudentAssignment {
                         let mut cur_idx = class_idx;
                         loop {
                             let subpart_idx = data.classes[cur_idx].subpart_idx;
-                            let local_idx = subpart_idx - config.subparts_start;
-                            local_assignment[local_idx] = Some(cur_idx);
+                            local_assignment[subpart_idx - config.subparts_start] = Some(cur_idx);
                             match data.classes[cur_idx].parent {
                                 Some(p) => cur_idx = p,
                                 None => break,
@@ -49,6 +48,8 @@ pub fn assign_students(data: &TimetableData) -> StudentAssignment {
                         }
                     }
                     if !assigned_subpart {
+                        // we have to try out another config if we couldn't
+                        // find a single fitting class in a subpart contained within that config
                         continue 'config_loop;
                     }
                 }

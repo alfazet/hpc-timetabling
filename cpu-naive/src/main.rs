@@ -24,22 +24,29 @@ mod solution;
 mod solver;
 
 fn main() -> Result<()> {
+    let mut generations = 200;
+    let mut population_size = 8000;
+    let mut mutation_rate = 0.05;
+    let mut elitism = 0.01;
+
+    // TODO: refactor with clap
     let args: Vec<_> = env::args().collect();
     if args.len() < 2 {
         bail!(
-            "usage: {} <problem_data.xml> [generations] [population_size]",
-            args[0]
+            "usage: {} <problem_data.xml> [generations | {}] [population_size | {}] [mutation_rate | {}] [elitism | {}]",
+            args[0],
+            generations,
+            population_size,
+            mutation_rate,
+            elitism,
         );
     }
 
     let input = fs::read_to_string(&args[1])?;
     let problem = Problem::parse(input)?;
     let output_metadata = OutputMetadata::from_problem(&problem);
-
     let data = TimetableData::new(problem);
 
-    let mut generations = 30;
-    let mut population_size = 8000;
     if args.len() >= 3 {
         generations = args[2]
             .parse::<usize>()
@@ -50,6 +57,16 @@ fn main() -> Result<()> {
             .parse::<usize>()
             .with_context(|| format!("invalid population_size value '{}'", &args[3]))?;
     }
+    if args.len() >= 5 {
+        mutation_rate = args[4]
+            .parse::<f32>()
+            .with_context(|| format!("invalid mutation_rate value '{}'", &args[4]))?;
+    }
+    if args.len() >= 6 {
+        elitism = args[5]
+            .parse::<f32>()
+            .with_context(|| format!("invalid elitism value '{}'", &args[5]))?;
+    }
 
     let rng = Box::new(rand::rng());
     let mut solver = NaiveSolver::new(
@@ -57,10 +74,10 @@ fn main() -> Result<()> {
         population_size,
         generations,
         data.clone(),
-        Elitism::new(0.01),
+        Elitism::new(elitism),
         TournamentSelection::new(rng.clone(), (population_size / 100).max(1)),
         OnePointCrossover::new(rng.clone()),
-        BasicMutation::new(rng, 0.03),
+        BasicMutation::new(rng, mutation_rate),
     );
 
     eprintln!(
@@ -69,14 +86,13 @@ fn main() -> Result<()> {
     );
     let solution = solver.solve();
 
-    let output = output::output(&solution.inner, &data);
+    let output = output::output(&solution.inner, &solution.student_assignment, &data);
     let Some(output) = output else {
         eprintln!("no valid solution found!");
         return Ok(());
     };
 
     let xml_solution = output.serialize(output_metadata);
-
     // keep only xml in stdout, debug info in stderr to allow for uses like
     // `cargo r problem.xml > solution.xml`
     println!("{}", xml_solution);
