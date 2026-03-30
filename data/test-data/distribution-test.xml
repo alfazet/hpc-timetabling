@@ -90,10 +90,14 @@
 			<class id="2"/>
 			<class id="3"/>
 		</distribution>
-<!--		<distribution type="NotOverlap" required="true">-->
-<!--			<class id="1"/>-->
-<!--			<class id="2"/>-->
-<!--		</distribution>-->
+		<distribution type="Overlap" required="true">
+			<class id="1"/>
+			<class id="2"/>
+		</distribution>
+		<distribution type="NotOverlap" required="true">
+			<class id="1"/>
+			<class id="2"/>
+		</distribution>
 <!--		<distribution type="Precedence" penalty="2">-->
 <!--			<class id="1"/>-->
 <!--			<class id="3"/>-->

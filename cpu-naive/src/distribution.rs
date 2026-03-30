@@ -814,4 +814,42 @@ mod tests {
             dist.different_weeks(&dist.data.distributions[7])
         );
     }
+
+    #[test]
+    fn overlap_and_not_overlap() {
+        // overlap
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.overlap(&dist.data.distributions[8]));
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.not_overlap(&dist.data.distributions[8])
+        );
+
+        // not overlap
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[3].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.overlap(&dist.data.distributions[8])
+        );
+        assert_eq!(
+            Fitness::new(),
+            dist.not_overlap(&dist.data.distributions[8])
+        );
+    }
 }
