@@ -26,7 +26,7 @@ impl<'a> Distribution<'a> {
     }
 
     /// returns [Fitness], because there can be both soft and hard constraints
-    pub fn calculate_penalty(self) -> Fitness {
+    pub fn calculate_penalty(&self) -> Fitness {
         let mut fitness = Fitness::new();
 
         self.data.distributions.iter().for_each(|d| {
@@ -472,5 +472,425 @@ impl<'a> Distribution<'a> {
 
     fn max_block(&self, dist: &DistributionData, m: u16, s: u16) -> Fitness {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::distribution::Distribution;
+    use crate::fitness::Fitness;
+    use crate::model::TimetableData;
+    use crate::solution::Solution;
+    use parser::Problem;
+    use std::sync::LazyLock;
+
+    static DATA: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
+        TimetableData::new(
+            Problem::parse(include_str!("../../data/test-data/distribution-test.xml")).unwrap(),
+        )
+    });
+
+    #[test]
+    fn same_start() {
+        // both distributions violated
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.same_start(&dist.data.distributions[0])
+        );
+        assert_eq!(
+            Fitness { hard: 0, soft: 15 },
+            dist.same_start(&dist.data.distributions[1])
+        );
+
+        // both distributions satisfied
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_start(&dist.data.distributions[0]));
+        assert_eq!(Fitness::new(), dist.same_start(&dist.data.distributions[1]));
+    }
+
+    #[test]
+    fn same_time() {
+        // first starts before second starts and ends before second ends -- violation
+        // 1: |---|
+        // 2:   |----|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 10 },
+            dist.same_time(&dist.data.distributions[2])
+        );
+
+        // first one fits into second one's timespan -- valid
+        // 1:  |---|
+        // 2: |--------|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_time(&dist.data.distributions[2]));
+
+        // first starts after second starts and ends after second ends -- violation
+        // 1:     |---|
+        // 2:  |-----|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[7].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 10 },
+            dist.same_time(&dist.data.distributions[2])
+        );
+    }
+
+    #[test]
+    fn different_time() {
+        // first starts and ends before second -- valid
+        // 1: |---|
+        // 2:       |-------|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness::new(),
+            dist.different_time(&dist.data.distributions[3])
+        );
+
+        // first starts before second starts and ends before second ends -- violation
+        // 1: |---|
+        // 2:   |----|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.different_time(&dist.data.distributions[3])
+        );
+
+        // first one fits into second one's timespan -- violation
+        // 1:  |---|
+        // 2: |--------|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.different_time(&dist.data.distributions[3])
+        );
+
+        // first starts after second starts and ends after second ends -- violation
+        // 1:     |---|
+        // 2:  |-----|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[7].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.different_time(&dist.data.distributions[3])
+        );
+
+        // first starts and ends after second -- valid
+        // 1:          |---|
+        // 2: |-----|
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness::new(),
+            dist.different_time(&dist.data.distributions[3])
+        );
+    }
+
+    #[test]
+    fn same_days() {
+        // second's days are a subset of first's days -- valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_days(&dist.data.distributions[4]));
+
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[3].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_days(&dist.data.distributions[4]));
+
+        // some days are different -- violation
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[3].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 15 },
+            dist.same_days(&dist.data.distributions[4])
+        );
+    }
+
+    #[test]
+    fn different_days() {
+        // three classes do not overlap (in days context) -- valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness::new(),
+            dist.different_days(&dist.data.distributions[5])
+        );
+
+        // overlapping classes -- violation
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 2, soft: 0 },
+            dist.different_days(&dist.data.distributions[5])
+        );
+
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 2, soft: 0 },
+            dist.different_days(&dist.data.distributions[5])
+        );
+    }
+
+    #[test]
+    fn same_weeks() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.same_weeks(&dist.data.distributions[6]));
+
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 20 },
+            dist.same_weeks(&dist.data.distributions[6])
+        );
+    }
+
+    #[test]
+    fn different_weeks() {
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 0, soft: 20 },
+            dist.different_weeks(&dist.data.distributions[7])
+        );
+
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness::new(),
+            dist.different_weeks(&dist.data.distributions[7])
+        );
+    }
+
+    #[test]
+    fn overlap_and_not_overlap() {
+        // overlap
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(Fitness::new(), dist.overlap(&dist.data.distributions[8]));
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.not_overlap(&dist.data.distributions[9])
+        );
+
+        // not overlap
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[3].clone(),
+                DATA.time_options[4].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.overlap(&dist.data.distributions[8])
+        );
+        assert_eq!(
+            Fitness::new(),
+            dist.not_overlap(&dist.data.distributions[9])
+        );
+    }
+
+    #[test]
+    fn same_and_different_room() {
+        // same room (2 classes) and no room (third class)
+        let sol = Solution {
+            times: vec![], // unnecessary
+            rooms: vec![
+                Some(DATA.room_options[1].clone()),
+                Some(DATA.room_options[2].clone()),
+                None,
+            ],
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 2, soft: 0 },
+            dist.same_room(&dist.data.distributions[10])
+        );
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.different_room(&dist.data.distributions[11])
+        );
+
+        // every class in unique room
+        let sol = Solution {
+            times: vec![], // unnecessary
+            rooms: vec![
+                Some(DATA.room_options[0].clone()),
+                Some(DATA.room_options[2].clone()),
+                None,
+            ],
+        };
+        let dist = Distribution::new(&DATA, &sol);
+        assert_eq!(
+            Fitness { hard: 3, soft: 0 },
+            dist.same_room(&dist.data.distributions[10])
+        );
+        assert_eq!(
+            Fitness::new(),
+            dist.different_room(&dist.data.distributions[11])
+        );
     }
 }
