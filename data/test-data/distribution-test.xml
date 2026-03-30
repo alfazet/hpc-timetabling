@@ -27,7 +27,7 @@
 						<room id="2" penalty="10"/>
 						<time days="1010100" start="90" length="10" weeks="1111111111111"
 							penalty="0"/>
-						<time days="0101000" start="96" length="15" weeks="1111111111111"
+						<time days="0101000" start="86" length="15" weeks="1111111111111"
 							penalty="2"/>
 					</class>
 					<class id="2" limit="20">
@@ -44,6 +44,8 @@
 							penalty="2"/>
 						<time days="0010000" start="108" length="22" weeks="0100000000000"
 							penalty="0"/>
+						<time days="0100000" start="86" length="22" weeks="0010000000000"
+					  		penalty="3"/>
 					</class>
 				</subpart>
 			</config>
