@@ -477,15 +477,12 @@ impl<'a> Distribution<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::{TimeOption, TimetableData};
-    use parser::Problem;
-    use std::sync::LazyLock;
-    use parser::days::Days;
-    use parser::timeslots::TimeSlots;
-    use parser::weeks::Weeks;
     use crate::distribution::Distribution;
     use crate::fitness::Fitness;
+    use crate::model::TimetableData;
     use crate::solution::Solution;
+    use parser::Problem;
+    use std::sync::LazyLock;
 
     static DATA: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
         TimetableData::new(
@@ -496,72 +493,32 @@ mod tests {
     #[test]
     fn same_start() {
         // both distributions violated
-        let sol = Solution{
-            times: vec![TimeOption{
-               times: TimeSlots{
-                   start: 90,
-                   length: 10,
-                   days: Days(0b1010100),
-                   weeks: Weeks(0b1111111111111),
-               },
-               penalty: 0,
-            }, TimeOption{
-                times: TimeSlots {
-                    start: 86,
-                    length: 18,
-                    days: Days(0b1000000),
-                    weeks: Weeks(0b0101010101010),
-                },
-                penalty: 0,
-            }, TimeOption{
-                times: TimeSlots {
-                    start: 108,
-                    length: 22,
-                    days: Days(0b0010000),
-                    weeks: Weeks(0b0100000000000),
-                },
-                penalty: 0,
-            }],
-            rooms: vec![],
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[0].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
         };
         let dist = Distribution::new(&DATA, &sol);
-        assert_eq!(Fitness {
-            hard: 1,
-            soft: 0,
-        }, dist.same_start(&dist.data.distributions[0]));
-        assert_eq!(Fitness {
-            hard: 0,
-            soft: 15,
-        }, dist.same_start(&dist.data.distributions[1]));
+        assert_eq!(
+            Fitness { hard: 1, soft: 0 },
+            dist.same_start(&dist.data.distributions[0])
+        );
+        assert_eq!(
+            Fitness { hard: 0, soft: 15 },
+            dist.same_start(&dist.data.distributions[1])
+        );
 
         // both distributions satisfied
-        let sol = Solution{
-            times: vec![TimeOption{
-                times: TimeSlots{
-                    start: 86,
-                    length: 15,
-                    days: Days(0b0101000),
-                    weeks: Weeks(0b1111111111111),
-                },
-                penalty: 2,
-            }, TimeOption{
-                times: TimeSlots {
-                    start: 86,
-                    length: 18,
-                    days: Days(0b1000000),
-                    weeks: Weeks(0b0101010101010),
-                },
-                penalty: 0,
-            }, TimeOption{
-                times: TimeSlots {
-                    start: 86,
-                    length: 22,
-                    days: Days(0b0100000),
-                    weeks: Weeks(0b0010000000000),
-                },
-                penalty: 3,
-            }],
-            rooms: vec![],
+        let sol = Solution {
+            times: vec![
+                DATA.time_options[1].clone(),
+                DATA.time_options[2].clone(),
+                DATA.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
         };
         let dist = Distribution::new(&DATA, &sol);
         assert_eq!(Fitness::new(), dist.same_start(&dist.data.distributions[0]));
