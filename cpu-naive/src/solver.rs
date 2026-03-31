@@ -470,4 +470,52 @@ mod tests {
 
         assert_eq!(penalty, 0);
     }
+
+    #[test]
+    fn students_not_enrolled_in_exactly_one_per_subpart_empty() {
+        let solver = solver();
+        let assignment = StudentAssignment {
+            students_in_classes: vec![vec![]; 3],
+        };
+
+        let penalty = solver.students_not_enrolled_in_exactly_one_per_subpart(&assignment);
+
+        assert_eq!(penalty, 4);
+    }
+
+    #[test]
+    fn students_not_enrolled_in_exactly_one_per_subpart_too_much() {
+        let solver = solver();
+        let assignment = StudentAssignment {
+            students_in_classes: vec![vec![0, 1], vec![0], vec![0, 1]],
+        };
+
+        let penalty = solver.students_not_enrolled_in_exactly_one_per_subpart(&assignment);
+
+        assert_eq!(penalty, 1);
+    }
+
+    #[test]
+    fn students_not_enrolled_in_exactly_one_per_subpart_missing() {
+        let solver = solver();
+        let assignment = StudentAssignment {
+            students_in_classes: vec![vec![0, 1], vec![], vec![1]],
+        };
+
+        let penalty = solver.students_not_enrolled_in_exactly_one_per_subpart(&assignment);
+
+        assert_eq!(penalty, 1);
+    }
+
+    #[test]
+    fn students_not_enrolled_in_exactly_one_per_subpart_correct() {
+        let solver = solver();
+        let assignment = StudentAssignment {
+            students_in_classes: vec![vec![0], vec![1], vec![0, 1]],
+        };
+
+        let penalty = solver.students_not_enrolled_in_exactly_one_per_subpart(&assignment);
+
+        assert_eq!(penalty, 0);
+    }
 }
