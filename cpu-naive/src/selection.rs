@@ -1,13 +1,13 @@
 use rand::{Rng, seq::index};
 
-use crate::{fitness::Fitness, solution::Solution};
+use crate::{penalty::Penalty, solution::Solution};
 
 pub trait Selection {
     fn select(
         &mut self,
         rng: &mut dyn Rng,
         solutions: &[Solution],
-        fitness: &[Fitness],
+        penalties: &[Penalty],
     ) -> Vec<usize>;
 }
 
@@ -22,7 +22,7 @@ impl TournamentSelection {
 }
 
 impl Selection for TournamentSelection {
-    fn select(&mut self, rng: &mut dyn Rng, solutions: &[Solution], fitness: &[Fitness]) -> Vec<usize> {
+    fn select(&mut self, rng: &mut dyn Rng, solutions: &[Solution], penalties: &[Penalty]) -> Vec<usize> {
         let n = solutions.len();
         let tournament_size = self.tournament_size.min(n);
         let mut selected = Vec::with_capacity(n);
@@ -30,7 +30,7 @@ impl Selection for TournamentSelection {
             let cand_idxs = index::sample(rng, n, tournament_size);
             let best_idx = cand_idxs
                 .iter()
-                .min_by(|&i, &j| fitness[i].cmp(&fitness[j]))
+                .min_by(|&i, &j| penalties[i].cmp(&penalties[j]))
                 .expect("solutions vec shouldn't be empty");
             selected.push(best_idx);
         }

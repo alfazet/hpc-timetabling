@@ -1,4 +1,4 @@
-use crate::{fitness::Fitness, solution::Solution};
+use crate::{penalty::Penalty, solution::Solution};
 
 pub struct Elitism {
     retain_percentage: f32,
@@ -13,9 +13,9 @@ impl Elitism {
     pub fn split(
         &self,
         solutions: Vec<Solution>,
-        fitness: Vec<Fitness>,
-    ) -> (Vec<Solution>, Vec<Fitness>, Vec<Solution>, Vec<Fitness>) {
-        let mut tuples: Vec<_> = solutions.into_iter().zip(fitness).collect();
+        penalties: Vec<Penalty>,
+    ) -> (Vec<Solution>, Vec<Penalty>, Vec<Solution>, Vec<Penalty>) {
+        let mut tuples: Vec<_> = solutions.into_iter().zip(penalties).collect();
         tuples.sort_by_key(|tuple| tuple.1);
         let cut_point =
             ((tuples.len() as f32 * self.retain_percentage) as usize).min(tuples.len() - 1);

@@ -3,7 +3,7 @@ use crate::distribution::Distribution;
 use crate::{
     crossover::Crossover,
     elitism::Elitism,
-    fitness::Fitness,
+    penalty::Penalty,
     model::{RoomData, TimetableData},
     mutation::Mutation,
     selection::Selection,
@@ -18,7 +18,7 @@ pub trait Solver {
 
 pub struct EvaluatedSolution {
     pub inner: Solution,
-    pub fitness: Fitness,
+    pub penalty: Penalty,
     pub student_assignment: StudentAssignment,
 }
 
@@ -48,9 +48,9 @@ where
         let assignment = assigner::assign_students(&self.data);
         let mut solutions = self.initialize_solutions(rng);
         for generation in 0..self.generations {
-            let mut fitness = self.evaluate_solutions_fitness(&solutions, &assignment);
+            let mut penalties = self.evaluate_solutions_penalties(&solutions, &assignment);
             let (top_solutions, top_fitness, mut other_solutions, mut other_fitness) =
-                self.elitism.split(solutions, fitness);
+                self.elitism.split(solutions, penalties);
             let selected = self.selection.select(rng, &other_solutions, &other_fitness);
             self.crossover
                 .crossover(rng, &mut other_solutions, &selected);
@@ -60,19 +60,19 @@ where
             other_solutions.extend(top_solutions);
             solutions = other_solutions;
             other_fitness.extend(top_fitness);
-            fitness = other_fitness;
+            penalties = other_fitness;
 
-            let min_fitness = fitness
+            let min_penalty = penalties
                 .iter()
                 .min()
                 .expect("solutions vec shouldn't be empty");
             eprintln!(
                 "min penalty after {} generations: {}",
-                generation, min_fitness
+                generation, min_penalty
             );
         }
-        let final_fitness = self.evaluate_solutions_fitness(&solutions, &assignment);
-        let min_idx = final_fitness
+        let final_penalty = self.evaluate_solutions_penalties(&solutions, &assignment);
+        let min_idx = final_penalty
             .iter()
             .enumerate()
             .min_by(|(_, f1), (_, f2)| f1.cmp(f2))
@@ -81,7 +81,7 @@ where
 
         EvaluatedSolution {
             inner: solutions[min_idx].clone(),
-            fitness: final_fitness[min_idx],
+            penalty: final_penalty[min_idx],
             student_assignment: assignment,
         }
     }
@@ -269,7 +269,6 @@ where
     /// counts the hard violations for students not enrolled in a parent of a
     /// class they're attending
     fn students_not_enrolled_in_parent_penalty(&self, assignment: &StudentAssignment) -> u32 {
-        // TODO: not optimal implementation
         let mut n_violations = 0;
         for (class_idx, class) in self.data.classes.iter().enumerate() {
             let Some(parent) = class.parent else {
@@ -374,37 +373,37 @@ where
         sol.times.iter().map(|t| t.penalty).sum()
     }
 
-    fn solution_fitness(&self, sol: &Solution, assignment: &StudentAssignment) -> Fitness {
-        let mut fitness = Fitness::new();
+    fn solution_penalty(&self, sol: &Solution, assignment: &StudentAssignment) -> Penalty {
+        let mut penalty = Penalty::new();
 
         let clas = self.classes_hard_penalties(sol, assignment);
-        fitness.hard += clas;
+        penalty.hard += clas;
 
         let stud = self.student_assignment_conflicts(sol, assignment);
-        fitness.soft += stud * self.data.optimization.student;
+        penalty.soft += stud * self.data.optimization.student;
 
         let room = self.rooms_penalty(sol);
-        fitness.soft += room * self.data.optimization.room;
+        penalty.soft += room * self.data.optimization.room;
 
         let time = self.times_penalty(sol);
-        fitness.soft += time * self.data.optimization.time;
+        penalty.soft += time * self.data.optimization.time;
 
         let dist = Distribution::new(&self.data, sol).calculate_penalty();
-        fitness.hard += dist.hard;
-        fitness.soft += dist.soft * self.data.optimization.distribution;
+        penalty.hard += dist.hard;
+        penalty.soft += dist.soft * self.data.optimization.distribution;
 
-        fitness
+        penalty
     }
 
-    fn evaluate_solutions_fitness(
+    fn evaluate_solutions_penalties(
         &self,
         solutions: &[Solution],
         assignment: &StudentAssignment,
-    ) -> Vec<Fitness> {
+    ) -> Vec<Penalty> {
         // parallelizing this should be a change from `iter` to `par_iter`
         solutions
             .iter()
-            .map(|sol| self.solution_fitness(sol, assignment))
+            .map(|sol| self.solution_penalty(sol, assignment))
             .collect()
     }
 }

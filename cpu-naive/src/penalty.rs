@@ -1,35 +1,35 @@
 use std::ops::{Add, AddAssign};
 use std::{cmp::Ordering, fmt::Display};
 
-/// individual fitness as the number of hard and soft violations,
+/// individual penalty as the number of hard and soft violations,
 /// lower value indicates a better solution
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Fitness {
+pub struct Penalty {
     /// number of hard violations
     pub hard: u32,
     /// number of soft violations
     pub soft: u32,
 }
 
-impl Fitness {
+impl Penalty {
     pub fn new() -> Self {
         Self { hard: 0, soft: 0 }
     }
 }
 
-impl Ord for Fitness {
+impl Ord for Penalty {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.hard.cmp(&other.hard).then(self.soft.cmp(&other.soft))
     }
 }
 
-impl PartialOrd for Fitness {
+impl PartialOrd for Penalty {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Add for Fitness {
+impl Add for Penalty {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -40,13 +40,13 @@ impl Add for Fitness {
     }
 }
 
-impl AddAssign for Fitness {
+impl AddAssign for Penalty {
     fn add_assign(&mut self, rhs: Self) {
         *self = *self + rhs;
     }
 }
 
-impl Display for Fitness {
+impl Display for Penalty {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // when there are hard violations, the number of soft violations doesn't
         // matter, since the solution won't be accepted anyway

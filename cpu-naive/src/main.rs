@@ -8,18 +8,17 @@ use crate::{
 };
 use anyhow::{Context, Result, bail};
 use parser::problem::Problem;
-use rand::{SeedableRng, rngs::StdRng};
 use serializer::output::OutputMetadata;
-use std::{cell::RefCell, env, fs, rc::Rc};
+use std::{env, fs};
 
 mod assigner;
 mod crossover;
 mod distribution;
 mod elitism;
-mod fitness;
 mod model;
 mod mutation;
 mod output;
+mod penalty;
 mod selection;
 mod solution;
 mod solver;
@@ -96,7 +95,7 @@ fn main() -> Result<()> {
     // keep only xml in stdout, debug info in stderr to allow for uses like
     // `cargo r problem.xml > solution.xml`
     println!("{}", xml_solution);
-    eprintln!("best fitness: {}", solution.fitness);
+    eprintln!("best fitness: {}", solution.penalty);
 
     Ok(())
 }
