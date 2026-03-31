@@ -920,6 +920,45 @@ mod tests {
             Penalty::new(),
             dist.same_attendees(&dist.data.distributions[0])
         );
+
+        // invalid solution, not enough time to travel from class 1 to class 3
+        // (classes don't overlap though)
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[5].clone(),
+            ],
+            rooms: vec![
+                Some(DATA2.room_options[0].clone()),
+                Some(DATA2.room_options[2].clone()),
+                Some(DATA2.room_options[5].clone()),
+            ],
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty { hard: 1, soft: 0 },
+            dist.same_attendees(&dist.data.distributions[0])
+        );
+
+        // invalid, every class collide with each other
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![
+                Some(DATA2.room_options[0].clone()),
+                Some(DATA2.room_options[2].clone()),
+                Some(DATA2.room_options[5].clone()),
+            ],
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty { hard: 3, soft: 0 },
+            dist.same_attendees(&dist.data.distributions[0])
+        );
     }
 
     /*#[test]

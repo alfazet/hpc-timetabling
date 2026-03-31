@@ -41,6 +41,7 @@
                 <subpart id="2">
                     <class id="3" parent="1">
                         <room id="2" penalty="0"/>
+                        <room id="4" penalty="0"/>
                         <time days="0000100" start="96" length="22" weeks="1000000000000"
                               penalty="2"/>
                         <time days="0010000" start="108" length="22" weeks="0100000000000"
