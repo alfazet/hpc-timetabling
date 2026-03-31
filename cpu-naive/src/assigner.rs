@@ -1,7 +1,7 @@
 use crate::model::TimetableData;
 
 pub struct StudentAssignment {
-    /// students_in_classes[i] = indices of students taking the class with index `i`
+    /// `students_in_classes[i]` = indices of students taking the class with index `i`
     pub students_in_classes: Vec<Vec<usize>>,
 }
 

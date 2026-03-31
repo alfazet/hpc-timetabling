@@ -208,8 +208,8 @@ where
         let mut n_violations = 0;
 
         n_violations += self.classes_student_limits_penalty(assignment);
-        n_violations += self.students_not_all_subparts_penalty(sol);
-        n_violations += self.students_not_enrolled_in_parent_penalty(sol);
+        n_violations += self.students_not_enrolled_in_exactly_one_per_subpart(assignment);
+        n_violations += self.students_not_enrolled_in_parent_penalty(assignment);
         n_violations += self.rooms_capacity_limits_penalty(sol, assignment);
         n_violations += self.classes_in_unavailable_rooms_penalty(sol);
         n_violations += self.time_intervals_overlap_penalty(sol);
@@ -219,23 +219,46 @@ where
 
     /// counts the hard violations for students enrolled in multiple courses from
     /// a subpart
-    fn students_enrolled_in_multiple_from_subpart(&self, sol: &Solution) -> u32 {
-        // TODO
-        0
-    }
-
-    /// counts the hard violations for students not enrolled in all subparts of
-    /// a config
-    fn students_not_all_subparts_penalty(&self, sol: &Solution) -> u32 {
-        // TODO
-        0
+    fn students_not_enrolled_in_exactly_one_per_subpart(
+        &self,
+        assignment: &StudentAssignment,
+    ) -> u32 {
+        let mut n_violations = 0u32;
+        for (class_idx, class) in self.data.classes.iter().enumerate() {
+            let subpart = &self.data.subparts[class.subpart_idx];
+            for stud_idx in &assignment.students_in_classes[class_idx] {
+                let assigned = (subpart.classes_start..subpart.classes_end)
+                    .filter(|&c| assignment.students_in_classes[c].contains(stud_idx))
+                    .count();
+                // student should be enrolled in exactly one in this subpart
+                if assigned == 0 {
+                    n_violations += 1;
+                } else {
+                    n_violations += assigned as u32 - 1;
+                }
+            }
+        }
+        n_violations
     }
 
     /// counts the hard violations for students not enrolled in a parent of a
     /// class they're attending
-    fn students_not_enrolled_in_parent_penalty(&self, sol: &Solution) -> u32 {
-        // TODO
-        0
+    fn students_not_enrolled_in_parent_penalty(&self, assignment: &StudentAssignment) -> u32 {
+        // TODO: not optimal implementation
+        let mut n_violations = 0;
+        for (class_idx, class) in self.data.classes.iter().enumerate() {
+            let Some(parent) = class.parent else {
+                continue;
+            };
+
+            for stud_idx in &assignment.students_in_classes[class_idx] {
+                if !assignment.students_in_classes[parent].contains(stud_idx) {
+                    n_violations += 1;
+                }
+            }
+        }
+
+        n_violations
     }
 
     /// counts the hard violations for classes having more students
