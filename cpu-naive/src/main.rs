@@ -6,10 +6,11 @@ use crate::{
     selection::TournamentSelection,
     solver::{NaiveSolver, Solver},
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
+use clap::Parser;
 use parser::problem::Problem;
 use serializer::output::OutputMetadata;
-use std::{env, fs};
+use std::fs;
 
 mod assigner;
 mod crossover;
@@ -23,64 +24,63 @@ mod selection;
 mod solution;
 mod solver;
 
+#[derive(Parser, Debug)]
+#[command(
+    author,
+    version,
+    about = "ITC2019 timetable solver",
+    long_about = "Solves ITC2019 timetabling problems using a genetic algorithm.\n\
+                  \n\
+                  You can provide parameters either positionally:\n\
+                  solver <input> [generations] [population_size] [mutation_rate] [elitism]\n\
+                  \n\
+                  Or via flags:\n\
+                  solver <input> --generations 100 --population-size 1000"
+)]
+struct Args {
+    /// problem file in itc2019 XML format
+    input: String,
+
+    /// number of generations of the algorithm
+    #[arg(short, long, default_value_t = 200)]
+    generations: usize,
+
+    /// initial population size
+    #[arg(short, long, default_value_t = 8000)]
+    population_size: usize,
+
+    /// probability of a mutation occuring
+    #[arg(short, long, default_value_t = 0.05)]
+    mutation_rate: f32,
+
+    /// fraction of best solutions to keep unchanged every generation
+    #[arg(short, long, default_value_t = 0.01)]
+    elitism: f32,
+}
+
 fn main() -> Result<()> {
-    let mut generations = 200;
-    let mut population_size = 8000;
-    let mut mutation_rate = 0.05;
-    let mut elitism = 0.01;
+    let args = Args::parse();
 
-    // TODO: refactor with clap
-    let args: Vec<_> = env::args().collect();
-    if args.len() < 2 {
-        bail!(
-            "usage: {} <problem_data.xml> [generations | {}] [population_size | {}] [mutation_rate | {}] [elitism | {}]",
-            args[0],
-            generations,
-            population_size,
-            mutation_rate,
-            elitism,
-        );
-    }
+    let input = fs::read_to_string(&args.input)
+        .with_context(|| format!("failed to read {}", &args.input))?;
 
-    let input = fs::read_to_string(&args[1])?;
     let problem = Problem::parse(input)?;
     let output_metadata = OutputMetadata::from_problem(&problem);
     let data = TimetableData::new(problem);
 
-    if args.len() >= 3 {
-        generations = args[2]
-            .parse::<usize>()
-            .with_context(|| format!("invalid generations value '{}'", &args[2]))?;
-    }
-    if args.len() >= 4 {
-        population_size = args[3]
-            .parse::<usize>()
-            .with_context(|| format!("invalid population_size value '{}'", &args[3]))?;
-    }
-    if args.len() >= 5 {
-        mutation_rate = args[4]
-            .parse::<f32>()
-            .with_context(|| format!("invalid mutation_rate value '{}'", &args[4]))?;
-    }
-    if args.len() >= 6 {
-        elitism = args[5]
-            .parse::<f32>()
-            .with_context(|| format!("invalid elitism value '{}'", &args[5]))?;
-    }
-
     let mut solver = NaiveSolver::new(
-        population_size,
-        generations,
+        args.population_size,
+        args.generations,
         data.clone(),
-        Elitism::new(elitism),
-        TournamentSelection::new((population_size / 100).max(1)),
+        Elitism::new(args.elitism),
+        TournamentSelection::new((args.population_size / 100).max(1)),
         OnePointCrossover::new(),
-        BasicMutation::new(mutation_rate),
+        BasicMutation::new(args.mutation_rate),
     );
 
     eprintln!(
         "Solving '{}' with {} generations of {} individuals",
-        args[1], generations, population_size
+        args.input, args.generations, args.population_size
     );
     let mut rng = rand::rng();
     let solution = solver.solve(&mut rng);

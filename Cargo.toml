@@ -8,10 +8,11 @@ edition = "2024"
 
 [workspace.dependencies]
 anyhow = "1.0.102"
-quick-xml = { version = "0.39.2", features=["serialize"] }
+quick-xml = { version = "0.39.2", features = ["serialize"] }
 thiserror = "2.0.18"
 rand = "0.10.0"
 serde = { version = "1.0.228", features = ["derive"] }
+clap = { version="4.6.0", features = ["derive"] }
 
 parser = { path = "parser" }
 serializer = { path = "serializer" }
