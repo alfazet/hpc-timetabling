@@ -486,7 +486,7 @@ mod tests {
 
     static DATA: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
         TimetableData::new(
-            Problem::parse(include_str!("../../data/test-data/distribution-test.xml")).unwrap(),
+            Problem::parse(include_str!("../../data/test-data/distribution-test-1.xml")).unwrap(),
         )
     });
 
