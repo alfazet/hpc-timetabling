@@ -460,15 +460,19 @@ impl<'a> Distribution<'a> {
 
         let mut factor = 0;
         let mut penalty = Penalty::new();
-        for (_, day_load) in days {
+        for (day_tuple, day_load) in days {
             if day_load > s {
-                factor = day_load - s;
-                penalty.apply_penalty(dist.penalty);
+                factor += day_load - s;
+                dbg!(day_tuple);
+                dbg!(factor);
+                dbg!(penalty);
             }
         }
 
+        penalty.apply_penalty(dist.penalty);
         penalty.soft *= factor;
         penalty.soft /= self.data.n_weeks;
+
         penalty
     }
 
@@ -1115,12 +1119,49 @@ mod tests {
         );
     }
 
-    /*#[test]
+    #[test]
     fn max_day_load() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDayLoad(mdl) = dist.data.distributions[5].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty::new(),
+            dist.max_day_load(&dist.data.distributions[5], mdl)
+        );
 
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDayLoad(mdl) = dist.data.distributions[5].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty {
+                hard: 0,
+                soft: 10 * (6 + 28 + 6 + 6 + 6 + 6) / dist.data.n_weeks
+            },
+            dist.max_day_load(&dist.data.distributions[5], mdl)
+        );
     }
 
-    #[test]
+    /*#[test]
     fn max_breaks() {
 
     }

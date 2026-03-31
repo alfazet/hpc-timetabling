@@ -83,6 +83,11 @@
 			<class id="2"/>
 			<class id="3"/>
 		</distribution>
+        <distribution type="MaxDayLoad(22)" penalty="10">
+            <class id="1"/>
+            <class id="2"/>
+            <class id="3"/>
+        </distribution>
     </distributions>
 
     <students>
