@@ -3,9 +3,9 @@ use crate::distribution::Distribution;
 use crate::{
     crossover::Crossover,
     elitism::Elitism,
-    penalty::Penalty,
     model::{RoomData, TimetableData},
     mutation::Mutation,
+    penalty::Penalty,
     selection::Selection,
     solution::Solution,
 };

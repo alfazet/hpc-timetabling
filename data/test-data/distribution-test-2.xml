@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem PUBLIC
+        "-//ITC 2019//DTD Problem Format/EN"
+        "http://www.itc2019.org/competition-format.dtd">
+
+<problem name="unique-instance-name" nrDays="7" nrWeeks="13" slotsPerDay="288">
+    <optimization time="2" room="1" distribution="1" student="2"/>
+
+    <rooms>
+        <room id="1" capacity="50"/>
+        <room id="2" capacity="100">
+            <travel room="1" value="2"/>
+        </room>
+        <room id="4" capacity="80">
+            <travel room="1" value="10"/>
+            <travel room="2" value="3"/>
+        </room>
+    </rooms>
+
+    <courses>
+        <course id="1">
+            <config id="1">
+                <subpart id="1">
+                    <class id="1" limit="20">
+                        <room id="1" penalty="0"/>
+                        <room id="2" penalty="10"/>
+                        <time days="1010100" start="90" length="10" weeks="1111111111111"
+                              penalty="0"/>
+                        <time days="0101000" start="86" length="15" weeks="1111111111111"
+                              penalty="2"/>
+                    </class>
+                    <class id="2" limit="20">
+                        <room id="2" penalty="5"/>
+                        <room id="4" penalty="0"/>
+                        <time days="1000000" start="86" length="18" weeks="0101010101010"
+                              penalty="0"/>
+                        <time days="0100000" start="86" length="18" weeks="0101010101010"
+                              penalty="0"/>
+                    </class>
+                </subpart>
+                <subpart id="2">
+                    <class id="3" parent="1">
+                        <room id="2" penalty="0"/>
+                        <room id="4" penalty="0"/>
+                        <time days="0000100" start="96" length="22" weeks="1000000000000"
+                              penalty="2"/>
+                        <time days="0010000" start="108" length="22" weeks="0100000000000"
+                              penalty="0"/>
+                        <time days="0100000" start="86" length="22" weeks="0010000000000"
+                              penalty="3"/>
+                        <time days="1000000" start="76" length="22" weeks="0001000000000"
+                              penalty="4"/>
+                        <time days="1100000" start="66" length="22" weeks="0001000000000"
+                              penalty="4"/>
+                    </class>
+                </subpart>
+            </config>
+        </course>
+    </courses>
+
+    <distributions>
+        <distribution type="SameAttendees" required="true">
+            <class id="1"/>
+            <class id="2"/>
+            <class id="3"/>
+        </distribution>
+		<distribution type="Precedence" penalty="2">
+			<class id="1"/>
+			<class id="2"/>
+			<class id="3"/>
+		</distribution>
+        <distribution type="WorkDay(30)" required="true">
+            <class id="1"/>
+            <class id="2"/>
+            <class id="3"/>
+        </distribution>
+        <distribution type="MinGap(1)" penalty="10">
+            <class id="1"/>
+            <class id="3"/>
+        </distribution>
+		<distribution type="MaxDays(2)" penalty="15">
+			<class id="1"/>
+			<class id="2"/>
+			<class id="3"/>
+		</distribution>
+        <distribution type="MaxDayLoad(22)" penalty="10">
+            <class id="1"/>
+            <class id="2"/>
+            <class id="3"/>
+        </distribution>
+    </distributions>
+
+    <students>
+        <student id="1">
+            <course id="1"/>
+            <course id="5"/>
+        </student>
+        <student id="2">
+            <course id="1"/>
+            <course id="3"/>
+            <course id="4"/>
+        </student>
+    </students>
+</problem>
