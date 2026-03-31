@@ -355,11 +355,17 @@ impl<'a> Distribution<'a> {
                 (i + 1..dist.class_indices.len()).for_each(|j| {
                     // i < j
                     let c_j = &self.sol.times[dist.class_indices[j]].times;
-                    if !((c_i.weeks.0.leading_zeros() < c_j.weeks.0.leading_zeros())
-                        || ((c_i.weeks.0.leading_zeros() == c_j.weeks.0.leading_zeros())
-                            && ((c_i.days.0.leading_zeros() < c_j.days.0.leading_zeros())
-                                || ((c_i.days.0.leading_zeros() == c_j.days.0.leading_zeros())
-                                    && (c_i.start + c_i.length <= c_j.start)))))
+                    let weeks_lower_cond =
+                        c_i.weeks.0.trailing_zeros() < c_j.weeks.0.trailing_zeros();
+                    let weeks_equal_cond =
+                        c_i.weeks.0.trailing_zeros() == c_j.weeks.0.trailing_zeros();
+                    let days_lower_cond = c_i.days.0.trailing_zeros() < c_j.days.0.trailing_zeros();
+                    let days_equal_cond =
+                        c_i.days.0.trailing_zeros() == c_j.days.0.trailing_zeros();
+                    let ends_before_start = c_i.start + c_i.length <= c_j.start;
+                    if !(weeks_lower_cond
+                        || (weeks_equal_cond
+                            && (days_lower_cond || (days_equal_cond && ends_before_start))))
                     {
                         penalty.apply_penalty(dist.penalty);
                     }
@@ -961,12 +967,37 @@ mod tests {
         );
     }
 
-    /*#[test]
+    #[test]
     fn precedence() {
+        // correct precedence
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(), // on Tuesday, every week
+                DATA2.time_options[2].clone(), // on Monday, but on second week -- valid
+                DATA2.time_options[6].clone(), // third week -- valid
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(Penalty::new(), dist.precedence(&dist.data.distributions[1]));
 
+        // reverse precedence between class 2 and class 3
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[2].clone(), // on Monday, second week
+                DATA2.time_options[4].clone(), // on Friday, first week
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty { hard: 0, soft: 2 },
+            dist.precedence(&dist.data.distributions[1])
+        );
     }
 
-    #[test]
+    /*#[test]
     fn work_day() {
 
     }
