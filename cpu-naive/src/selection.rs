@@ -22,7 +22,12 @@ impl TournamentSelection {
 }
 
 impl Selection for TournamentSelection {
-    fn select(&mut self, rng: &mut dyn Rng, solutions: &[Solution], penalties: &[Penalty]) -> Vec<usize> {
+    fn select(
+        &mut self,
+        rng: &mut dyn Rng,
+        solutions: &[Solution],
+        penalties: &[Penalty],
+    ) -> Vec<usize> {
         let n = solutions.len();
         let tournament_size = self.tournament_size.min(n);
         let mut selected = Vec::with_capacity(n);

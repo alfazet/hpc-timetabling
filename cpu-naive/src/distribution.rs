@@ -1,5 +1,5 @@
-use crate::penalty::Penalty;
 use crate::model::{DistributionData, RoomOption, TimetableData};
+use crate::penalty::Penalty;
 use crate::solution::Solution;
 use parser::distributions::DistributionKind;
 use parser::timeslots::TimeSlots;
@@ -478,8 +478,8 @@ impl<'a> Distribution<'a> {
 #[cfg(test)]
 mod tests {
     use crate::distribution::Distribution;
-    use crate::penalty::Penalty;
     use crate::model::TimetableData;
+    use crate::penalty::Penalty;
     use crate::solution::Solution;
     use parser::Problem;
     use std::sync::LazyLock;
@@ -894,13 +894,32 @@ mod tests {
         );
     }
 
-    static DATA2: LazyLock<TimetableData, fn() -> TimetableData> = std::sync::LazyLock::new(|| {
-        TimetableData::new(Problem::parse(include_str!("../../data/test-data/distribution-test-2.xml")).unwrap())
+    static DATA2: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
+        TimetableData::new(
+            Problem::parse(include_str!("../../data/test-data/distribution-test-2.xml")).unwrap(),
+        )
     });
 
     #[test]
     fn same_attendees() {
-
+        // valid solution, instructor able to attend every class
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[5].clone(),
+            ],
+            rooms: vec![
+                Some(DATA2.room_options[0].clone()),
+                Some(DATA2.room_options[2].clone()),
+                Some(DATA2.room_options[4].clone()),
+            ],
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty::new(),
+            dist.same_attendees(&dist.data.distributions[0])
+        );
     }
 
     /*#[test]
