@@ -488,6 +488,7 @@ mod tests {
     use crate::penalty::Penalty;
     use crate::solution::Solution;
     use parser::Problem;
+    use parser::distributions::DistributionKind;
     use std::sync::LazyLock;
 
     static DATA1: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
@@ -997,22 +998,124 @@ mod tests {
         );
     }
 
-    /*#[test]
+    #[test]
     fn work_day() {
-
+        // exceed 30 timeslots
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::WorkDay(wd) = dist.data.distributions[2].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 2, soft: 0 },
+            dist.work_day(&dist.data.distributions[2], wd)
+        );
     }
 
     #[test]
     fn min_gap() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MinGap(mg) = dist.data.distributions[3].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty::new(),
+            dist.min_gap(&dist.data.distributions[3], mg)
+        );
 
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MinGap(mg) = dist.data.distributions[3].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 0, soft: 10 },
+            dist.min_gap(&dist.data.distributions[3], mg)
+        );
     }
 
     #[test]
     fn max_days() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty::new(),
+            dist.max_days(&dist.data.distributions[4], md)
+        );
 
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 0, soft: 15 },
+            dist.max_days(&dist.data.distributions[4], md)
+        );
+
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 0, soft: 30 },
+            dist.max_days(&dist.data.distributions[4], md)
+        );
     }
 
-    #[test]
+    /*#[test]
     fn max_day_load() {
 
     }
