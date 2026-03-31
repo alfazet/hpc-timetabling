@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE problem PUBLIC
+	"-//ITC 2019//DTD Problem Format/EN"
+	"http://www.itc2019.org/competition-format.dtd">
+
+<problem name="unique-instance-name" nrDays="7" nrWeeks="13" slotsPerDay="288">
+	<optimization time="2" room="1" distribution="1" student="2"/>
+
+	<courses>
+		<course id="1">
+			<config id="1">
+				<subpart id="1">
+					<class id="1" limit="20">
+						<time days="0101000" start="86" length="15" weeks="1111111111111"
+							penalty="2"/>
+					</class>
+					<class id="2" limit="20">
+						<time days="0100000" start="86" length="18" weeks="0101010101010"
+							penalty="0"/>
+					</class>
+				</subpart>
+				<subpart id="2">
+					<class id="3" parent="1" room="false">
+						<time days="1100000" start="66" length="22" weeks="0001000000000"
+						  	penalty="4"/>
+					</class>
+				</subpart>
+			</config>
+		</course>
+	</courses>
+
+	<students>
+		<student id="1">
+			<course id="1"/>
+			<course id="5"/>
+		</student>
+		<student id="2">
+			<course id="1"/>
+			<course id="3"/>
+			<course id="4"/>
+		</student>
+	</students>
+
+
+    <rooms></rooms>
+    <distributions></distributions>
+</problem>

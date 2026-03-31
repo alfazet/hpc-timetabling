@@ -8,8 +8,9 @@ use crate::{
 };
 use anyhow::{Context, Result, bail};
 use parser::problem::Problem;
+use rand::{SeedableRng, rngs::StdRng};
 use serializer::output::OutputMetadata;
-use std::{env, fs};
+use std::{cell::RefCell, env, fs, rc::Rc};
 
 mod assigner;
 mod crossover;
@@ -68,23 +69,22 @@ fn main() -> Result<()> {
             .with_context(|| format!("invalid elitism value '{}'", &args[5]))?;
     }
 
-    let rng = Box::new(rand::rng());
     let mut solver = NaiveSolver::new(
-        rng.clone(),
         population_size,
         generations,
         data.clone(),
         Elitism::new(elitism),
-        TournamentSelection::new(rng.clone(), (population_size / 100).max(1)),
-        OnePointCrossover::new(rng.clone()),
-        BasicMutation::new(rng, mutation_rate),
+        TournamentSelection::new((population_size / 100).max(1)),
+        OnePointCrossover::new(),
+        BasicMutation::new(mutation_rate),
     );
 
     eprintln!(
         "Solving '{}' with {} generations of {} individuals",
         args[1], generations, population_size
     );
-    let solution = solver.solve();
+    let mut rng = rand::rng();
+    let solution = solver.solve(&mut rng);
 
     let output = output::output(&solution.inner, &solution.student_assignment, &data);
     let Some(output) = output else {

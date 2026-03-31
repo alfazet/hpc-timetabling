@@ -13,7 +13,7 @@ use parser::timeslots::TimeSlots;
 use rand::Rng;
 
 pub trait Solver {
-    fn solve(&mut self) -> EvaluatedSolution;
+    fn solve(&mut self, rng: &mut dyn Rng) -> EvaluatedSolution;
 }
 
 pub struct EvaluatedSolution {
@@ -28,7 +28,6 @@ where
     C: Crossover,
     M: Mutation,
 {
-    rng: Box<dyn Rng>,
     population_size: usize,
     generations: usize,
     data: TimetableData,
@@ -44,17 +43,18 @@ where
     C: Crossover,
     M: Mutation,
 {
-    fn solve(&mut self) -> EvaluatedSolution {
+    fn solve(&mut self, rng: &mut dyn Rng) -> EvaluatedSolution {
         // because we don't even use the solution (for now) we can generate it only once
         let assignment = assigner::assign_students(&self.data);
-        let mut solutions = self.initialize_solutions();
+        let mut solutions = self.initialize_solutions(rng);
         for generation in 0..self.generations {
             let mut fitness = self.evaluate_solutions_fitness(&solutions, &assignment);
             let (top_solutions, top_fitness, mut other_solutions, mut other_fitness) =
                 self.elitism.split(solutions, fitness);
-            let selected = self.selection.select(&other_solutions, &other_fitness);
-            self.crossover.crossover(&mut other_solutions, &selected);
-            self.mutation.mutate(&mut other_solutions, &self.data);
+            let selected = self.selection.select(rng, &other_solutions, &other_fitness);
+            self.crossover
+                .crossover(rng, &mut other_solutions, &selected);
+            self.mutation.mutate(rng, &mut other_solutions, &self.data);
 
             // merge unchanged top solutions with crossed-over/mutated others
             other_solutions.extend(top_solutions);
@@ -94,7 +94,6 @@ where
     M: Mutation,
 {
     pub fn new(
-        rng: Box<dyn Rng>,
         population_size: usize,
         generations: usize,
         data: TimetableData,
@@ -104,7 +103,6 @@ where
         mutation: M,
     ) -> Self {
         Self {
-            rng,
             population_size,
             generations,
             data,
@@ -115,10 +113,10 @@ where
         }
     }
 
-    fn initialize_solutions(&mut self) -> Vec<Solution> {
+    fn initialize_solutions(&mut self, rng: &mut dyn Rng) -> Vec<Solution> {
         let mut solutions = Vec::with_capacity(self.population_size);
         for _ in 0..self.population_size {
-            solutions.push(Solution::new(&self.data, &mut self.rng));
+            solutions.push(Solution::new(&self.data, rng));
         }
 
         solutions
@@ -203,7 +201,6 @@ where
         n_conflicts
     }
 
-    /// - TODO: sf else?
     fn classes_hard_penalties(&self, sol: &Solution, assignment: &StudentAssignment) -> u32 {
         let mut n_violations = 0;
 
@@ -224,20 +221,48 @@ where
         assignment: &StudentAssignment,
     ) -> u32 {
         let mut n_violations = 0u32;
-        for (class_idx, class) in self.data.classes.iter().enumerate() {
-            let subpart = &self.data.subparts[class.subpart_idx];
-            for stud_idx in &assignment.students_in_classes[class_idx] {
-                let assigned = (subpart.classes_start..subpart.classes_end)
-                    .filter(|&c| assignment.students_in_classes[c].contains(stud_idx))
-                    .count();
-                // student should be enrolled in exactly one in this subpart
-                if assigned == 0 {
-                    n_violations += 1;
-                } else {
-                    n_violations += assigned as u32 - 1;
+
+        for (student_idx, student) in self.data.students.iter().enumerate() {
+            for &course_idx in &student.course_indices {
+                let course = &self.data.courses[course_idx];
+
+                let mut best_config_penalty = u32::MAX;
+
+                for config_idx in course.configs_start..course.configs_end {
+                    let config = &self.data.configs[config_idx];
+
+                    let mut penalty = 0u32;
+
+                    for subpart_idx in config.subparts_start..config.subparts_end {
+                        let subpart = &self.data.subparts[subpart_idx];
+
+                        let assigned = (subpart.classes_start..subpart.classes_end)
+                            .filter(|&class_idx| {
+                                assignment.students_in_classes[class_idx].contains(&student_idx)
+                            })
+                            .count();
+
+                        // should be assigned to exaclty one
+                        if assigned == 0 {
+                            penalty += 1;
+                        } else if assigned > 1 {
+                            penalty += (assigned as u32) - 1;
+                        }
+                    }
+
+                    // since the student should attend just one config, we pick
+                    // the one with lowest penalty as the "indended" solution
+                    best_config_penalty = best_config_penalty.min(penalty);
                 }
+
+                debug_assert!(
+                    best_config_penalty != u32::MAX,
+                    "a course should have at least one subpart"
+                );
+                n_violations += best_config_penalty;
             }
         }
+
         n_violations
     }
 
@@ -381,5 +406,68 @@ where
             .iter()
             .map(|sol| self.solution_fitness(sol, assignment))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use parser::Problem;
+
+    use crate::{
+        assigner::StudentAssignment, crossover::OnePointCrossover, elitism::Elitism,
+        model::TimetableData, mutation::BasicMutation, selection::TournamentSelection,
+        solver::NaiveSolver,
+    };
+
+    fn solver() -> NaiveSolver<TournamentSelection, OnePointCrossover, BasicMutation> {
+        let xml = include_str!("../../data/test-data/students-test.xml");
+        let problem = Problem::parse(xml).unwrap();
+        let data = TimetableData::new(problem);
+        let solver = NaiveSolver::new(
+            1,
+            1,
+            data,
+            Elitism::new(0.0),
+            TournamentSelection::new(1),
+            OnePointCrossover::new(),
+            BasicMutation::new(0.0),
+        );
+        solver
+    }
+
+    #[test]
+    fn test_students_not_enrolled_in_parent_penalty_empty() {
+        let solver = solver();
+        let assignment = StudentAssignment {
+            students_in_classes: vec![vec![]; 3],
+        };
+
+        let penalty = solver.students_not_enrolled_in_parent_penalty(&assignment);
+
+        assert_eq!(penalty, 0);
+    }
+
+    #[test]
+    fn test_students_not_enrolled_in_parent_penalty() {
+        let solver = solver();
+        let assignment = StudentAssignment {
+            students_in_classes: vec![vec![], vec![], vec![0, 1]],
+        };
+
+        let penalty = solver.students_not_enrolled_in_parent_penalty(&assignment);
+
+        assert_eq!(penalty, 2);
+    }
+
+    #[test]
+    fn test_students_not_enrolled_in_parent_penalty_correct() {
+        let solver = solver();
+        let assignment = StudentAssignment {
+            students_in_classes: vec![vec![0, 1], vec![1], vec![0, 1]],
+        };
+
+        let penalty = solver.students_not_enrolled_in_parent_penalty(&assignment);
+
+        assert_eq!(penalty, 0);
     }
 }

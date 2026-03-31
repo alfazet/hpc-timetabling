@@ -18,7 +18,7 @@ impl Solution {
     /// generates a random (quite possibly useless) solution
     /// by assigning to each class a random time slot and a random room
     /// out of its [TimeOption]s and [RoomOption]s
-    pub fn new(data: &TimetableData, rng: &mut impl Rng) -> Self {
+    pub fn new(data: &TimetableData, rng: &mut dyn Rng) -> Self {
         let times: Vec<_> = data
             .classes
             .iter()

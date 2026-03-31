@@ -3,21 +3,19 @@ use rand::{Rng, RngExt, seq::SliceRandom};
 use crate::solution::Solution;
 
 pub trait Crossover {
-    fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: &[usize]);
+    fn crossover(&mut self, rng: &mut dyn Rng, solutions: &mut Vec<Solution>, selected: &[usize]);
 }
 
-pub struct OnePointCrossover {
-    rng: Box<dyn Rng>,
-}
+pub struct OnePointCrossover {}
 
 impl OnePointCrossover {
-    pub fn new(rng: Box<dyn Rng>) -> Self {
-        Self { rng }
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
 impl Crossover for OnePointCrossover {
-    fn crossover(&mut self, solutions: &mut Vec<Solution>, selected: &[usize]) {
+    fn crossover(&mut self, rng: &mut dyn Rng, solutions: &mut Vec<Solution>, selected: &[usize]) {
         debug_assert!(!solutions.is_empty());
         debug_assert!(selected.len() <= solutions.len());
 
@@ -34,7 +32,7 @@ impl Crossover for OnePointCrossover {
             let parent_b = &solutions[*b];
 
             // the child takes a random proportion of values from both parents
-            let cut_point = self.rng.random_range(1..n_classes);
+            let cut_point = rng.random_range(1..n_classes);
             let child1 = Solution {
                 times: [&parent_a.times[..cut_point], &parent_b.times[cut_point..]].concat(),
                 rooms: [&parent_a.rooms[..cut_point], &parent_b.rooms[cut_point..]].concat(),
@@ -46,7 +44,7 @@ impl Crossover for OnePointCrossover {
             new_solutions.push(child1);
             new_solutions.push(child2);
         }
-        new_solutions.shuffle(&mut self.rng);
+        new_solutions.shuffle(rng);
         new_solutions.truncate(n_solutions);
 
         *solutions = new_solutions;
