@@ -6,11 +6,13 @@ pub trait Crossover {
     fn crossover(&mut self, rng: &mut dyn Rng, solutions: &mut Vec<Solution>, selected: &[usize]);
 }
 
-pub struct OnePointCrossover {}
+pub struct OnePointCrossover {
+    probability: f32,
+}
 
 impl OnePointCrossover {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(probability: f32) -> Self {
+        Self { probability }
     }
 }
 
@@ -30,6 +32,12 @@ impl Crossover for OnePointCrossover {
         for [a, b] in chunks {
             let parent_a = &solutions[*a];
             let parent_b = &solutions[*b];
+
+            if rng.random_range(0.0..1.0) > self.probability {
+                new_solutions.push(parent_a.clone());
+                new_solutions.push(parent_b.clone());
+                continue;
+            }
 
             // the child takes a random proportion of values from both parents
             let cut_point = rng.random_range(1..n_classes);

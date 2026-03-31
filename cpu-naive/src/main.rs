@@ -49,6 +49,10 @@ struct Args {
     #[arg(short, long, default_value_t = 8000)]
     population_size: usize,
 
+    /// probability of a crossover between two parents occuring
+    #[arg(short, long, default_value_t = 0.8)]
+    crossover_rate: f32,
+
     /// probability of a mutation occuring
     #[arg(short, long, default_value_t = 0.05)]
     mutation_rate: f32,
@@ -74,7 +78,7 @@ fn main() -> Result<()> {
         data.clone(),
         Elitism::new(args.elitism),
         TournamentSelection::new((args.population_size / 100).max(1)),
-        OnePointCrossover::new(),
+        OnePointCrossover::new(args.crossover_rate),
         BasicMutation::new(args.mutation_rate),
     );
 

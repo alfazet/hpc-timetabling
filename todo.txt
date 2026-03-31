@@ -1,2 +1,5 @@
-- implement not implemented student penalties (the ones returning 0)
+- implement dynamic parameters (ex. when it's stuck, increase the mutation rate
+or decrease with time)
+
+- implement student mutations and crossover
 
