@@ -1,3 +1,4 @@
+use crate::adjuster::{Adjuster, GenerationStats};
 use crate::assigner::{self, StudentAssignment};
 use crate::distribution::Distribution;
 use crate::{
@@ -35,9 +36,8 @@ where
     selection: S,
     crossover: C,
     mutation: M,
-    /// amount of consecutive current generations with no improvement in penalty
-    no_improvement: usize,
-    last_penalty: Option<Penalty>,
+    stats: GenerationStats,
+    adjuster: Adjuster,
 }
 
 impl<S, C, M> Solver for NaiveSolver<S, C, M>
@@ -69,21 +69,14 @@ where
                 .into_iter()
                 .min()
                 .expect("solutions vec shouldn't be empty");
-            eprintln!(
-                "min penalty after {} generations: {}",
-                generation, min_penalty
+
+            self.stats.update(min_penalty);
+            self.stats.print_logs();
+            self.adjuster.adjust(
+                &self.stats,
+                self.mutation.probability(),
+                self.crossover.probability(),
             );
-
-            if let Some(last_penalty) = self.last_penalty
-                && last_penalty == min_penalty
-            {
-                self.no_improvement += 1;
-            } else {
-                self.no_improvement = 0;
-            }
-            self.last_penalty = Some(min_penalty);
-
-            self.adjust_parameters();
         }
         let final_penalty = self.evaluate_solutions_penalties(&solutions, &assignment);
         let min_idx = final_penalty
@@ -124,8 +117,8 @@ where
             selection,
             crossover,
             mutation,
-            no_improvement: 0,
-            last_penalty: None,
+            stats: GenerationStats::new(),
+            adjuster: Adjuster::new(generations / 50),
         }
     }
 
@@ -136,29 +129,6 @@ where
         }
 
         solutions
-    }
-
-    fn adjust_parameters(&mut self) {
-        let max_no_improvement = 30;
-        if self.no_improvement < max_no_improvement {
-            return;
-        }
-        eprintln!(
-            "no improvement for {} generations, adjusting parameters...",
-            max_no_improvement
-        );
-
-        let p = self.mutation.probability();
-        eprint!("mutation: {p} ->");
-        *p = (*p * 1.2).min(0.5);
-        eprintln!(" {p}");
-
-        let p = self.crossover.probability();
-        eprint!("crossover: {p} ->");
-        *p = (*p * 1.2).min(1.0);
-        eprintln!(" {p}");
-
-        self.no_improvement = 0;
     }
 
     fn timeslots_overlap(a: &TimeSlots, b: &TimeSlots) -> bool {
