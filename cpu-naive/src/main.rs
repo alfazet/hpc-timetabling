@@ -12,6 +12,7 @@ use parser::problem::Problem;
 use serializer::output::OutputMetadata;
 use std::fs;
 
+mod adjuster;
 mod assigner;
 mod crossover;
 mod distribution;
@@ -23,7 +24,7 @@ mod penalty;
 mod selection;
 mod solution;
 mod solver;
-mod adjuster;
+mod stats;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -82,7 +83,9 @@ fn main() -> Result<()> {
         args.generations,
         data.clone(),
         Elitism::new(args.elitism),
-        TournamentSelection::new(((args.population_size as f32 * args.tournament_frac) as usize).max(1)),
+        TournamentSelection::new(
+            ((args.population_size as f32 * args.tournament_frac) as usize).max(1),
+        ),
         OnePointCrossover::new(args.crossover_rate),
         BasicMutation::new(args.mutation_rate),
     );

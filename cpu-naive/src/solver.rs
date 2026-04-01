@@ -1,6 +1,7 @@
-use crate::adjuster::{Adjuster, GenerationStats};
+use crate::adjuster::Adjuster;
 use crate::assigner::{self, StudentAssignment};
 use crate::distribution::Distribution;
+use crate::stats::GenerationStats;
 use crate::{
     crossover::Crossover,
     elitism::Elitism,
@@ -437,7 +438,7 @@ mod tests {
             data,
             Elitism::new(0.0),
             TournamentSelection::new(1),
-            OnePointCrossover::new(),
+            OnePointCrossover::new(0.0),
             BasicMutation::new(0.0),
         );
         solver

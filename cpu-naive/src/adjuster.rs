@@ -1,39 +1,4 @@
-use crate::penalty::Penalty;
-
-pub struct GenerationStats {
-    generation: usize,
-    min_penalty: Option<Penalty>,
-    no_improvement: usize,
-}
-
-impl GenerationStats {
-    pub fn new() -> Self {
-        Self {
-            generation: 0,
-            min_penalty: None,
-            no_improvement: 0,
-        }
-    }
-
-    pub fn update(&mut self, current_min_penalty: Penalty) {
-        if let Some(p) = self.min_penalty
-            && current_min_penalty == p
-        {
-            self.no_improvement += 1;
-        } else {
-            self.no_improvement = 0;
-        }
-        self.generation += 1;
-        self.min_penalty = Some(current_min_penalty);
-    }
-
-    pub fn print_logs(&self) {
-        let Some(p) = self.min_penalty else {
-            return;
-        };
-        eprintln!("min penalty after {} generations: {}", self.generation, p);
-    }
-}
+use crate::{penalty::Penalty, stats::GenerationStats};
 
 pub struct Adjuster {
     max_no_improvement: usize,
