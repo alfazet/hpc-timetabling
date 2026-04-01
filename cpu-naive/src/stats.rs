@@ -22,7 +22,7 @@ impl GenerationStats {
         }
     }
 
-    pub fn update(&mut self, current_min_penalty: Penalty) {
+    pub fn update(&mut self, current_min_penalty: Penalty, current_mean_hard_penalty: f32) {
         if let Some(p) = self.min_penalty
             && current_min_penalty == p
         {
@@ -30,6 +30,7 @@ impl GenerationStats {
         } else {
             self.no_improvement = 0;
         }
+        self.mean_penalty_hard = Some(current_mean_hard_penalty);
         self.generation += 1;
         self.min_penalty = Some(current_min_penalty);
         if let Some(prev_mean) = self.mean_penalty_hard {

@@ -66,13 +66,17 @@ where
             other_fitness.extend(top_fitness);
             penalties = other_fitness;
 
+            let mean_penalty_hard =
+                penalties.iter().map(|p| p.hard as f32).sum::<f32>() / penalties.len() as f32;
+
             let min_penalty = penalties
                 .into_iter()
                 .min()
                 .expect("solutions vec shouldn't be empty");
 
-            self.stats.update(min_penalty);
+            self.stats.update(min_penalty, mean_penalty_hard as f32);
             self.stats.print_logs();
+
             self.adjuster.adjust(
                 &self.stats,
                 self.mutation.probability(),
