@@ -23,6 +23,7 @@ mod penalty;
 mod selection;
 mod solution;
 mod solver;
+mod utils;
 
 #[derive(Parser, Debug)]
 #[command(

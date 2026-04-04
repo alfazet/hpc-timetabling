@@ -1,5 +1,6 @@
 use crate::assigner::{self, StudentAssignment};
 use crate::distribution::Distribution;
+use crate::utils;
 use crate::{
     crossover::Crossover,
     elitism::Elitism,
@@ -44,11 +45,10 @@ where
     M: Mutation,
 {
     fn solve(&mut self, rng: &mut dyn Rng) -> EvaluatedSolution {
-        // because we don't even use the solution (for now) we can generate it only once
-        let assignment = assigner::assign_students(&self.data);
         let mut solutions = self.initialize_solutions(rng);
         for generation in 0..self.generations {
-            let mut penalties = self.evaluate_solutions_penalties(&solutions, &assignment);
+            let assignments = self.find_assignments(&solutions);
+            let mut penalties = self.evaluate_solutions_penalties(&solutions, &assignments);
             let (top_solutions, top_fitness, mut other_solutions, mut other_fitness) =
                 self.elitism.split(solutions, penalties);
             let selected = self.selection.select(rng, &other_solutions, &other_fitness);
@@ -71,18 +71,31 @@ where
                 generation, min_penalty
             );
         }
-        let final_penalty = self.evaluate_solutions_penalties(&solutions, &assignment);
-        let min_idx = final_penalty
+
+        let final_assignments = self.find_assignments(&solutions);
+        let final_penalties = self.evaluate_solutions_penalties(&solutions, &final_assignments);
+        let min_idx = final_penalties
             .iter()
             .enumerate()
             .min_by(|(_, f1), (_, f2)| f1.cmp(f2))
             .expect("solutions vec shouldn't be empty")
             .0;
 
+        let (best_solution, best_assignment, min_penalty) = {
+            let min_penalty = final_penalties[min_idx];
+            let mut assignments = final_assignments;
+
+            (
+                solutions.swap_remove(min_idx),
+                assignments.swap_remove(min_idx),
+                min_penalty,
+            )
+        };
+
         EvaluatedSolution {
-            inner: solutions[min_idx].clone(),
-            penalty: final_penalty[min_idx],
-            student_assignment: assignment,
+            inner: best_solution,
+            penalty: min_penalty,
+            student_assignment: best_assignment,
         }
     }
 }
@@ -120,16 +133,6 @@ where
         }
 
         solutions
-    }
-
-    fn timeslots_overlap(a: &TimeSlots, b: &TimeSlots) -> bool {
-        let shared_weeks = a.weeks.0 & b.weeks.0;
-        let shared_days = a.days.0 & b.days.0;
-        if shared_weeks == 0 || shared_days == 0 {
-            return false;
-        }
-
-        a.start < b.start + b.length && b.start < a.start + a.length
     }
 
     fn travel_time_between(rooms: &[RoomData], room_a: usize, room_b: usize) -> u32 {
@@ -179,7 +182,7 @@ where
                     let cj = student_classes[j];
                     let time_a = &sol.times[ci].times;
                     let time_b = &sol.times[cj].times;
-                    if Self::timeslots_overlap(time_a, time_b) {
+                    if utils::timeslots_overlap(time_a, time_b) {
                         n_conflicts += 1;
                     } else {
                         let travel = match (&sol.rooms[ci], &sol.rooms[cj]) {
@@ -333,7 +336,7 @@ where
                     let times = &time_option.times;
                     if unavailabilities
                         .iter()
-                        .any(|unavailability| Self::timeslots_overlap(unavailability, times))
+                        .any(|unavailability| utils::timeslots_overlap(unavailability, times))
                     {
                         return 1;
                     }
@@ -354,7 +357,10 @@ where
                     for i in index + 1..sol.rooms.len() {
                         if let Some(i_room_idx) = sol.rooms[i].as_ref().map(|r| r.room_idx)
                             && room_idx == i_room_idx
-                            && Self::timeslots_overlap(&sol.times[index].times, &sol.times[i].times)
+                            && utils::timeslots_overlap(
+                                &sol.times[index].times,
+                                &sol.times[i].times,
+                            )
                         {
                             return 1;
                         }
@@ -395,15 +401,22 @@ where
         penalty
     }
 
+    fn find_assignments(&self, solutions: &[Solution]) -> Vec<StudentAssignment> {
+        solutions
+            .iter()
+            .map(|sol| assigner::assign_students(&self.data, sol))
+            .collect()
+    }
+
     fn evaluate_solutions_penalties(
         &self,
         solutions: &[Solution],
-        assignment: &StudentAssignment,
+        assignments: &[StudentAssignment],
     ) -> Vec<Penalty> {
-        // parallelizing this should be a change from `iter` to `par_iter`
         solutions
             .iter()
-            .map(|sol| self.solution_penalty(sol, assignment))
+            .zip(assignments)
+            .map(|(sol, assignment)| self.solution_penalty(sol, assignment))
             .collect()
     }
 }
@@ -428,7 +441,7 @@ mod tests {
             data,
             Elitism::new(0.0),
             TournamentSelection::new(1),
-            OnePointCrossover::new(),
+            OnePointCrossover::new(0.5),
             BasicMutation::new(0.0),
         );
         solver

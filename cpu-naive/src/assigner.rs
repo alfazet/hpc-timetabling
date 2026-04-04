@@ -1,14 +1,22 @@
 use crate::model::TimetableData;
+use crate::solution::Solution;
+use crate::utils;
 
 pub struct StudentAssignment {
     /// `students_in_classes[i]` = indices of students taking the class with index `i`
     pub students_in_classes: Vec<Vec<usize>>,
 }
 
-pub fn assign_students(data: &TimetableData) -> StudentAssignment {
-    // not using the solution for now
+pub fn assign_students(data: &TimetableData, sol: &Solution) -> StudentAssignment {
     let mut students_in_classes = vec![Vec::new(); data.classes.len()];
     for (student_idx, student) in data.students.iter().enumerate() {
+        let already_attending: Vec<_> = students_in_classes
+            .iter()
+            .enumerate()
+            .filter(|(_, students)| students.contains(&student_idx))
+            .map(|(i, _)| i)
+            .collect();
+
         for &course_idx in &student.course_indices {
             let course = &data.courses[course_idx];
             'config_loop: for config_idx in course.configs_start..course.configs_end {
@@ -41,6 +49,24 @@ pub fn assign_students(data: &TimetableData) -> StudentAssignment {
                                 }
                             }
                         }
+
+                        // check timing conflicts with classes this student is already attending
+                        if ok {
+                            for &new_class in local_assignment.iter().flatten() {
+                                let new_time = &sol.times[new_class].times;
+                                for &attended_class in &already_attending {
+                                    let already_taken_time = &sol.times[attended_class].times;
+                                    if utils::timeslots_overlap(new_time, already_taken_time) {
+                                        ok = false;
+                                        break;
+                                    }
+                                }
+                                if !ok {
+                                    break;
+                                }
+                            }
+                        }
+
                         if ok {
                             class_taken_in_subpart = local_assignment;
                             assigned_subpart = true;
