@@ -1,3 +1,4 @@
+use crate::adjuster::{Adjuster, GenerationStats};
 use crate::assigner::{self, StudentAssignment};
 use crate::distribution::Distribution;
 use crate::utils;
@@ -36,6 +37,8 @@ where
     selection: S,
     crossover: C,
     mutation: M,
+    stats: GenerationStats,
+    adjuster: Adjuster,
 }
 
 impl<S, C, M> Solver for NaiveSolver<S, C, M>
@@ -63,12 +66,16 @@ where
             penalties = other_fitness;
 
             let min_penalty = penalties
-                .iter()
+                .into_iter()
                 .min()
                 .expect("solutions vec shouldn't be empty");
-            eprintln!(
-                "min penalty after {} generations: {}",
-                generation, min_penalty
+
+            self.stats.update(min_penalty);
+            self.stats.print_logs();
+            self.adjuster.adjust(
+                &self.stats,
+                self.mutation.probability(),
+                self.crossover.probability(),
             );
         }
 
@@ -123,6 +130,8 @@ where
             selection,
             crossover,
             mutation,
+            stats: GenerationStats::new(),
+            adjuster: Adjuster::new(generations / 50),
         }
     }
 
