@@ -4,6 +4,7 @@ use crate::solution::Solution;
 
 pub trait Crossover {
     fn crossover(&mut self, rng: &mut dyn Rng, solutions: &mut Vec<Solution>, selected: &[usize]);
+    fn probability(&mut self) -> &mut f32;
 }
 
 pub struct OnePointCrossover {
@@ -56,5 +57,9 @@ impl Crossover for OnePointCrossover {
         new_solutions.truncate(n_solutions);
 
         *solutions = new_solutions;
+    }
+
+    fn probability(&mut self) -> &mut f32 {
+        &mut self.probability
     }
 }

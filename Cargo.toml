@@ -13,6 +13,7 @@ thiserror = "2.0.18"
 rand = "0.10.0"
 serde = { version = "1.0.228", features = ["derive"] }
 clap = { version="4.6.0", features = ["derive"] }
+rayon = "1.11.0"
 
 parser = { path = "parser" }
 serializer = { path = "serializer" }

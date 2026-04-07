@@ -12,6 +12,7 @@ use parser::problem::Problem;
 use serializer::output::OutputMetadata;
 use std::fs;
 
+mod adjuster;
 mod assigner;
 mod crossover;
 mod distribution;
@@ -23,6 +24,7 @@ mod penalty;
 mod selection;
 mod solution;
 mod solver;
+mod utils;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -50,7 +52,7 @@ struct Args {
     population_size: usize,
 
     /// probability of a crossover between two parents occuring
-    #[arg(short, long, default_value_t = 0.8)]
+    #[arg(short, long, default_value_t = 0.9)]
     crossover_rate: f32,
 
     /// probability of a mutation occuring
@@ -60,6 +62,10 @@ struct Args {
     /// fraction of best solutions to keep unchanged every generation
     #[arg(short, long, default_value_t = 0.01)]
     elitism: f32,
+
+    /// fraction of the population to use for tournament size
+    #[arg(short, long, default_value_t = 0.02)]
+    tournament_frac: f32,
 }
 
 fn main() -> Result<()> {
@@ -77,13 +83,15 @@ fn main() -> Result<()> {
         args.generations,
         data.clone(),
         Elitism::new(args.elitism),
-        TournamentSelection::new((args.population_size / 100).max(1)),
+        TournamentSelection::new(
+            ((args.population_size as f32 * args.tournament_frac) as usize).max(1),
+        ),
         OnePointCrossover::new(args.crossover_rate),
         BasicMutation::new(args.mutation_rate),
     );
 
     eprintln!(
-        "Solving '{}' with {} generations of {} individuals",
+        "solving '{}' with {} generations of {} individuals",
         args.input, args.generations, args.population_size
     );
     let mut rng = rand::rng();

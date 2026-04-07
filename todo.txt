@@ -1,5 +1,5 @@
 - implement dynamic parameters (ex. when it's stuck, increase the mutation rate
 or decrease with time)
+- ^ make a radical change when the same results persist for a lot of iterations
 
 - implement student mutations and crossover
-
