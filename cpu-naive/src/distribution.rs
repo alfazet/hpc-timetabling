@@ -1,5 +1,5 @@
-use crate::penalty::Penalty;
 use crate::model::{DistributionData, RoomOption, TimetableData};
+use crate::penalty::Penalty;
 use crate::solution::Solution;
 use parser::distributions::DistributionKind;
 use parser::timeslots::TimeSlots;
@@ -355,11 +355,17 @@ impl<'a> Distribution<'a> {
                 (i + 1..dist.class_indices.len()).for_each(|j| {
                     // i < j
                     let c_j = &self.sol.times[dist.class_indices[j]].times;
-                    if !((c_i.weeks.0.leading_zeros() < c_j.weeks.0.leading_zeros())
-                        || ((c_i.weeks.0.leading_zeros() == c_j.weeks.0.leading_zeros())
-                            && ((c_i.days.0.leading_zeros() < c_j.days.0.leading_zeros())
-                                || ((c_i.days.0.leading_zeros() == c_j.days.0.leading_zeros())
-                                    && (c_i.start + c_i.length <= c_j.start)))))
+                    let weeks_lower_cond =
+                        c_i.weeks.0.trailing_zeros() < c_j.weeks.0.trailing_zeros();
+                    let weeks_equal_cond =
+                        c_i.weeks.0.trailing_zeros() == c_j.weeks.0.trailing_zeros();
+                    let days_lower_cond = c_i.days.0.trailing_zeros() < c_j.days.0.trailing_zeros();
+                    let days_equal_cond =
+                        c_i.days.0.trailing_zeros() == c_j.days.0.trailing_zeros();
+                    let ends_before_start = c_i.start + c_i.length <= c_j.start;
+                    if !(weeks_lower_cond
+                        || (weeks_equal_cond
+                            && (days_lower_cond || (days_equal_cond && ends_before_start))))
                     {
                         penalty.apply_penalty(dist.penalty);
                     }
@@ -454,15 +460,19 @@ impl<'a> Distribution<'a> {
 
         let mut factor = 0;
         let mut penalty = Penalty::new();
-        for (_, day_load) in days {
+        for (day_tuple, day_load) in days {
             if day_load > s {
-                factor = day_load - s;
-                penalty.apply_penalty(dist.penalty);
+                factor += day_load - s;
+                dbg!(day_tuple);
+                dbg!(factor);
+                dbg!(penalty);
             }
         }
 
+        penalty.apply_penalty(dist.penalty);
         penalty.soft *= factor;
         penalty.soft /= self.data.n_weeks;
+
         penalty
     }
 
@@ -478,15 +488,16 @@ impl<'a> Distribution<'a> {
 #[cfg(test)]
 mod tests {
     use crate::distribution::Distribution;
-    use crate::penalty::Penalty;
     use crate::model::TimetableData;
+    use crate::penalty::Penalty;
     use crate::solution::Solution;
     use parser::Problem;
+    use parser::distributions::DistributionKind;
     use std::sync::LazyLock;
 
-    static DATA: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
+    static DATA1: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
         TimetableData::new(
-            Problem::parse(include_str!("../../data/test-data/distribution-test.xml")).unwrap(),
+            Problem::parse(include_str!("../../data/test-data/distribution-test-1.xml")).unwrap(),
         )
     });
 
@@ -495,13 +506,13 @@ mod tests {
         // both distributions violated
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[5].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 1, soft: 0 },
             dist.same_start(&dist.data.distributions[0])
@@ -514,13 +525,13 @@ mod tests {
         // both distributions satisfied
         let sol = Solution {
             times: vec![
-                DATA.time_options[1].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[6].clone(),
+                DATA1.time_options[1].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_start(&dist.data.distributions[0]));
         assert_eq!(Penalty::new(), dist.same_start(&dist.data.distributions[1]));
     }
@@ -532,13 +543,13 @@ mod tests {
         // 2:   |----|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[4].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 0, soft: 10 },
             dist.same_time(&dist.data.distributions[2])
@@ -549,13 +560,13 @@ mod tests {
         // 2: |--------|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[6].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_time(&dist.data.distributions[2]));
 
         // first starts after second starts and ends after second ends -- violation
@@ -563,13 +574,13 @@ mod tests {
         // 2:  |-----|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[7].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[7].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 0, soft: 10 },
             dist.same_time(&dist.data.distributions[2])
@@ -583,13 +594,13 @@ mod tests {
         // 2:       |-------|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[5].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty::new(),
             dist.different_time(&dist.data.distributions[3])
@@ -600,13 +611,13 @@ mod tests {
         // 2:   |----|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[4].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 1, soft: 0 },
             dist.different_time(&dist.data.distributions[3])
@@ -617,13 +628,13 @@ mod tests {
         // 2: |--------|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[6].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 1, soft: 0 },
             dist.different_time(&dist.data.distributions[3])
@@ -634,13 +645,13 @@ mod tests {
         // 2:  |-----|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[7].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[7].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 1, soft: 0 },
             dist.different_time(&dist.data.distributions[3])
@@ -651,13 +662,13 @@ mod tests {
         // 2: |-----|
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[8].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty::new(),
             dist.different_time(&dist.data.distributions[3])
@@ -669,36 +680,36 @@ mod tests {
         // second's days are a subset of first's days -- valid
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[8].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_days(&dist.data.distributions[4]));
 
         let sol = Solution {
             times: vec![
-                DATA.time_options[1].clone(),
-                DATA.time_options[3].clone(),
-                DATA.time_options[8].clone(),
+                DATA1.time_options[1].clone(),
+                DATA1.time_options[3].clone(),
+                DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_days(&dist.data.distributions[4]));
 
         // some days are different -- violation
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[3].clone(),
-                DATA.time_options[8].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[3].clone(),
+                DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 0, soft: 15 },
             dist.same_days(&dist.data.distributions[4])
@@ -710,13 +721,13 @@ mod tests {
         // three classes do not overlap (in days context) -- valid
         let sol = Solution {
             times: vec![
-                DATA.time_options[1].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[5].clone(),
+                DATA1.time_options[1].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty::new(),
             dist.different_days(&dist.data.distributions[5])
@@ -725,13 +736,13 @@ mod tests {
         // overlapping classes -- violation
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[5].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 2, soft: 0 },
             dist.different_days(&dist.data.distributions[5])
@@ -739,13 +750,13 @@ mod tests {
 
         let sol = Solution {
             times: vec![
-                DATA.time_options[1].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[8].clone(),
+                DATA1.time_options[1].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 2, soft: 0 },
             dist.different_days(&dist.data.distributions[5])
@@ -757,25 +768,25 @@ mod tests {
         // valid
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[5].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_weeks(&dist.data.distributions[6]));
 
         // invalid
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[4].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 0, soft: 20 },
             dist.same_weeks(&dist.data.distributions[6])
@@ -787,13 +798,13 @@ mod tests {
         // invalid
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[5].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 0, soft: 20 },
             dist.different_weeks(&dist.data.distributions[7])
@@ -802,13 +813,13 @@ mod tests {
         // valid
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[4].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty::new(),
             dist.different_weeks(&dist.data.distributions[7])
@@ -820,13 +831,13 @@ mod tests {
         // overlap
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[2].clone(),
-                DATA.time_options[5].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[2].clone(),
+                DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.overlap(&dist.data.distributions[8]));
         assert_eq!(
             Penalty { hard: 1, soft: 0 },
@@ -836,13 +847,13 @@ mod tests {
         // not overlap
         let sol = Solution {
             times: vec![
-                DATA.time_options[0].clone(),
-                DATA.time_options[3].clone(),
-                DATA.time_options[4].clone(),
+                DATA1.time_options[0].clone(),
+                DATA1.time_options[3].clone(),
+                DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 1, soft: 0 },
             dist.overlap(&dist.data.distributions[8])
@@ -859,12 +870,12 @@ mod tests {
         let sol = Solution {
             times: vec![], // unnecessary
             rooms: vec![
-                Some(DATA.room_options[1].clone()),
-                Some(DATA.room_options[2].clone()),
+                Some(DATA1.room_options[1].clone()),
+                Some(DATA1.room_options[2].clone()),
                 None,
             ],
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 2, soft: 0 },
             dist.same_room(&dist.data.distributions[10])
@@ -878,12 +889,12 @@ mod tests {
         let sol = Solution {
             times: vec![], // unnecessary
             rooms: vec![
-                Some(DATA.room_options[0].clone()),
-                Some(DATA.room_options[2].clone()),
+                Some(DATA1.room_options[0].clone()),
+                Some(DATA1.room_options[2].clone()),
                 None,
             ],
         };
-        let dist = Distribution::new(&DATA, &sol);
+        let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
             Penalty { hard: 3, soft: 0 },
             dist.same_room(&dist.data.distributions[10])
@@ -893,4 +904,270 @@ mod tests {
             dist.different_room(&dist.data.distributions[11])
         );
     }
+
+    static DATA2: LazyLock<TimetableData, fn() -> TimetableData> = LazyLock::new(|| {
+        TimetableData::new(
+            Problem::parse(include_str!("../../data/test-data/distribution-test-2.xml")).unwrap(),
+        )
+    });
+
+    #[test]
+    fn same_attendees() {
+        // valid solution, instructor able to attend every class
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[5].clone(),
+            ],
+            rooms: vec![
+                Some(DATA2.room_options[0].clone()),
+                Some(DATA2.room_options[2].clone()),
+                Some(DATA2.room_options[4].clone()),
+            ],
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty::new(),
+            dist.same_attendees(&dist.data.distributions[0])
+        );
+
+        // invalid solution, not enough time to travel from class 1 to class 3
+        // (classes don't overlap though)
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[5].clone(),
+            ],
+            rooms: vec![
+                Some(DATA2.room_options[0].clone()),
+                Some(DATA2.room_options[2].clone()),
+                Some(DATA2.room_options[5].clone()),
+            ],
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty { hard: 1, soft: 0 },
+            dist.same_attendees(&dist.data.distributions[0])
+        );
+
+        // invalid, every class collide with each other
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![
+                Some(DATA2.room_options[0].clone()),
+                Some(DATA2.room_options[2].clone()),
+                Some(DATA2.room_options[5].clone()),
+            ],
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty { hard: 3, soft: 0 },
+            dist.same_attendees(&dist.data.distributions[0])
+        );
+    }
+
+    #[test]
+    fn precedence() {
+        // correct precedence
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(), // on Tuesday, every week
+                DATA2.time_options[2].clone(), // on Monday, but on second week -- valid
+                DATA2.time_options[6].clone(), // third week -- valid
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(Penalty::new(), dist.precedence(&dist.data.distributions[1]));
+
+        // reverse precedence between class 2 and class 3
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[2].clone(), // on Monday, second week
+                DATA2.time_options[4].clone(), // on Friday, first week
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        assert_eq!(
+            Penalty { hard: 0, soft: 2 },
+            dist.precedence(&dist.data.distributions[1])
+        );
+    }
+
+    #[test]
+    fn work_day() {
+        // exceed 30 timeslots
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::WorkDay(wd) = dist.data.distributions[2].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 2, soft: 0 },
+            dist.work_day(&dist.data.distributions[2], wd)
+        );
+    }
+
+    #[test]
+    fn min_gap() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MinGap(mg) = dist.data.distributions[3].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty::new(),
+            dist.min_gap(&dist.data.distributions[3], mg)
+        );
+
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MinGap(mg) = dist.data.distributions[3].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 0, soft: 10 },
+            dist.min_gap(&dist.data.distributions[3], mg)
+        );
+    }
+
+    #[test]
+    fn max_days() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty::new(),
+            dist.max_days(&dist.data.distributions[4], md)
+        );
+
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 0, soft: 15 },
+            dist.max_days(&dist.data.distributions[4], md)
+        );
+
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[3].clone(),
+                DATA2.time_options[6].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty { hard: 0, soft: 30 },
+            dist.max_days(&dist.data.distributions[4], md)
+        );
+    }
+
+    #[test]
+    fn max_day_load() {
+        // valid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[1].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[5].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDayLoad(mdl) = dist.data.distributions[5].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty::new(),
+            dist.max_day_load(&dist.data.distributions[5], mdl)
+        );
+
+        // invalid
+        let sol = Solution {
+            times: vec![
+                DATA2.time_options[0].clone(),
+                DATA2.time_options[2].clone(),
+                DATA2.time_options[8].clone(),
+            ],
+            rooms: vec![], // unnecessary
+        };
+        let dist = Distribution::new(&DATA2, &sol);
+        let DistributionKind::MaxDayLoad(mdl) = dist.data.distributions[5].kind else {
+            panic!("You messed up the dataset ;<");
+        };
+        assert_eq!(
+            Penalty {
+                hard: 0,
+                soft: 10 * (6 + 28 + 6 + 6 + 6 + 6) / dist.data.n_weeks
+            },
+            dist.max_day_load(&dist.data.distributions[5], mdl)
+        );
+    }
+
+    /*#[test]
+    fn max_breaks() {
+
+    }
+
+    #[test]
+    fn max_block() {
+
+    }*/
 }
