@@ -13,6 +13,7 @@ use crate::{
 };
 use parser::timeslots::TimeSlots;
 use rand::Rng;
+use rayon::prelude::*;
 
 pub trait Solver {
     fn solve(&mut self, rng: &mut dyn Rng) -> EvaluatedSolution;
@@ -43,13 +44,13 @@ where
 
 impl<S, C, M> Solver for NaiveSolver<S, C, M>
 where
-    S: Selection,
-    C: Crossover,
-    M: Mutation,
+    S: Selection + Sync,
+    C: Crossover + Sync,
+    M: Mutation + Sync,
 {
     fn solve(&mut self, rng: &mut dyn Rng) -> EvaluatedSolution {
         let mut solutions = self.initialize_solutions(rng);
-        for generation in 0..self.generations {
+        for _ in 0..self.generations {
             let assignments = self.find_assignments(&solutions);
             let mut penalties = self.evaluate_solutions_penalties(&solutions, &assignments);
             let (top_solutions, top_fitness, mut other_solutions, mut other_fitness) =
@@ -109,9 +110,9 @@ where
 
 impl<S, C, M> NaiveSolver<S, C, M>
 where
-    S: Selection,
-    C: Crossover,
-    M: Mutation,
+    S: Selection + Sync,
+    C: Crossover + Sync,
+    M: Mutation + Sync,
 {
     pub fn new(
         population_size: usize,
@@ -412,7 +413,7 @@ where
 
     fn find_assignments(&self, solutions: &[Solution]) -> Vec<StudentAssignment> {
         solutions
-            .iter()
+            .par_iter()
             .map(|sol| assigner::assign_students(&self.data, sol))
             .collect()
     }
@@ -423,7 +424,7 @@ where
         assignments: &[StudentAssignment],
     ) -> Vec<Penalty> {
         solutions
-            .iter()
+            .par_iter()
             .zip(assignments)
             .map(|(sol, assignment)| self.solution_penalty(sol, assignment))
             .collect()

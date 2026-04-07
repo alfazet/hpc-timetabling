@@ -48,7 +48,7 @@ impl Adjuster {
         let n = stats.no_improvement as f32;
         let m = self.max_no_improvement as f32;
         let r = 1.0 + (n - m) / m * 0.001;
-        dbg!(r);
+        eprintln!("r: {}", r);
 
         macro_rules! update_print {
             ($v:ident, $max:expr) => {
