@@ -40,6 +40,7 @@ where
     mutation: M,
     stats: GenerationStats,
     adjuster: Adjuster,
+    last_penalties: Option<Vec<Penalty>>,
 }
 
 impl<S, C, M> Solver for NaiveSolver<S, C, M>
@@ -52,32 +53,40 @@ where
         let mut solutions = self.initialize_solutions(rng);
         for _ in 0..self.generations {
             let assignments = self.find_assignments(&solutions);
-            let mut penalties = self.evaluate_solutions_penalties(&solutions, &assignments);
-            let (top_solutions, top_fitness, mut other_solutions, mut other_fitness) =
-                self.elitism.split(solutions, penalties);
-            let selected = self.selection.select(rng, &other_solutions, &other_fitness);
-            self.crossover
-                .crossover(rng, &mut other_solutions, &selected);
-            self.mutation.mutate(rng, &mut other_solutions, &self.data);
 
-            // merge unchanged top solutions with crossed-over/mutated others
-            other_solutions.extend(top_solutions);
-            solutions = other_solutions;
-            other_fitness.extend(top_fitness);
-            penalties = other_fitness;
+            // take the penalties from the end of last generation, otherwise we
+            // would be calculating them twice per generation
+            let penalties = if let Some(p) = self.last_penalties.clone() {
+                p
+            } else {
+                let p = self.evaluate_solutions_penalties(&solutions, &assignments);
+                self.last_penalties = Some(p.clone());
+                p
+            };
+            let (elites, elite_penalties) = self.elitism.elites(&solutions, &penalties);
+
+            let selected = self.selection.select(rng, &solutions, &penalties);
+            self.crossover.crossover(rng, &mut solutions, &selected);
+            self.mutation.mutate(rng, &mut solutions, &self.data);
+
+            let mut penalties = self.evaluate_solutions_penalties(&solutions, &assignments);
+            self.elitism
+                .replace_worst(&elites, &mut solutions, &elite_penalties, &mut penalties);
 
             let min_penalty = penalties
-                .into_iter()
+                .iter()
                 .min()
                 .expect("solutions vec shouldn't be empty");
 
-            self.stats.update(min_penalty);
+            self.stats.update(*min_penalty);
             self.stats.print_logs();
             self.adjuster.adjust(
                 &self.stats,
                 self.mutation.probability(),
                 self.crossover.probability(),
             );
+
+            self.last_penalties = Some(penalties);
         }
 
         let final_assignments = self.find_assignments(&solutions);
@@ -133,6 +142,7 @@ where
             mutation,
             stats: GenerationStats::new(),
             adjuster: Adjuster::new(generations / 50),
+            last_penalties: None,
         }
     }
 

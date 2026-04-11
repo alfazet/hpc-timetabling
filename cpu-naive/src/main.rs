@@ -60,7 +60,7 @@ struct Args {
     mutation_rate: f64,
 
     /// fraction of best solutions to keep unchanged every generation
-    #[arg(short, long, default_value_t = 0.01)]
+    #[arg(short, long, default_value_t = 0.05)]
     elitism: f32,
 
     /// fraction of the population to use for tournament size
