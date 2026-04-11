@@ -4,15 +4,15 @@ use crate::{model::TimetableData, solution::Solution};
 
 pub trait Mutation {
     fn mutate(&mut self, rng: &mut dyn Rng, solutions: &mut [Solution], data: &TimetableData);
-    fn probability(&mut self) -> &mut f32;
+    fn probability(&mut self) -> &mut f64;
 }
 
 pub struct BasicMutation {
-    probability: f32,
+    probability: f64,
 }
 
 impl BasicMutation {
-    pub fn new(probability: f32) -> Self {
+    pub fn new(probability: f64) -> Self {
         Self { probability }
     }
 }
@@ -48,7 +48,7 @@ impl Mutation for BasicMutation {
         }
     }
 
-    fn probability(&mut self) -> &mut f32 {
+    fn probability(&mut self) -> &mut f64 {
         &mut self.probability
     }
 }

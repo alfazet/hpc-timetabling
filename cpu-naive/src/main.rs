@@ -1,5 +1,5 @@
 use crate::{
-    crossover::OnePointCrossover,
+    crossover::{OnePointCrossover, UniformCrossover},
     elitism::Elitism,
     model::TimetableData,
     mutation::BasicMutation,
@@ -53,11 +53,11 @@ struct Args {
 
     /// probability of a crossover between two parents occuring
     #[arg(short, long, default_value_t = 0.9)]
-    crossover_rate: f32,
+    crossover_rate: f64,
 
     /// probability of a mutation occuring
     #[arg(short, long, default_value_t = 0.05)]
-    mutation_rate: f32,
+    mutation_rate: f64,
 
     /// fraction of best solutions to keep unchanged every generation
     #[arg(short, long, default_value_t = 0.01)]
@@ -86,7 +86,8 @@ fn main() -> Result<()> {
         TournamentSelection::new(
             ((args.population_size as f32 * args.tournament_frac) as usize).max(1),
         ),
-        OnePointCrossover::new(args.crossover_rate),
+        UniformCrossover::new(args.crossover_rate),
+        // OnePointCrossover::new(args.crossover_rate),
         BasicMutation::new(args.mutation_rate),
     );
 
