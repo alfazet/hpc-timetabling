@@ -511,6 +511,7 @@ mod tests {
                 DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -530,6 +531,7 @@ mod tests {
                 DATA1.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_start(&dist.data.distributions[0]));
@@ -548,6 +550,7 @@ mod tests {
                 DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -565,6 +568,7 @@ mod tests {
                 DATA1.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_time(&dist.data.distributions[2]));
@@ -579,6 +583,7 @@ mod tests {
                 DATA1.time_options[7].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -599,6 +604,7 @@ mod tests {
                 DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -616,6 +622,7 @@ mod tests {
                 DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -633,6 +640,7 @@ mod tests {
                 DATA1.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -650,6 +658,7 @@ mod tests {
                 DATA1.time_options[7].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -667,6 +676,7 @@ mod tests {
                 DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -685,6 +695,7 @@ mod tests {
                 DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_days(&dist.data.distributions[4]));
@@ -696,6 +707,7 @@ mod tests {
                 DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_days(&dist.data.distributions[4]));
@@ -708,6 +720,7 @@ mod tests {
                 DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -726,6 +739,7 @@ mod tests {
                 DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -741,6 +755,7 @@ mod tests {
                 DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -755,6 +770,7 @@ mod tests {
                 DATA1.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -773,6 +789,7 @@ mod tests {
                 DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.same_weeks(&dist.data.distributions[6]));
@@ -785,6 +802,7 @@ mod tests {
                 DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -803,6 +821,7 @@ mod tests {
                 DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -818,6 +837,7 @@ mod tests {
                 DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -836,6 +856,7 @@ mod tests {
                 DATA1.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(Penalty::new(), dist.overlap(&dist.data.distributions[8]));
@@ -852,6 +873,7 @@ mod tests {
                 DATA1.time_options[4].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -874,6 +896,7 @@ mod tests {
                 Some(DATA1.room_options[2].clone()),
                 None,
             ],
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -893,6 +916,7 @@ mod tests {
                 Some(DATA1.room_options[2].clone()),
                 None,
             ],
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA1, &sol);
         assert_eq!(
@@ -925,6 +949,7 @@ mod tests {
                 Some(DATA2.room_options[2].clone()),
                 Some(DATA2.room_options[4].clone()),
             ],
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         assert_eq!(
@@ -945,6 +970,7 @@ mod tests {
                 Some(DATA2.room_options[2].clone()),
                 Some(DATA2.room_options[5].clone()),
             ],
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         assert_eq!(
@@ -964,6 +990,7 @@ mod tests {
                 Some(DATA2.room_options[2].clone()),
                 Some(DATA2.room_options[5].clone()),
             ],
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         assert_eq!(
@@ -982,6 +1009,7 @@ mod tests {
                 DATA2.time_options[6].clone(), // third week -- valid
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         assert_eq!(Penalty::new(), dist.precedence(&dist.data.distributions[1]));
@@ -994,6 +1022,7 @@ mod tests {
                 DATA2.time_options[4].clone(), // on Friday, first week
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         assert_eq!(
@@ -1012,6 +1041,7 @@ mod tests {
                 DATA2.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::WorkDay(wd) = dist.data.distributions[2].kind else {
@@ -1033,6 +1063,7 @@ mod tests {
                 DATA2.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::MinGap(mg) = dist.data.distributions[3].kind else {
@@ -1051,6 +1082,7 @@ mod tests {
                 DATA2.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::MinGap(mg) = dist.data.distributions[3].kind else {
@@ -1072,6 +1104,7 @@ mod tests {
                 DATA2.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
@@ -1090,6 +1123,7 @@ mod tests {
                 DATA2.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
@@ -1108,6 +1142,7 @@ mod tests {
                 DATA2.time_options[6].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::MaxDays(md) = dist.data.distributions[4].kind else {
@@ -1129,6 +1164,7 @@ mod tests {
                 DATA2.time_options[5].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::MaxDayLoad(mdl) = dist.data.distributions[5].kind else {
@@ -1147,6 +1183,7 @@ mod tests {
                 DATA2.time_options[8].clone(),
             ],
             rooms: vec![], // unnecessary
+            config_preferences: vec![],
         };
         let dist = Distribution::new(&DATA2, &sol);
         let DistributionKind::MaxDayLoad(mdl) = dist.data.distributions[5].kind else {

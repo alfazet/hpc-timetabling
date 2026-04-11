@@ -1,5 +1,2 @@
-- implement dynamic parameters (ex. when it's stuck, increase the mutation rate
-or decrease with time)
-- ^ make a radical change when the same results persist for a lot of iterations
-
-- implement student mutations and crossover
+- increase the rate of change of mutation prob. as the penalty stops decreasing
+(eg. +0.05 per iter if the answer has been the same for <= 5 iters, +0.1 for <= 10 iters and so on)

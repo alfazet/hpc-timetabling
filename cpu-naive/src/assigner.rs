@@ -17,9 +17,14 @@ pub fn assign_students(data: &TimetableData, sol: &Solution) -> StudentAssignmen
             .map(|(i, _)| i)
             .collect();
 
-        for &course_idx in &student.course_indices {
+        for (enrollment_idx, &course_idx) in student.course_indices.iter().enumerate() {
             let course = &data.courses[course_idx];
-            'config_loop: for config_idx in course.configs_start..course.configs_end {
+            let n_configs = course.configs_end - course.configs_start;
+            let pref_offset = sol.config_preferences[student_idx][enrollment_idx];
+            let config_order = (0..n_configs).map(|i| (pref_offset + i) % n_configs);
+
+            'config_loop: for config_offset in config_order {
+                let config_idx = course.configs_start + config_offset;
                 let config = &data.configs[config_idx];
                 let mut class_taken_in_subpart =
                     vec![None; config.subparts_end - config.subparts_start];

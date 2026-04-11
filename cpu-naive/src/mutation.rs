@@ -36,7 +36,15 @@ impl Mutation for BasicMutation {
                     }
                 }
             }
-            // TODO: mutations on students
+            for (student_idx, student) in data.students.iter().enumerate() {
+                for (i, course_idx) in student.course_indices.iter().enumerate() {
+                    if rng.random_range(0.0..1.0) <= self.probability {
+                        let course = &data.courses[*course_idx];
+                        let n_configs = course.configs_end - course.configs_start;
+                        sol.config_preferences[student_idx][i] = rng.random_range(0..n_configs);
+                    }
+                }
+            }
         }
     }
 

@@ -3,7 +3,7 @@ use rand::{Rng, RngExt};
 use crate::model::{RoomOption, TimeOption, TimetableData};
 
 /// one particular assignment of classes to meetings times and rooms
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Solution {
     /// time slot assignments
     /// `times[i]` = assignment for the `i`-th class
@@ -12,6 +12,9 @@ pub struct Solution {
     /// `rooms[i]` = assignment for the `i`-th class,
     /// None if the class doesn't require a room
     pub rooms: Vec<Option<RoomOption>>,
+    /// `config_preferences[i][j]` = preferred config index for the `j`-th course of the `i`-th student
+    /// (offset into `course.configs_start..course.configs_end`)
+    pub config_preferences: Vec<Vec<usize>>,
 }
 
 impl Solution {
@@ -37,8 +40,28 @@ impl Solution {
                 })
             })
             .collect();
+        let config_preferences: Vec<_> = data
+            .students
+            .iter()
+            .map(|student| {
+                student
+                    .course_indices
+                    .iter()
+                    .map(|&course_idx| {
+                        let course = &data.courses[course_idx];
+                        let n_configs = course.configs_end - course.configs_start;
 
-        Self { times, rooms }
+                        rng.random_range(0..n_configs)
+                    })
+                    .collect()
+            })
+            .collect();
+
+        Self {
+            times,
+            rooms,
+            config_preferences,
+        }
     }
 }
 
