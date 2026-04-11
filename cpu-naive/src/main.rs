@@ -44,11 +44,11 @@ struct Args {
     input: String,
 
     /// number of generations of the algorithm
-    #[arg(short, long, default_value_t = 200)]
+    #[arg(short, long, default_value_t = 600)]
     generations: usize,
 
     /// initial population size
-    #[arg(short, long, default_value_t = 8000)]
+    #[arg(short, long, default_value_t = 24000)]
     population_size: usize,
 
     /// probability of a crossover between two parents occuring
