@@ -49,8 +49,16 @@ impl Crossover for OnePointCrossover {
             };
 
             let child1 = Solution {
-                times: [&parent_a.times[..times_rooms_cut], &parent_b.times[times_rooms_cut..]].concat(),
-                rooms: [&parent_a.rooms[..times_rooms_cut], &parent_b.rooms[times_rooms_cut..]].concat(),
+                times: [
+                    &parent_a.times[..times_rooms_cut],
+                    &parent_b.times[times_rooms_cut..],
+                ]
+                .concat(),
+                rooms: [
+                    &parent_a.rooms[..times_rooms_cut],
+                    &parent_b.rooms[times_rooms_cut..],
+                ]
+                .concat(),
                 config_preferences: [
                     &parent_a.config_preferences[..student_cut],
                     &parent_b.config_preferences[student_cut..],
@@ -58,8 +66,16 @@ impl Crossover for OnePointCrossover {
                 .concat(),
             };
             let child2 = Solution {
-                times: [&parent_b.times[..times_rooms_cut], &parent_a.times[times_rooms_cut..]].concat(),
-                rooms: [&parent_b.rooms[..times_rooms_cut], &parent_a.rooms[times_rooms_cut..]].concat(),
+                times: [
+                    &parent_b.times[..times_rooms_cut],
+                    &parent_a.times[times_rooms_cut..],
+                ]
+                .concat(),
+                rooms: [
+                    &parent_b.rooms[..times_rooms_cut],
+                    &parent_a.rooms[times_rooms_cut..],
+                ]
+                .concat(),
                 config_preferences: [
                     &parent_b.config_preferences[..student_cut],
                     &parent_a.config_preferences[student_cut..],

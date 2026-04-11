@@ -313,7 +313,7 @@ impl<'a> Distribution<'a> {
                 let i_class_time = &self.sol.times[dist.class_indices[i]].times;
 
                 let days_overlap = i_class_time.days.0 & class_time.days.0 != 0;
-                let weeks_overlap = i_class_time.days.0 & class_time.days.0 != 0;
+                let weeks_overlap = i_class_time.weeks.0 & class_time.weeks.0 != 0;
                 if !days_overlap || !weeks_overlap {
                     continue;
                 }

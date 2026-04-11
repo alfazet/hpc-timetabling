@@ -9,13 +9,11 @@ pub struct StudentAssignment {
 
 pub fn assign_students(data: &TimetableData, sol: &Solution) -> StudentAssignment {
     let mut students_in_classes = vec![Vec::new(); data.classes.len()];
+    let mut already_attending = vec![false; data.classes.len()];
     for (student_idx, student) in data.students.iter().enumerate() {
-        let already_attending: Vec<_> = students_in_classes
-            .iter()
-            .enumerate()
-            .filter(|(_, students)| students.contains(&student_idx))
-            .map(|(i, _)| i)
-            .collect();
+        for (class_idx, enrolled_student_idxs) in students_in_classes.iter().enumerate() {
+            already_attending[class_idx] = enrolled_student_idxs.contains(&student_idx);
+        }
 
         for (enrollment_idx, &course_idx) in student.course_indices.iter().enumerate() {
             let course = &data.courses[course_idx];
@@ -59,8 +57,12 @@ pub fn assign_students(data: &TimetableData, sol: &Solution) -> StudentAssignmen
                         if ok {
                             for &new_class in local_assignment.iter().flatten() {
                                 let new_time = &sol.times[new_class].times;
-                                for &attended_class in &already_attending {
-                                    let already_taken_time = &sol.times[attended_class].times;
+                                for attended_class_idx in already_attending
+                                    .iter()
+                                    .enumerate()
+                                    .filter_map(|(i, v)| v.then_some(i))
+                                {
+                                    let already_taken_time = &sol.times[attended_class_idx].times;
                                     if utils::timeslots_overlap(new_time, already_taken_time) {
                                         ok = false;
                                         break;
@@ -89,6 +91,7 @@ pub fn assign_students(data: &TimetableData, sol: &Solution) -> StudentAssignmen
                 for i in &class_taken_in_subpart {
                     let c = i.expect("all subparts should be assigned");
                     students_in_classes[c].push(student_idx);
+                    already_attending[c] = true;
                 }
                 break;
             }
