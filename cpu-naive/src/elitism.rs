@@ -1,4 +1,4 @@
-use crate::{penalty::Penalty, solution::Solution};
+use crate::{assigner::StudentAssignment, penalty::Penalty, solution::Solution};
 
 pub struct Elitism {
     retain_percentage: f32,
@@ -50,19 +50,29 @@ impl Elitism {
     pub fn replace_worst(
         &self,
         elites: &[Solution],
-        offspring: &mut Vec<Solution>,
         elite_penalties: &[Penalty],
-        offspring_penalties: &mut Vec<Penalty>,
+        offspring: &mut [Solution],
+        offspring_penalties: &mut [Penalty],
     ) {
-        let mut indices: Vec<usize> = (0..offspring.len()).collect();
+        let k = elites.len();
+        if k == 0 {
+            return;
+        }
 
+        debug_assert_eq!(offspring.len(), offspring_penalties.len());
+        debug_assert_eq!(elites.len(), elite_penalties.len());
+
+        let mut indices: Vec<usize> = (0..offspring.len()).collect();
         indices.sort_by_key(|&i| offspring_penalties[i]);
 
-        let worst = &indices[indices.len() - elites.len()..];
+        let worst = &indices[indices.len() - k..];
 
-        for (idx, (elite, &pen)) in worst.iter().zip(elites.iter().zip(elite_penalties)) {
-            offspring[*idx] = elite.clone();
-            offspring_penalties[*idx] = pen;
+        for (i, &idx) in worst.iter().enumerate() {
+            // only replace if elite is actually better
+            if elite_penalties[i] < offspring_penalties[idx] {
+                offspring[idx] = elites[i].clone();
+                offspring_penalties[idx] = elite_penalties[i];
+            }
         }
     }
 }

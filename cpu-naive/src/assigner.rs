@@ -2,6 +2,7 @@ use crate::model::TimetableData;
 use crate::solution::Solution;
 use crate::utils;
 
+#[derive(Debug, Clone)]
 pub struct StudentAssignment {
     /// `students_in_classes[i]` = indices of students taking the class with index `i`
     pub students_in_classes: Vec<Vec<usize>>,

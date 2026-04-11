@@ -69,9 +69,12 @@ where
             self.crossover.crossover(rng, &mut solutions, &selected);
             self.mutation.mutate(rng, &mut solutions, &self.data);
 
+            // TODO: cache last assignments like last fitness, also requires
+            // mutating them in replace_worst
+            let assignments = self.find_assignments(&solutions);
             let mut penalties = self.evaluate_solutions_penalties(&solutions, &assignments);
             self.elitism
-                .replace_worst(&elites, &mut solutions, &elite_penalties, &mut penalties);
+                .replace_worst(&elites, &elite_penalties, &mut solutions, &mut penalties);
 
             let min_penalty = penalties
                 .iter()
