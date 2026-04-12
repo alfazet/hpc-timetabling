@@ -3,12 +3,6 @@ name = "cpu-naive"
 version.workspace = true
 edition.workspace = true
 
-[profile.release]
-debug = true
-debug-assertions = false
-lto = false
-codegen-units = 1
-
 [dependencies]
 anyhow = { workspace = true }
 rand = { workspace = true }

@@ -236,7 +236,7 @@ fn time_intervals_overlap_penalty(sol: &Solution) -> u32 {
     for room_idxs in classes_per_room {
         for i in 0..room_idxs.len() {
             let times_i = &sol.times[room_idxs[i]].times;
-            for j in i+1..room_idxs.len() {
+            for j in i + 1..room_idxs.len() {
                 let times_j = &sol.times[room_idxs[j]].times;
                 if utils::timeslots_overlap(times_i, times_j) {
                     res += 1;

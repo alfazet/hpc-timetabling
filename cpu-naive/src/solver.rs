@@ -140,6 +140,10 @@ where
         mutation: M,
         hill_climbing: HillClimbing,
     ) -> Self {
+        let adjuster = Adjuster::new(0.025, 0.1, 0.9, 0.1, 0.9);
+        let stats = GenerationStats::new();
+        let last_penalties = None;
+
         Self {
             population_size,
             generations,
@@ -148,9 +152,9 @@ where
             selection,
             crossover,
             mutation,
-            stats: GenerationStats::new(),
-            adjuster: Adjuster::new((generations / 50).max(1)),
-            last_penalties: None,
+            stats,
+            adjuster,
+            last_penalties,
             hill_climbing,
         }
     }

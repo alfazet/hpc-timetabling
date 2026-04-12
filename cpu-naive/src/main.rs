@@ -59,7 +59,7 @@ struct Args {
     crossover_rate: f64,
 
     /// probability of a mutation occuring
-    #[arg(short, long, default_value_t = 0.05)]
+    #[arg(short, long, default_value_t = 0.1)]
     mutation_rate: f64,
 
     /// fraction of best solutions to keep unchanged every generation
