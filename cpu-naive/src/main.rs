@@ -1,6 +1,7 @@
 use crate::{
     crossover::{OnePointCrossover, UniformCrossover},
     elitism::Elitism,
+    local_search::HillClimbing,
     model::TimetableData,
     mutation::BasicMutation,
     selection::TournamentSelection,
@@ -17,6 +18,8 @@ mod assigner;
 mod crossover;
 mod distribution;
 mod elitism;
+mod evaluator;
+mod local_search;
 mod model;
 mod mutation;
 mod output;
@@ -66,6 +69,14 @@ struct Args {
     /// fraction of the population to use for tournament size
     #[arg(short, long, default_value_t = 0.02)]
     tournament_frac: f32,
+
+    /// number of passes during local search
+    #[arg(long, default_value_t = 10)]
+    ls_passes: usize,
+
+    /// fraction of top solutions to do local search on
+    #[arg(long, default_value_t = 0.1)]
+    ls_frac: f32,
 }
 
 fn main() -> Result<()> {
@@ -89,6 +100,7 @@ fn main() -> Result<()> {
         UniformCrossover::new(args.crossover_rate),
         // OnePointCrossover::new(args.crossover_rate),
         BasicMutation::new(args.mutation_rate),
+        HillClimbing::new(args.ls_passes, args.ls_frac),
     );
 
     eprintln!(
