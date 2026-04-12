@@ -1,6 +1,7 @@
 use crate::{
-    crossover::OnePointCrossover,
+    crossover::{OnePointCrossover, UniformCrossover},
     elitism::Elitism,
+    local_search::HillClimbing,
     model::TimetableData,
     mutation::BasicMutation,
     selection::TournamentSelection,
@@ -17,6 +18,8 @@ mod assigner;
 mod crossover;
 mod distribution;
 mod elitism;
+mod evaluator;
+mod local_search;
 mod model;
 mod mutation;
 mod output;
@@ -53,19 +56,27 @@ struct Args {
 
     /// probability of a crossover between two parents occuring
     #[arg(short, long, default_value_t = 0.9)]
-    crossover_rate: f32,
+    crossover_rate: f64,
 
     /// probability of a mutation occuring
-    #[arg(short, long, default_value_t = 0.05)]
-    mutation_rate: f32,
+    #[arg(short, long, default_value_t = 0.1)]
+    mutation_rate: f64,
 
     /// fraction of best solutions to keep unchanged every generation
-    #[arg(short, long, default_value_t = 0.01)]
+    #[arg(short, long, default_value_t = 0.05)]
     elitism: f32,
 
     /// fraction of the population to use for tournament size
     #[arg(short, long, default_value_t = 0.02)]
     tournament_frac: f32,
+
+    /// number of passes during local search
+    #[arg(long, default_value_t = 10)]
+    ls_passes: usize,
+
+    /// fraction of top solutions to do local search on
+    #[arg(long, default_value_t = 0.1)]
+    ls_frac: f32,
 }
 
 fn main() -> Result<()> {
@@ -86,8 +97,10 @@ fn main() -> Result<()> {
         TournamentSelection::new(
             ((args.population_size as f32 * args.tournament_frac) as usize).max(1),
         ),
-        OnePointCrossover::new(args.crossover_rate),
+        UniformCrossover::new(args.crossover_rate),
+        // OnePointCrossover::new(args.crossover_rate),
         BasicMutation::new(args.mutation_rate),
+        HillClimbing::new(args.ls_passes, args.ls_frac),
     );
 
     eprintln!(
