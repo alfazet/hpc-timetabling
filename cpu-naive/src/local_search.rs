@@ -25,7 +25,11 @@ impl HillClimbing {
         data: &TimetableData,
     ) {
         let n = solutions.len();
-        let n_to_improve = ((n as f32 * self.top_fraction) as usize).clamp(1, n);
+        let n_to_improve = ((n as f32 * self.top_fraction) as usize).clamp(0, n);
+        if n_to_improve == 0 {
+            return;
+        }
+
         let mut indices: Vec<_> = (0..n).collect();
         indices.par_sort_unstable_by(|&a, &b| penalties[a].cmp(&penalties[b]));
         let top_indices: Vec<_> = indices[..n_to_improve].to_vec();

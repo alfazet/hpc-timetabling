@@ -2,6 +2,7 @@ use parser::timeslots::TimeSlots;
 
 use crate::model::RoomData;
 
+#[inline(always)]
 pub fn timeslots_overlap(a: &TimeSlots, b: &TimeSlots) -> bool {
     let shared_weeks = a.weeks.0 & b.weeks.0;
     let shared_days = a.days.0 & b.days.0;

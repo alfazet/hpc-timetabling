@@ -149,7 +149,7 @@ where
             crossover,
             mutation,
             stats: GenerationStats::new(),
-            adjuster: Adjuster::new(generations / 50),
+            adjuster: Adjuster::new((generations / 50).max(1)),
             last_penalties: None,
             hill_climbing,
         }

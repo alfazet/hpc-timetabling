@@ -164,7 +164,7 @@ fn students_not_enrolled_in_parent_penalty(
 fn classes_student_limits_penalty(data: &TimetableData, assignment: &StudentAssignment) -> u32 {
     assignment
         .students_in_classes
-        .par_iter()
+        .iter()
         .enumerate()
         .map(|(index, class)| {
             if let Some(limit) = data.classes[index].limit
@@ -186,15 +186,16 @@ fn rooms_capacity_limits_penalty(
 ) -> u32 {
     assignment
         .students_in_classes
-        .par_iter()
+        .iter()
         .enumerate()
         .map(|(index, class)| {
             if let Some(room_option) = &sol.rooms[index]
                 && data.rooms[room_option.room_idx].capacity < class.len() as u32
             {
-                return 1;
+                1
+            } else {
+                0
             }
-            0
         })
         .sum()
 }
@@ -203,7 +204,7 @@ fn rooms_capacity_limits_penalty(
 /// in rooms that are unavailable in chosen timeslots
 fn classes_in_unavailable_rooms_penalty(sol: &Solution, data: &TimetableData) -> u32 {
     sol.times
-        .par_iter()
+        .iter()
         .enumerate()
         .map(|(index, time_option)| {
             if let Some(room_option) = &sol.rooms[index] {
@@ -224,29 +225,32 @@ fn classes_in_unavailable_rooms_penalty(sol: &Solution, data: &TimetableData) ->
 /// counts the hard violations -- time intervals of two
 /// classes overlap in the same room
 fn time_intervals_overlap_penalty(sol: &Solution) -> u32 {
-    sol.rooms
-        .par_iter()
-        .enumerate()
-        .map(|(index, room_option)| {
-            if let Some(room_idx) = room_option.as_ref().map(|r| r.room_idx) {
-                for i in index + 1..sol.rooms.len() {
-                    if let Some(i_room_idx) = sol.rooms[i].as_ref().map(|r| r.room_idx)
-                        && room_idx == i_room_idx
-                        && utils::timeslots_overlap(&sol.times[index].times, &sol.times[i].times)
-                    {
-                        return 1;
-                    }
+    let mut classes_per_room = vec![vec![]; sol.rooms.len()];
+    for (i, r) in sol.rooms.iter().enumerate() {
+        if let Some(room_idx) = r.as_ref().map(|r| r.room_idx) {
+            classes_per_room[room_idx].push(i);
+        }
+    }
+
+    let mut res = 0;
+    for room_idxs in classes_per_room {
+        for i in 0..room_idxs.len() {
+            let times_i = &sol.times[room_idxs[i]].times;
+            for j in i+1..room_idxs.len() {
+                let times_j = &sol.times[room_idxs[j]].times;
+                if utils::timeslots_overlap(times_i, times_j) {
+                    res += 1;
                 }
             }
-            0
-        })
-        .sum()
+        }
+    }
+    res
 }
 
 fn rooms_penalty(sol: &Solution) -> u32 {
-    sol.rooms.par_iter().flatten().map(|r| r.penalty).sum()
+    sol.rooms.iter().flatten().map(|r| r.penalty).sum()
 }
 
 fn times_penalty(sol: &Solution) -> u32 {
-    sol.times.par_iter().map(|t| t.penalty).sum()
+    sol.times.iter().map(|t| t.penalty).sum()
 }
