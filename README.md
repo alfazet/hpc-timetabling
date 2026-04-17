@@ -6,7 +6,7 @@ Dane pobieramy ze zbiorów udostępnionych podczas [ITC 2019](https://www.itc201
 Format danych opisany jest [pod tym linkiem](https://www.itc2019.org/format) ([przykładowy input](data/itc2019/sample.xml)).
 
 ### Algorytm genetyczny
-Zarys podstawowoych kroków algorytmu:
+Zarys podstawowych kroków algorytmu:
 ```
 population = init_population(SIZE) // inicjalizacja losowa, populacja = zbiór planów
 for generations in 0..N_GENERATIONS {
