@@ -63,9 +63,6 @@ std::string read_file(const std::string &path) {
     return ss.str();
 }
 
-// Either this or all templated functions would have to
-// be specified in the header file.
-// In other words: great language design.
 template u32 required_int<u32>(const pugi::xml_node &, const char *);
 
 template std::optional<u32> optional_int<u32>(const pugi::xml_node &,
