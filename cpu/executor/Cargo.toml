@@ -1,5 +1,5 @@
 [package]
-name = "cpu-naive"
+name = "executor"
 version.workspace = true
 edition.workspace = true
 

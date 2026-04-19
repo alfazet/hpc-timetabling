@@ -2,10 +2,10 @@
 #define GPU_TIMETABLING_COMMON_CUH
 
 #include <cstdio>
-#include <vector>
+#include <cstdlib>
+#include <cuda_runtime.h>
 
 #include "typedefs.h"
-#include "cuda_runtime.h"
 
 #define ERR_AND_DIE(reason) \
 do { \

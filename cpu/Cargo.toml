@@ -1,5 +1,5 @@
 [workspace]
-members = ["parser", "cpu-naive", "serializer"]
+members = ["parser", "executor", "serializer"]
 resolver = "3"
 
 [workspace.package]

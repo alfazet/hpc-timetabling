@@ -13,4 +13,4 @@ cmake -S "$SCRIPT_DIR" -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Debug || exit 1
 cmake --build "$BUILD_DIR" --target ${TEST_TARGET} -j"$(nproc)" || exit 1
 
 cd "$BUILD_DIR"
-ctest --output-on-failure -L "^${1}$"
+ctest --output-on-failure -L "^$1$"

@@ -9,21 +9,46 @@ include(FetchContent)
 
 include_directories(include)
 
-file(GLOB_RECURSE PARSER_SRC src/parser/*.cpp include/parser/*.h)
-add_library(parser ${PARSER_SRC})
+set(CXX_COMPILE_OPTIONS_DEBUG "-O0;-g;-Wall;-Wextra;-Wpedantic")
+set(CXX_COMPILE_OPTIONS_RELEASE "-O3;-march=native;-Wall;-Wextra;-Wpedantic")
+set(CUDA_COMPILE_OPTIONS_DEBUG "-O0;-g;-G;-v;-fno-omit-frame-pointer")
+set(CUDA_COMPILE_OPTIONS_RELEASE "-O3;--use_fast_math")
 
-file(GLOB_RECURSE SERIALIZER_SRC src/serializer/*.cpp include/serializer/*.h)
-add_library(serializer ${SERIALIZER_SRC})
+file(GLOB KERNELS_SRC src/kernels/*.cu)
+add_library(kernels OBJECT ${KERNELS_SRC})
+set_target_properties(kernels PROPERTIES CUDA_ARCHITECTURES 120) # change for different GPUs
+
+file(GLOB EXECUTOR_SRC src/executor/*.cpp)
+add_library(executor OBJECT ${EXECUTOR_SRC})
+
+file(GLOB PARSER_SRC src/parser/*.cpp)
+add_library(parser OBJECT ${PARSER_SRC})
+
+file(GLOB SERIALIZER_SRC src/serializer/*.cpp)
+add_library(serializer OBJECT ${SERIALIZER_SRC})
 target_link_libraries(serializer PRIVATE parser)
 
-file(GLOB_RECURSE MAIN_SRC src/main.cu include/common.cuh)
-add_executable(main ${MAIN_SRC})
-set_target_properties(main PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+add_executable(main src/main.cu)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(kernels PRIVATE ${CUDA_COMPILE_OPTIONS_DEBUG})
+    target_compile_options(executor PRIVATE ${CXX_COMPILE_OPTIONS_DEBUG})
+    target_compile_options(parser PRIVATE ${CXX_COMPILE_OPTIONS_DEBUG})
+    target_compile_options(serializer PRIVATE ${CXX_COMPILE_OPTIONS_DEBUG})
+    target_compile_options(main PRIVATE ${CUDA_COMPILE_OPTIONS_DEBUG})
+else ()
+    target_compile_options(kernels PRIVATE ${CUDA_COMPILE_OPTIONS_RELEASE})
+    target_compile_options(executor PRIVATE ${CXX_COMPILE_OPTIONS_RELEASE})
+    target_compile_options(parser PRIVATE ${CXX_COMPILE_OPTIONS_RELEASE})
+    target_compile_options(serializer PRIVATE ${CXX_COMPILE_OPTIONS_RELEASE})
+    target_compile_options(main PRIVATE ${CUDA_COMPILE_OPTIONS_RELEASE})
+endif ()
 
 find_package(CUDAToolkit REQUIRED)
 target_include_directories(main PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_link_libraries(main PRIVATE
-        CUDA::cudart
+        executor
+        kernels
         parser
         serializer
 )
@@ -47,13 +72,13 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 include(GoogleTest)
 
-file(GLOB_RECURSE PARSER_TESTS_SRC tests/parser/*.cpp)
+file(GLOB PARSER_TESTS_SRC tests/parser/*.cpp)
 add_executable(parser_tests ${PARSER_TESTS_SRC})
 target_link_libraries(parser_tests PRIVATE parser GTest::gtest_main)
 target_compile_definitions(parser_tests PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data")
 gtest_discover_tests(parser_tests PROPERTIES LABELS parser)
 
-file(GLOB_RECURSE SERIALIZER_TESTS_SRC tests/serializer/*.cpp)
+file(GLOB SERIALIZER_TESTS_SRC tests/serializer/*.cpp)
 add_executable(serializer_tests ${SERIALIZER_TESTS_SRC})
 target_link_libraries(serializer_tests PRIVATE serializer GTest::gtest_main)
 gtest_discover_tests(serializer_tests PROPERTIES LABELS serializer)
