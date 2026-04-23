@@ -14,23 +14,24 @@ struct ArgsList {
 
 class ArgParser {
 public:
-    int n_args;
+    usize n_args;
     char **values;
     usize arg_i = 0;
 
-    ArgParser(int argc_, char **argv_);
+    ArgParser(usize n_args_, char **values_);
 
     ArgsList parse_all();
 
     static void display_help();
 
 private:
-    static std::unordered_map<std::string, void (ArgParser::*)(ArgsList &)>
+    static std::unordered_map<std::string, void (
+                                  ArgParser::*)(ArgsList &) const>
     flag_parsers;
 
-    void parse_generations(ArgsList &args_list);
+    void parse_generations(ArgsList &list) const;
 
-    void parse_population_size(ArgsList &args_list);
+    void parse_population_size(ArgsList &list) const;
 };
 
 #endif //GPU_TIMETABLING_CMD_ARGS_H
