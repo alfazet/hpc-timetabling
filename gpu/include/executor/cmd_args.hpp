@@ -6,10 +6,13 @@
 
 #include "typedefs.hpp"
 
+constexpr u32 DEFAULT_GENERATIONS = 600;
+constexpr u32 DEFAULT_POPULATION_SIZE = 24000;
+
 struct ArgsList {
     std::string dataset_path;
-    u32 generations = 600;
-    u32 population_size = 24000;
+    u32 generations = DEFAULT_GENERATIONS;
+    u32 population_size = DEFAULT_POPULATION_SIZE;
 };
 
 class ArgParser {

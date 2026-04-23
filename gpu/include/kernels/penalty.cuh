@@ -3,10 +3,7 @@
 
 #include "typedefs.hpp"
 
-constexpr u8 BAR = 42;
-
 namespace kernels {
-void foo();
 }
 
 #endif //GPU_TIMETABLING_PENALTY_CUH
