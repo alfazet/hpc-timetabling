@@ -1,9 +1,9 @@
 #include <cstring>
 #include <pugixml.hpp>
 
-#include "parser/utils.h"
-#include "parser/distributions.h"
-#include "parser/parse_error.h"
+#include "parser/utils.hpp"
+#include "parser/distributions.hpp"
+#include "parser/parse_error.hpp"
 
 namespace parser {
 /// parse a single-parameter distribution

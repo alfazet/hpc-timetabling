@@ -1,7 +1,7 @@
 #ifndef GPU_TIMETABLING_OPTIMIZATION_H
 #define GPU_TIMETABLING_OPTIMIZATION_H
 
-#include "typedefs.h"
+#include "typedefs.hpp"
 
 namespace pugi {
 class xml_node;

@@ -1,5 +1,5 @@
-#include "parser/parse_error.h"
-#include "parser/days.h"
+#include "parser/parse_error.hpp"
+#include "parser/days.hpp"
 
 namespace parser {
 Days Days::parse(const std::string &s) {

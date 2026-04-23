@@ -3,12 +3,12 @@
 
 #include <string>
 
-#include "typedefs.h"
-#include "courses.h"
-#include "distributions.h"
-#include "optimization.h"
-#include "rooms.h"
-#include "students.h"
+#include "typedefs.hpp"
+#include "courses.hpp"
+#include "distributions.hpp"
+#include "optimization.hpp"
+#include "rooms.hpp"
+#include "students.hpp"
 
 namespace parser {
 struct Problem {

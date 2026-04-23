@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <pugixml.hpp>
 
-#include "parser/parse_error.h"
-#include "parser/rooms.h"
+#include "parser/parse_error.hpp"
+#include "parser/rooms.hpp"
 
 using namespace parser;
 

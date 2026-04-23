@@ -1,9 +1,9 @@
 #include <cstring>
 #include <pugixml.hpp>
 
-#include "parser/utils.h"
-#include "parser/parse_error.h"
-#include "parser/optimization.h"
+#include "parser/utils.hpp"
+#include "parser/parse_error.hpp"
+#include "parser/optimization.hpp"
 
 namespace parser {
 Optimization Optimization::parse(const pugi::xml_node &node) {

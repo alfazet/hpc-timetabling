@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "typedefs.h"
-#include "parse_error.h"
+#include "typedefs.hpp"
+#include "parse_error.hpp"
 
 namespace parser {
 struct Weeks {

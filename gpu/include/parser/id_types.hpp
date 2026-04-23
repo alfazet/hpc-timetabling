@@ -3,7 +3,7 @@
 
 #include <cassert>
 
-#include "typedefs.h"
+#include "typedefs.hpp"
 
 namespace parser {
 struct RoomId {

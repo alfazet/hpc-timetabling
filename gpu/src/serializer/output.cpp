@@ -1,8 +1,8 @@
 #include <sstream>
 
-#include "parser/problem.h"
-#include "serializer/utils.h"
-#include "serializer/output.h"
+#include "parser/problem.hpp"
+#include "serializer/utils.hpp"
+#include "serializer/output.hpp"
 
 namespace serializer {
 OutputMetadata OutputMetadata::from_problem(const parser::Problem &problem) {

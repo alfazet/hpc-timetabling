@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "parser/weeks.h"
+#include "parser/weeks.hpp"
 
 using namespace parser;
 

@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 
-#include "parser/days.h"
-#include "parser/id_types.h"
-#include "parser/weeks.h"
-#include "typedefs.h"
+#include "parser/days.hpp"
+#include "parser/id_types.hpp"
+#include "parser/weeks.hpp"
+#include "typedefs.hpp"
 
 namespace parser {
 struct Problem;

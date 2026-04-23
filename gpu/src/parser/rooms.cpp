@@ -1,8 +1,8 @@
 #include <pugixml.hpp>
 
-#include "parser/utils.h"
-#include "parser/parse_error.h"
-#include "parser/rooms.h"
+#include "parser/utils.hpp"
+#include "parser/parse_error.hpp"
+#include "parser/rooms.hpp"
 
 namespace parser {
 Rooms Rooms::parse(const pugi::xml_node &node) {

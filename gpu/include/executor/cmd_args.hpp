@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "typedefs.h"
+#include "typedefs.hpp"
 
 struct ArgsList {
     std::string dataset_path;

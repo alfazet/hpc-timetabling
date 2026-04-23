@@ -1,9 +1,9 @@
 #include <string>
 #include <pugixml.hpp>
 
-#include "parser/utils.h"
-#include "parser/parse_error.h"
-#include "parser/timeslots.h"
+#include "parser/utils.hpp"
+#include "parser/parse_error.hpp"
+#include "parser/timeslots.hpp"
 
 namespace parser {
 TimeSlots TimeSlots::parse(const pugi::xml_node &node) {

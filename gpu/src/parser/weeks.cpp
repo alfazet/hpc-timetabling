@@ -1,4 +1,4 @@
-#include "parser/weeks.h"
+#include "parser/weeks.hpp"
 
 namespace parser {
 Weeks Weeks::parse(const std::string &s) {

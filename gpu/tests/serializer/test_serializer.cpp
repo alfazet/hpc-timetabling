@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "serializer/serializer.h"
+#include "serializer/serializer.hpp"
 
 using namespace serializer;
 

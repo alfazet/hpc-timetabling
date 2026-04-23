@@ -1,7 +1,7 @@
 #include <cstring>
 #include <pugixml.hpp>
 
-#include "parser/problem.h"
+#include "parser/problem.hpp"
 
 namespace parser {
 template <typename T>

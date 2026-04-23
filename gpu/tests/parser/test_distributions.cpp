@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <pugixml.hpp>
 
-#include "parser/distributions.h"
-#include "parser/parse_error.h"
+#include "parser/distributions.hpp"
+#include "parser/parse_error.hpp"
 
 using namespace parser;
 

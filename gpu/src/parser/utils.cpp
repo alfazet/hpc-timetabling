@@ -4,9 +4,9 @@
 #include <optional>
 #include <pugixml.hpp>
 
-#include "typedefs.h"
-#include "parser/parse_error.h"
-#include "parser/utils.h"
+#include "typedefs.hpp"
+#include "parser/parse_error.hpp"
+#include "parser/utils.hpp"
 
 namespace parser::utils {
 template <typename T>

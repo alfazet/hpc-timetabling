@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 
-#include "parser/parser.h"
-#include "parser/utils.h"
+#include "parser/parser.hpp"
+#include "parser/utils.hpp"
 
 using namespace parser;
 

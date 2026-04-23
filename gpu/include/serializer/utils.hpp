@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "typedefs.h"
+#include "typedefs.hpp"
 
 namespace serializer::utils {
 template <typename T>

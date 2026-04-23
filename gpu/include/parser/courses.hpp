@@ -4,9 +4,9 @@
 #include <optional>
 #include <vector>
 
-#include "typedefs.h"
-#include "id_types.h"
-#include "timeslots.h"
+#include "typedefs.hpp"
+#include "id_types.hpp"
+#include "timeslots.hpp"
 
 namespace pugi {
 class xml_node;

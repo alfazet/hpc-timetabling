@@ -1,9 +1,9 @@
 #ifndef GPU_TIMETABLING_TIMESLOTS_H
 #define GPU_TIMETABLING_TIMESLOTS_H
 
-#include "typedefs.h"
-#include "days.h"
-#include "weeks.h"
+#include "typedefs.hpp"
+#include "days.hpp"
+#include "weeks.hpp"
 
 namespace pugi {
 class xml_node;

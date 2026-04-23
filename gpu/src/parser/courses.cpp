@@ -1,8 +1,8 @@
 #include <cstring>
 #include <pugixml.hpp>
 
-#include "parser/utils.h"
-#include "parser/courses.h"
+#include "parser/utils.hpp"
+#include "parser/courses.hpp"
 
 namespace parser {
 ClassRoom parse_class_room(const pugi::xml_node &node) {

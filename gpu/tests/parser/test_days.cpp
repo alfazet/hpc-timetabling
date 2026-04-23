@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "parser/parse_error.h"
-#include "parser/days.h"
+#include "parser/parse_error.hpp"
+#include "parser/days.hpp"
 
 using namespace parser;
 

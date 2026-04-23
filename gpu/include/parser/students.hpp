@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "id_types.h"
+#include "id_types.hpp"
 
 namespace pugi {
 class xml_node;

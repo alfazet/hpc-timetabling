@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <cuda_runtime.h>
 
-#include "typedefs.h"
+#include "typedefs.hpp"
 
 #define ERR_AND_DIE(reason) \
 do { \

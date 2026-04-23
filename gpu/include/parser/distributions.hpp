@@ -6,8 +6,8 @@
 #include <variant>
 #include <vector>
 
-#include "typedefs.h"
-#include "id_types.h"
+#include "typedefs.hpp"
+#include "id_types.hpp"
 
 namespace pugi {
 class xml_node;
