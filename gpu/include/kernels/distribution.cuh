@@ -1,19 +1,21 @@
 #ifndef GPU_TIMETABLING_DISTRIBUTION_CUH
 #define GPU_TIMETABLING_DISTRIBUTION_CUH
 
-#include "executor/solution.hpp"
+#include "solution.cuh"
 #include "common.cuh"
 
 struct Distribution {
-    const Solution &sol;
-    const TimetableData &data;
+    // Assume that sol and data are pointers to structs in gpu memory
+    const Solution *sol;
+    const TimetableData *data;
 
-    Distribution(const Solution &, const TimetableData &);
-    Penalty calculate_penalty();
+    Distribution(const Solution *, const TimetableData *);
+    u32 calculate_penalty() const;
 };
 
 namespace kernels {
-    __global__ void distribution_penalty_calculation(const Distribution *, u32 *);
+    __global__ void distribution_penalty_calculation(const Solution *,
+        const TimetableData *, u32 *, const usize);
 }
 
 #endif // GPU_TIMETABLING_DISTRIBUTION_CUH
