@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.28)
 project(gpu-timetabling LANGUAGES CXX CUDA)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_ARCHITECTURES native)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 
@@ -16,7 +17,6 @@ set(CUDA_COMPILE_OPTIONS_RELEASE "-O3;--use_fast_math")
 
 file(GLOB KERNELS_SRC src/kernels/*.cu)
 add_library(kernels OBJECT ${KERNELS_SRC})
-set_target_properties(kernels PROPERTIES CUDA_ARCHITECTURES 120) # change for different GPUs
 
 file(GLOB EXECUTOR_SRC src/executor/*.cpp)
 add_library(executor OBJECT ${EXECUTOR_SRC})
@@ -74,7 +74,7 @@ include(GoogleTest)
 
 file(GLOB PARSER_TESTS_SRC tests/parser/*.cpp)
 add_executable(parser_tests ${PARSER_TESTS_SRC})
-target_link_libraries(parser_tests PRIVATE parser GTest::gtest_main)
+target_link_libraries(parser_tests PRIVATE pugixml parser GTest::gtest_main)
 target_compile_definitions(parser_tests PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data")
 gtest_discover_tests(parser_tests PROPERTIES LABELS parser)
 
