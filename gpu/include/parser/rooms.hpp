@@ -25,11 +25,11 @@ struct Room {
     RoomId id;
     u32 capacity;
     std::vector<Travel> travels;
-    std::vector<TimeSlots> unavailabilities;
+    std::vector<TimeSlots> unavail;
 
     bool operator==(const Room &o) const {
         return id == o.id && capacity == o.capacity && travels == o.travels &&
-               unavailabilities == o.unavailabilities;
+               unavail == o.unavail;
     }
 };
 

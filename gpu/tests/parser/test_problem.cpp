@@ -31,7 +31,7 @@ TEST(Problem, SampleXml) {
     EXPECT_EQ(problem.rooms.items[1].travels[0].value, 2u);
     EXPECT_EQ(problem.rooms.items[2].id, RoomId(3));
     EXPECT_EQ(problem.rooms.items[2].capacity, 80u);
-    ASSERT_EQ(problem.rooms.items[2].unavailabilities.size(), 2u);
+    ASSERT_EQ(problem.rooms.items[2].unavail.size(), 2u);
 
     ASSERT_EQ(problem.courses.items.size(), 1u);
     auto &course = problem.courses.items[0];

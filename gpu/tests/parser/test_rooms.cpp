@@ -40,8 +40,8 @@ TEST(Rooms, MultipleRooms) {
     EXPECT_EQ(rooms.items[2].id, RoomId(3));
     EXPECT_EQ(rooms.items[2].capacity, 300u);
 
-    ASSERT_EQ(rooms.items[2].unavailabilities.size(), 1u);
-    auto &u = rooms.items[2].unavailabilities[0];
+    ASSERT_EQ(rooms.items[2].unavail.size(), 1u);
+    auto &u = rooms.items[2].unavail[0];
     EXPECT_EQ(u.start, 102u);
     EXPECT_EQ(u.length, 24u);
     EXPECT_EQ(u.days, Days(1 << 0 | 1 << 1));

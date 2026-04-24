@@ -25,7 +25,7 @@ Rooms Rooms::parse(const pugi::xml_node &node) {
         }
 
         for (auto u : child.children("unavailable")) {
-            room.unavailabilities.push_back(TimeSlots::parse(u));
+            room.unavail.push_back(TimeSlots::parse(u));
         }
         result.items.push_back(std::move(room));
     }

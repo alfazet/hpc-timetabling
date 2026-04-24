@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <cuda_runtime.h>
 
+#include <thrust/device_vector.h>
+
 #include "typedefs.hpp"
 
 #define ERR_AND_DIE(reason) \
