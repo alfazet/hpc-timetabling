@@ -22,4 +22,6 @@ struct Penalty {
 
 std::ostream &operator<<(std::ostream &stream, const Penalty &p);
 
+Penalty operator+(Penalty p1, const Penalty p2);
+
 #endif //GPU_TIMETABLING_PENALTY_HPP

@@ -14,3 +14,9 @@ std::ostream &operator<<(std::ostream &stream, const Penalty &p) {
 
     return stream;
 }
+
+Penalty operator+(Penalty p1, const Penalty p2) {
+    p1.soft += p2.soft;
+    p1.hard += p2.hard;
+    return p1;
+}
