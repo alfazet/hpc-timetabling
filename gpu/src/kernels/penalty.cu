@@ -12,3 +12,10 @@ std::ostream &operator<<(std::ostream &stream, const Penalty &p) {
 
     return stream;
 }
+
+Penalty operator+(Penalty p1, const Penalty p2) {
+    p1.penalty.x += p2.penalty.x;
+    p1.penalty.y += p2.penalty.y;
+
+    return p1;
+}

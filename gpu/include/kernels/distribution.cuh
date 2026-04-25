@@ -1,12 +1,11 @@
 #ifndef GPU_TIMETABLING_DISTRIBUTION_CUH
 #define GPU_TIMETABLING_DISTRIBUTION_CUH
 
-#include "common.cuh"
+#include "population.cuh"
 
-namespace kernels {
-struct Distribution {
+namespace kernels::distribution {
 
-};
+__device__ void calculate_penalty(const TimetableData *d_data, u32 *penalty);
 }
 
 #endif //GPU_TIMETABLING_DISTRIBUTION_CUH
