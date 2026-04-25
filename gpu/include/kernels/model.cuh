@@ -2,6 +2,7 @@
 #define GPU_TIMETABLING_MODEL_CUH
 
 #include "common.cuh"
+#include "penalty.cuh"
 #include "typedefs.hpp"
 #include "parser/parser.hpp"
 
@@ -103,6 +104,35 @@ struct RoomOption {
                const std::vector<u32> &penalty);
 };
 
+struct StudentData {
+    thrust::device_vector<parser::StudentId> id;
+    // indices into TimetableData::courses
+    thrust::device_vector<usize> course_idxs;
+    // the courses wanted by student `i` begin at idx course_idxs_offsets[i]
+    // and end at idx course_idxs_offsets[i + 1] - 1
+    thrust::device_vector<usize> course_idxs_offsets;
+
+    StudentData(const std::vector<parser::StudentId> &id,
+                const std::vector<usize> &course_idxs,
+                const std::vector<usize> &course_idxs_offsets);
+};
+
+struct DistributionData {
+    // apparently CUDA supports std::variant so this should be fine
+    thrust::device_vector<parser::DistributionKind> kind;
+    // incides into TimetableData::classes
+    thrust::device_vector<usize> class_idxs;
+    // the idxs of classes taken into account by distribution `i`
+    // begin at idx class_idxs_offsets[i] and end at idx class_idx_offsets[i + 1] - 1
+    thrust::device_vector<usize> class_idxs_offsets;
+    thrust::device_vector<Penalty> penalty;
+
+    DistributionData(const std::vector<parser::DistributionKind> &kind,
+                     const std::vector<usize> &class_idxs,
+                     const std::vector<usize> &class_idxs_offsets,
+                     const std::vector<Penalty> &penalty);
+};
+
 // This struct should be allocated once on the GPU's heap.
 // All the kernels should just take pointers to relevant parts of this struct
 // to access the problem's data.
@@ -112,9 +142,10 @@ struct TimetableData {
     ConfigData configs;
     SubpartData subparts;
     ClassData classes;
-
     TimeOption time_options;
     RoomOption room_options;
+    DistributionData distributions;
+    StudentData students;
 
     parser::Optimization optimization;
     u32 n_days;
@@ -129,7 +160,9 @@ struct TimetableData {
                   SubpartData subpart_data,
                   ClassData class_data,
                   TimeOption time_options,
-                  RoomOption room_options
+                  RoomOption room_options,
+                  DistributionData distributions,
+                  StudentData students
         );
 
     static TimetableData from_problem(parser::Problem p);

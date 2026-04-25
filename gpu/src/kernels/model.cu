@@ -53,12 +53,33 @@ RoomOption::RoomOption(const std::vector<usize> &room_idx,
     penalty(penalty) {
 }
 
+StudentData::StudentData(const std::vector<parser::StudentId> &id,
+                         const std::vector<usize> &course_idxs,
+                         const std::vector<usize> &
+                         course_idxs_offsets) : id(id),
+                                                course_idxs(course_idxs),
+                                                course_idxs_offsets(
+                                                    course_idxs_offsets) {
+}
+
+DistributionData::DistributionData(
+    const std::vector<parser::DistributionKind> &kind,
+    const std::vector<usize> &class_idxs,
+    const std::vector<usize> &class_idxs_offsets,
+    const std::vector<Penalty> &penalty) : kind(kind), class_idxs(class_idxs),
+                                           class_idxs_offsets(
+                                               class_idxs_offsets),
+                                           penalty(penalty) {
+}
+
 TimetableData::TimetableData(u32 n_days, u32 n_weeks, u32 slots_per_day,
                              parser::Optimization optimization,
                              RoomData room_data, CourseData course_data,
                              ConfigData config_data, SubpartData subpart_data,
                              ClassData class_data, TimeOption time_options,
-                             RoomOption room_options) : room_data(
+                             RoomOption room_options,
+                             DistributionData distributions,
+                             StudentData students) : room_data(
         std::move(room_data)),
     courses(std::move(course_data)),
     configs(std::move(config_data)),
@@ -66,6 +87,8 @@ TimetableData::TimetableData(u32 n_days, u32 n_weeks, u32 slots_per_day,
     classes(std::move(class_data)),
     time_options(std::move(time_options)),
     room_options(std::move(room_options)),
+    distributions(std::move(distributions)),
+    students(std::move(students)),
     optimization(optimization),
     n_days(n_days),
     n_weeks(n_weeks),
@@ -208,9 +231,50 @@ TimetableData TimetableData::from_problem(parser::Problem p) {
     TimeOption time_options(times, time_penalty);
     RoomOption room_options(room_idx, room_penalty);
 
+    std::vector<parser::StudentId> student_id;
+    std::vector<usize> course_idxs;
+    std::vector<usize> course_idxs_offsets;
+    offset = 0;
+    for (const auto &s : p.students.items) {
+        student_id.push_back(s.id);
+        course_idxs_offsets.push_back(offset);
+        for (const auto &c_id : s.courses) {
+            auto iter = course_id_to_idx.find(c_id.value);
+            if (iter != course_id_to_idx.end()) {
+                course_idxs.push_back(iter->second);
+                offset++;
+            }
+        }
+    }
+    StudentData students(student_id, course_idxs, course_idxs_offsets);
+
+    std::vector<parser::DistributionKind> kind;
+    std::vector<usize> class_idxs;
+    std::vector<usize> class_idxs_offsets;
+    std::vector<Penalty> penalty;
+    offset = 0;
+    for (const auto &d : p.distributions.items) {
+        kind.push_back(d.kind);
+        if (d.penalty.has_value()) {
+            penalty.emplace_back(0, d.penalty.value());
+        } else {
+            penalty.emplace_back(1, 0);
+        }
+        class_idxs_offsets.push_back(offset);
+        for (const auto &c_id : d.classes) {
+            auto iter = class_id_to_idx.find(c_id.value);
+            if (iter != class_id_to_idx.end()) {
+                class_idxs.push_back(iter->second);
+                offset++;
+            }
+        }
+    }
+    DistributionData distributions(kind, class_idxs, class_idxs_offsets,
+                                   penalty);
+
     return {p.nr_days, p.nr_weeks, p.slots_per_day, p.optimization,
             room_data, course_data, config_data, subpart_data,
-            class_data, time_options, room_options};
+            class_data, time_options, room_options, distributions, students};
 }
 
 }

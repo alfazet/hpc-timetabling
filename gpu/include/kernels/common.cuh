@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cuda_runtime.h>
-
+#include <vector_types.h>
 #include <thrust/device_vector.h>
 
 #include "typedefs.hpp"
