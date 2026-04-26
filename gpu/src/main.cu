@@ -1,6 +1,7 @@
 #include "parser/parser.hpp"
 #include "executor/cmd_args.hpp"
 #include "kernels/model.cuh"
+#include "serializer/serializer.hpp"
 
 void main_(int argc, char **argv) {
     ArgParser arg_parser(argc - 1, argv + 1);
@@ -8,6 +9,7 @@ void main_(int argc, char **argv) {
     auto content = parser::utils::read_file(arg_list.dataset_path);
     auto problem = parser::Problem::parse(content);
     auto data = kernels::TimetableData::from_problem(problem);
+    auto metadata = serializer::OutputMetadata::from_problem(problem);
 }
 
 int main(int argc, char **argv) {
