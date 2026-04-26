@@ -1,5 +1,6 @@
 #include "parser/parser.hpp"
 #include "executor/cmd_args.hpp"
+#include "executor/solver.cuh"
 #include "kernels/model.cuh"
 #include "serializer/serializer.hpp"
 
@@ -8,8 +9,12 @@ void main_(int argc, char **argv) {
     auto arg_list = arg_parser.parse_all();
     auto content = parser::utils::read_file(arg_list.dataset_path);
     auto problem = parser::Problem::parse(content);
-    auto data = kernels::TimetableData::from_problem(problem);
+    auto d_data = kernels::TimetableData::from_problem(problem);
     auto metadata = serializer::OutputMetadata::from_problem(problem);
+
+    Solver solver(arg_list.generations, arg_list.population_size, d_data,
+                  arg_list.seed);
+    // solver.solve();
 }
 
 int main(int argc, char **argv) {

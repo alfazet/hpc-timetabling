@@ -7,6 +7,7 @@ std::unordered_map<std::string, void(ArgParser::*)(ArgsList &) const>
 ArgParser::flag_parsers{
     {"-g", &ArgParser::parse_generations},
     {"-p", &ArgParser::parse_population_size},
+    {"-s", &ArgParser::parse_seed}
 };
 
 u32 parse_u32(const char *s, const char *arg_name) {
@@ -81,6 +82,14 @@ void ArgParser::parse_population_size(ArgsList &list) const {
     }
     list.population_size = parse_u32(this->values[this->arg_i],
                                      "population_size");
+}
+
+void ArgParser::parse_seed(ArgsList &list) const {
+    if (this->arg_i >= this->n_args) {
+        display_help();
+        throw std::runtime_error("missing value for seed");
+    }
+    list.seed = parse_u32(this->values[this->arg_i], "seed");
 }
 
 void ArgParser::display_help() {

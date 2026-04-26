@@ -24,11 +24,15 @@ struct FoundSolution {
 };
 
 struct Solver {
+    kernels::TimetableData d_data;
+    u32 seed;
     u32 generations;
     u32 population_size;
-    kernels::TimetableData d_data;
 
-    Solver(u32 generations, u32 population_size, kernels::TimetableData d_data);
+    Solver(u32 generations, u32 population_size, kernels::TimetableData d_data,
+           u32 seed);
+
+    FoundSolution solve() const;
 };
 
 #endif //GPU_TIMETABLING_SOLVER_CUH

@@ -1,5 +1,6 @@
 #include "executor/solver.cuh"
 #include "kernels/model.cuh"
+#include "kernels/population.cuh"
 
 FoundSolution::FoundSolution(
     std::vector<std::vector<usize> > student_assignment,
@@ -11,10 +12,10 @@ FoundSolution::FoundSolution(
       penalty(std::move(penalty)) {
 }
 
-serializer::Output FoundSolution::serialize(
-    const std::vector<parser::RoomId> &room_ids,
-    const std::vector<parser::StudentId> &student_ids,
-    const std::vector<parser::ClassId> &class_ids) const {
+serializer::Output
+FoundSolution::serialize(const std::vector<parser::RoomId> &room_ids,
+                         const std::vector<parser::StudentId> &student_ids,
+                         const std::vector<parser::ClassId> &class_ids) const {
     std::vector<serializer::Class> classes_out;
     for (usize i = 0; i < class_ids.size(); i++) {
         usize room_idx = this->rooms_idxs[i];
@@ -36,7 +37,20 @@ serializer::Output FoundSolution::serialize(
 }
 
 Solver::Solver(u32 generations, u32 population_size,
-               kernels::TimetableData d_data)
-    : generations(generations), population_size(population_size),
-      d_data(std::move(d_data)) {
+               kernels::TimetableData d_data, u32 seed)
+    : d_data(std::move(d_data)), seed(seed), generations(generations),
+      population_size(population_size) {
+}
+
+FoundSolution Solver::solve() const {
+    usize n_classes = d_data.classes.id.size();
+    kernels::Population
+        population(n_classes, this->population_size, this->seed);
+    population.init(d_data);
+
+    // TODO: main loop over generations
+
+    // TODO: create a FoundSolution
+
+    exit(123);
 }

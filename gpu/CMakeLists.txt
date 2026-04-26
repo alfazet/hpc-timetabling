@@ -9,16 +9,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 
 include_directories(include)
+find_package(CUDAToolkit REQUIRED)
 
-set(CXX_COMPILE_OPTIONS_DEBUG "-O0;-g;-Wall;-Wextra;-Wpedantic")
-set(CXX_COMPILE_OPTIONS_RELEASE "-O3;-march=native;-Wall;-Wextra;-Wpedantic")
+set(CXX_COMPILE_OPTIONS_DEBUG "-O0;-g;-Wall;-Wextra")
+set(CXX_COMPILE_OPTIONS_RELEASE "-O3;-march=native;-Wall;-Wextra")
 set(CUDA_COMPILE_OPTIONS_DEBUG "-O0;-g;-G;-v;-fno-omit-frame-pointer")
 set(CUDA_COMPILE_OPTIONS_RELEASE "-O3;--use_fast_math")
 
 file(GLOB KERNELS_SRC src/kernels/*.cu)
 add_library(kernels OBJECT ${KERNELS_SRC})
+target_link_libraries(kernels PRIVATE CUDA::curand)
 
-file(GLOB EXECUTOR_SRC src/executor/*.cpp)
+file(GLOB EXECUTOR_SRC src/executor/*.cpp src/executor/*.cu)
 add_library(executor OBJECT ${EXECUTOR_SRC})
 
 file(GLOB PARSER_SRC src/parser/*.cpp)
@@ -29,6 +31,7 @@ add_library(serializer OBJECT ${SERIALIZER_SRC})
 target_link_libraries(serializer PRIVATE parser)
 
 add_executable(main src/main.cu)
+target_include_directories(main PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_compile_options(kernels PRIVATE ${CUDA_COMPILE_OPTIONS_DEBUG})
@@ -44,8 +47,6 @@ else ()
     target_compile_options(main PRIVATE ${CUDA_COMPILE_OPTIONS_RELEASE})
 endif ()
 
-find_package(CUDAToolkit REQUIRED)
-target_include_directories(main PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 target_link_libraries(main PRIVATE
         executor
         kernels

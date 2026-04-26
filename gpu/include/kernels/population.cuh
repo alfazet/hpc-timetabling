@@ -19,9 +19,16 @@ struct Population {
     // `times[i]` = idx of the RoomOption chosen for the `i`-th class
     // NO_ROOM if the class doesn't need a room
     thrust::device_vector<usize> rooms;
+    u32 seed;
     usize n_classes;
+    usize population_size;
+
+    Population(usize n_classes, usize population_size, u64 seed);
+
+    // initialize the population with random solutions
+    void init(const TimetableData &d_data);
 };
 
 }
 
-#endif //GPU_TIMETABLING_POPULATION_CUH
+#endif // GPU_TIMETABLING_POPULATION_CUH
