@@ -8,15 +8,17 @@ namespace kernels {
 // All data about all solutions is packed into a flat array of
 // size n_classes * population_size.
 // For example: times[i * n_classes + j]
-// represents the time slot assignment for the `j`-th class in the
-// `i`-th solution
+// represents the index of the time option chosen for the `j`-th class in the
+// `i`-th solution.
+// Indices refer to the TimetableData::time_options/room_options vectors.
 struct Population {
     // time slot assignments
-    // `times[i]` = assignment for the `i`-th class
-    thrust::device_vector<TimeOption> times;
+    // `times[i]` = idx of the TimeOption chosen for the `i`-th class
+    thrust::device_vector<usize> times;
     // room assignments
-    // `rooms[i]` = assignment for the `i`-th class,
-    thrust::device_vector<RoomOption> rooms;
+    // `times[i]` = idx of the RoomOption chosen for the `i`-th class
+    // NO_ROOM if the class doesn't need a room
+    thrust::device_vector<usize> rooms;
     usize n_classes;
 };
 
