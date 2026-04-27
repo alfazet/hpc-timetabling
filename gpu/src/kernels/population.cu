@@ -37,8 +37,8 @@ __global__ void k_init_population(usize *times,
 }
 
 Population::Population(usize n_classes, usize population_size, u64 seed)
-    : times(thrust::device_vector<usize>(n_classes * population_size)),
-      rooms(thrust::device_vector<usize>(n_classes * population_size)),
+    : times(n_classes * population_size),
+      rooms(n_classes * population_size),
       seed(seed), n_classes(n_classes), population_size(population_size) {
 }
 
@@ -56,7 +56,7 @@ void Population::init(const TimetableData &d_data) {
     usize *d_rooms = thrust::raw_pointer_cast(this->rooms.data());
 
     // x: solutions, y: classes
-    constexpr dim3 block_dim(32, 32); // arbitrary numbers for now
+    constexpr dim3 block_dim(32, 32); // numbers that multiply to 1024
     const dim3 grid_dim(
         (static_cast<u32>(population_size) + block_dim.x - 1) / block_dim.x,
         (static_cast<u32>(n_classes) + block_dim.y - 1) / block_dim.y);

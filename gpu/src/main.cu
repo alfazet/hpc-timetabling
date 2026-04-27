@@ -12,9 +12,8 @@ void main_(int argc, char **argv) {
     auto d_data = kernels::TimetableData::from_problem(problem);
     auto metadata = serializer::OutputMetadata::from_problem(problem);
 
-    Solver solver(arg_list.generations, arg_list.population_size, d_data,
+    Solver solver(d_data, arg_list.generations, arg_list.population_size,
                   arg_list.seed);
-    // solver.solve();
 }
 
 int main(int argc, char **argv) {

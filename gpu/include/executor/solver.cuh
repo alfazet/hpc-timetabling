@@ -25,11 +25,11 @@ struct FoundSolution {
 
 struct Solver {
     kernels::TimetableData d_data;
-    u32 seed;
     u32 generations;
     u32 population_size;
+    u32 seed;
 
-    Solver(u32 generations, u32 population_size, kernels::TimetableData d_data,
+    Solver(kernels::TimetableData d_data, u32 generations, u32 population_size,
            u32 seed);
 
     FoundSolution solve() const;

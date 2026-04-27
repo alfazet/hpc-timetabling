@@ -26,6 +26,7 @@ struct Population {
     Population(usize n_classes, usize population_size, u64 seed);
 
     // initialize the population with random solutions
+    // (one thread per one solution)
     void init(const TimetableData &d_data);
 };
 

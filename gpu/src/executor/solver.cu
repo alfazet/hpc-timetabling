@@ -1,4 +1,6 @@
 #include "executor/solver.cuh"
+
+#include "kernels/assigner.cuh"
 #include "kernels/model.cuh"
 #include "kernels/population.cuh"
 
@@ -36,17 +38,23 @@ FoundSolution::serialize(const std::vector<parser::RoomId> &room_ids,
     return {classes_out};
 }
 
-Solver::Solver(u32 generations, u32 population_size,
-               kernels::TimetableData d_data, u32 seed)
-    : d_data(std::move(d_data)), seed(seed), generations(generations),
-      population_size(population_size) {
+Solver::Solver(
+    kernels::TimetableData d_data, u32 generations, u32 population_size,
+    u32 seed)
+    : d_data(std::move(d_data)), generations(generations),
+      population_size(population_size),
+      seed(seed) {
 }
 
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
+
     kernels::Population
         population(n_classes, this->population_size, this->seed);
     population.init(d_data);
+
+    kernels::StudentAssignment assignment(n_classes, this->population_size);
+    assignment.assign(d_data, population);
 
     // TODO: main loop over generations
 

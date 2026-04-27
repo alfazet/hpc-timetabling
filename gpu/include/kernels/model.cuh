@@ -10,6 +10,7 @@ constexpr u32 NO_TRAVEL = std::numeric_limits<u32>::max();
 constexpr u32 NO_LIMIT = std::numeric_limits<u32>::max();
 constexpr usize NO_PARENT = std::numeric_limits<usize>::max();
 constexpr usize NO_ROOM = std::numeric_limits<usize>::max();
+constexpr usize NO_CLASS_ASSIGNED = std::numeric_limits<usize>::max();
 
 namespace kernels {
 
