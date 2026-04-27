@@ -14,11 +14,11 @@ namespace kernels {
 struct Population {
     // time slot assignments
     // `times[i]` = idx of the TimeOption chosen for the `i`-th class
-    thrust::device_vector<usize> times;
+    thrust::device_vector<u16> times;
     // room assignments
     // `times[i]` = idx of the RoomOption chosen for the `i`-th class
     // NO_ROOM if the class doesn't need a room
-    thrust::device_vector<usize> rooms;
+    thrust::device_vector<u16> rooms;
     u32 seed;
     usize n_classes;
     usize population_size;

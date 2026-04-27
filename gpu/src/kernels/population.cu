@@ -3,13 +3,13 @@
 
 namespace kernels {
 
-__global__ void k_init_population(usize *times,
-                                  usize *rooms,
+__global__ void k_init_population(u16 *times,
+                                  u16 *rooms,
                                   usize n_classes, usize population_size,
-                                  const usize *times_start,
-                                  const usize *times_end,
-                                  const usize *rooms_start,
-                                  const usize *rooms_end,
+                                  const u16 *times_start,
+                                  const u16 *times_end,
+                                  const u16 *rooms_start,
+                                  const u16 *rooms_end,
                                   u32 seed) {
     usize sol = blockIdx.x * blockDim.x + threadIdx.x;
     usize cls = blockIdx.y * blockDim.y + threadIdx.y;
@@ -21,13 +21,13 @@ __global__ void k_init_population(usize *times,
     usize tid = sol * n_classes + cls;
     curand_init(seed, tid, 0, &rng);
 
-    usize t_start = times_start[cls];
-    usize t_end = times_end[cls];
-    usize n_times = t_end - t_start;
+    u16 t_start = times_start[cls];
+    u16 t_end = times_end[cls];
+    u16 n_times = t_end - t_start;
     times[tid] = t_start + (n_times > 0 ? curand(&rng) % n_times : 0);
 
-    usize r_start = rooms_start[cls];
-    usize r_end = rooms_end[cls];
+    u16 r_start = rooms_start[cls];
+    u16 r_end = rooms_end[cls];
     if (r_start == r_end) {
         rooms[tid] = NO_ROOM;
     } else {
@@ -43,17 +43,17 @@ Population::Population(usize n_classes, usize population_size, u64 seed)
 }
 
 void Population::init(const TimetableData &d_data) {
-    const usize *d_times_start =
+    const u16 *d_times_start =
         thrust::raw_pointer_cast(d_data.classes.times_start.data());
-    const usize *d_times_end =
+    const u16 *d_times_end =
         thrust::raw_pointer_cast(d_data.classes.times_end.data());
-    const usize *d_rooms_start =
+    const u16 *d_rooms_start =
         thrust::raw_pointer_cast(d_data.classes.rooms_start.data());
-    const usize *d_rooms_end =
+    const u16 *d_rooms_end =
         thrust::raw_pointer_cast(d_data.classes.rooms_end.data());
 
-    usize *d_times = thrust::raw_pointer_cast(this->times.data());
-    usize *d_rooms = thrust::raw_pointer_cast(this->rooms.data());
+    u16 *d_times = thrust::raw_pointer_cast(this->times.data());
+    u16 *d_rooms = thrust::raw_pointer_cast(this->rooms.data());
 
     // x: solutions, y: classes
     constexpr dim3 block_dim(32, 32); // numbers that multiply to 1024

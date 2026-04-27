@@ -14,16 +14,16 @@ __device__ bool timeslots_overlap(const parser::TimeSlots &a,
 }
 
 __global__ void assign_students_kernel(
-    usize *students_idxs,
+    u16 *students_idxs,
     u32 *class_counts,
-    const usize *pop_times,
-    const usize *courses_configs_start, const usize *courses_configs_end,
-    const usize *configs_subparts_start, const usize *configs_subparts_end,
-    const usize *subparts_classes_start, const usize *subparts_classes_end,
-    const u32 *class_limit, const usize *class_parent,
-    const usize *class_subpart_idx,
+    const u16 *pop_times,
+    const u16 *courses_configs_start, const u16 *courses_configs_end,
+    const u16 *configs_subparts_start, const u16 *configs_subparts_end,
+    const u16 *subparts_classes_start, const u16 *subparts_classes_end,
+    const u32 *class_limit, const u16 *class_parent,
+    const u16 *class_subpart_idx,
     const parser::TimeSlots *time_opt_times,
-    const usize *student_course_idxs, const usize *student_course_offsets,
+    const u16 *student_course_idxs, const usize *student_course_offsets,
     usize n_classes, usize n_students) {
     usize sol = blockIdx.x;
     usize tid = threadIdx.x;
@@ -197,33 +197,33 @@ void StudentAssignment::assign(const TimetableData &d_data,
     thrust::fill(students_idxs.begin(), students_idxs.end(), 0);
     thrust::fill(class_counts.begin(), class_counts.end(), 0);
 
-    usize *d_students_idxs =
+    u16 *d_students_idxs =
         thrust::raw_pointer_cast(this->students_idxs.data());
     u32 *d_class_counts = thrust::raw_pointer_cast(this->class_counts.data());
 
-    const usize *d_pop_times =
+    const u16 *d_pop_times =
         thrust::raw_pointer_cast(population.times.data());
-    const usize *d_courses_configs_start =
+    const u16 *d_courses_configs_start =
         thrust::raw_pointer_cast(d_data.courses.configs_start.data());
-    const usize *d_courses_configs_end =
+    const u16 *d_courses_configs_end =
         thrust::raw_pointer_cast(d_data.courses.configs_end.data());
-    const usize *d_configs_subparts_start =
+    const u16 *d_configs_subparts_start =
         thrust::raw_pointer_cast(d_data.configs.subparts_start.data());
-    const usize *d_configs_subparts_end =
+    const u16 *d_configs_subparts_end =
         thrust::raw_pointer_cast(d_data.configs.subparts_end.data());
-    const usize *d_subparts_classes_start =
+    const u16 *d_subparts_classes_start =
         thrust::raw_pointer_cast(d_data.subparts.classes_start.data());
-    const usize *d_subparts_classes_end =
+    const u16 *d_subparts_classes_end =
         thrust::raw_pointer_cast(d_data.subparts.classes_end.data());
     const u32 *d_class_limit =
         thrust::raw_pointer_cast(d_data.classes.limit.data());
-    const usize *d_class_parent =
+    const u16 *d_class_parent =
         thrust::raw_pointer_cast(d_data.classes.parent.data());
-    const usize *d_class_subpart_idx =
+    const u16 *d_class_subpart_idx =
         thrust::raw_pointer_cast(d_data.classes.subpart_idx.data());
     const parser::TimeSlots *d_time_opt_times =
         thrust::raw_pointer_cast(d_data.time_options.times.data());
-    const usize *d_student_course_idxs =
+    const u16 *d_student_course_idxs =
         thrust::raw_pointer_cast(d_data.students.course_idxs.data());
     const usize *d_student_course_offsets =
         thrust::raw_pointer_cast(d_data.students.course_idxs_offsets.data());
