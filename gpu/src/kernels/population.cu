@@ -75,7 +75,7 @@ FoundSolution Population::get_best_solution(const StudentAssignment &assignment)
     usize idx = iter - h_penalty.begin();
 
     auto penalty = std::make_pair(h_penalty[idx].hard, h_penalty[idx].soft);
-    std::vector<u16> times_idxs(population_size), rooms_idxs(population_size);
+    std::vector<u16> times_idxs(n_classes), rooms_idxs(n_classes);
     thrust::copy(this->times.begin() + idx * n_classes, this->times.begin() + (idx + 1) * n_classes,
                  times_idxs.begin());
     thrust::copy(this->rooms.begin() + idx * n_classes, this->rooms.begin() + (idx + 1) * n_classes,
@@ -83,14 +83,15 @@ FoundSolution Population::get_best_solution(const StudentAssignment &assignment)
 
     std::vector<std::vector<u16> > student_assignment(n_classes);
     std::vector<u32> class_counts(n_classes);
-    // TODO: this section triggers a malloc assertion
-    // thrust::copy(assignment.class_counts.begin(), assignment.class_counts.end(), class_counts.begin());
-    // for (usize i = 0; i < n_classes; i++) {
-    //     student_assignment[i] = std::vector<u16>(class_counts[i]);
-    //     thrust::copy(assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT,
-    //                  assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT +
-    //                  class_counts[i], student_assignment[i].begin());
-    // }
+    thrust::copy(assignment.class_counts.begin() + idx * n_classes,
+                 assignment.class_counts.begin() + (idx + 1) * n_classes,
+                 class_counts.begin());
+    for (usize i = 0; i < n_classes; i++) {
+        student_assignment[i] = std::vector<u16>(class_counts[i]);
+        thrust::copy(assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT,
+                     assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT +
+                     class_counts[i], student_assignment[i].begin());
+    }
 
     return {student_assignment, times_idxs, rooms_idxs, penalty};
 }
