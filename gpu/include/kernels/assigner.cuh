@@ -9,6 +9,8 @@ constexpr usize MAX_CLASS_LIMIT = 2048;
 
 namespace kernels {
 
+struct Population; // circular includes, let's go
+
 // TODO: this will take up a ton of memory for larger populations
 struct StudentAssignment {
     // (for class `i` in solution `j`)

@@ -13,7 +13,7 @@ __device__ bool timeslots_overlap(const parser::TimeSlots &a,
     return a.start < b.start + b.length && b.start < a.start + a.length;
 }
 
-__global__ void assign_students_kernel(
+__global__ void k_assign_students(
     u16 *students_idxs,
     u32 *class_counts,
     const u16 *pop_times,
@@ -38,7 +38,7 @@ __global__ void assign_students_kernel(
     __syncthreads();
 
     usize sol_offset = sol * n_classes;
-    constexpr usize MAX_SUBPARTS = 64; // this is enough, right?
+    constexpr usize MAX_SUBPARTS = 64; // should be enough
     // class index chosen per subpart in a given config
     usize local_assignment[MAX_SUBPARTS];
 
@@ -64,7 +64,7 @@ __global__ void assign_students_kernel(
 
         usize courses_start = student_course_offsets[student_idx];
         usize courses_end = student_course_offsets[student_idx + 1];
-        for (usize i = courses_start; i < courses_end; ++i) {
+        for (usize i = courses_start; i < courses_end; i++) {
             usize course_idx = student_course_idxs[i];
             usize configs_start = courses_configs_start[course_idx];
             usize configs_end = courses_configs_end[course_idx];
@@ -88,7 +88,7 @@ __global__ void assign_students_kernel(
                         for (usize class_idx = classes_start; class_idx < classes_end && !subpart_assigned; class_idx
                              ++) {
                             usize trial[MAX_SUBPARTS];
-                            for (usize j = 0; j < n_subparts; ++j) {
+                            for (usize j = 0; j < n_subparts; j++) {
                                 trial[j] = local_assignment[j];
                             }
                             usize cur = class_idx;
@@ -233,7 +233,7 @@ void StudentAssignment::assign(const TimetableData &d_data,
     dim3 grid_dim(static_cast<u32>(population.population_size));
     usize sh_mem_size =
         n_classes * sizeof(u32) + n_classes * sizeof(bool);
-    assign_students_kernel<<<grid_dim, block_dim, sh_mem_size>>>(
+    k_assign_students<<<grid_dim, block_dim, sh_mem_size>>>(
         d_students_idxs, d_class_counts, d_pop_times, d_courses_configs_start,
         d_courses_configs_end, d_configs_subparts_start, d_configs_subparts_end, d_subparts_classes_start,
         d_subparts_classes_end,
