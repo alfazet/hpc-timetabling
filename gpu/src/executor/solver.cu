@@ -59,10 +59,11 @@ FoundSolution Solver::solve() const {
 
     kernels::StudentAssignment assignment(n_classes, this->population_size);
 
-    u32 G = 1;
-    for (u32 gen = 1; gen <= G; gen++) {
+    for (u32 gen = 1; gen <= generations; gen++) {
+        printf("starting assignment\n");
         assignment.assign(d_data, population);
-        kernels::evaluator::evaluate(d_data, population, assignment);
+        printf("ended assignment\n");
+        // kernels::evaluator::evaluate(d_data, population, assignment);
     }
 
     return population.get_best_solution(assignment);

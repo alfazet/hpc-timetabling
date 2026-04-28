@@ -25,42 +25,38 @@ __global__ void k_assign_students(
     const parser::TimeSlots *time_opt_times,
     const u16 *student_course_idxs, const usize *student_course_offsets,
     usize n_classes, usize n_students) {
-    usize sol = blockIdx.x;
+
     usize tid = threadIdx.x;
+    if (tid != 0) {
+        return;
+    }
 
     extern __shared__ char sh_mem[];
-    u32 *sh_class_count = reinterpret_cast<u32 *>(sh_mem);
-    bool *sh_already_attending = reinterpret_cast<bool *>(
-        sh_class_count + n_classes);
-    for (usize i = tid; i < n_classes; i += blockDim.x) {
+    u32 *sh_class_count = reinterpret_cast<u32*>(sh_mem);
+    bool *sh_already_attending = reinterpret_cast<bool*>(sh_class_count + n_classes);
+    for (usize i = 0; i < n_classes; i++) {
         sh_class_count[i] = 0;
     }
-    __syncthreads();
 
+    usize sol = blockIdx.x;
     usize sol_offset = sol * n_classes;
-    constexpr usize MAX_SUBPARTS = 64; // should be enough
+    constexpr usize MAX_SUBPARTS = 64;
     // class index chosen per subpart in a given config
     usize local_assignment[MAX_SUBPARTS];
 
     for (usize student_idx = 0; student_idx < n_students; student_idx++) {
-        for (usize i = tid; i < n_classes; i += blockDim.x) {
+        printf("student %lu in block %lu\n", student_idx, sol);
+        for (usize i = 0; i < n_classes; i++) {
             sh_already_attending[i] = false;
-        }
-        __syncthreads();
-
-        if (tid == 0) {
-            for (usize i = 0; i < n_classes; i++) {
-                u32 cnt = sh_class_count[i];
-                usize offset = MAX_CLASS_LIMIT * (sol * n_classes + i);
-                for (u32 j = 0; j < cnt; j++) {
-                    if (students_idxs[offset + j] == student_idx) {
-                        sh_already_attending[i] = true;
-                        break;
-                    }
+            u32 class_count = sh_class_count[i];
+            usize offset = MAX_CLASS_LIMIT * (sol + n_classes + i);
+            for (u32 j = 0; j < class_count; j++) {
+                if (students_idxs[offset + j] == student_idx) {
+                    sh_already_attending[i] = true;
+                    break;
                 }
             }
         }
-        __syncthreads();
 
         usize courses_start = student_course_offsets[student_idx];
         usize courses_end = student_course_offsets[student_idx + 1];
@@ -71,117 +67,111 @@ __global__ void k_assign_students(
             bool course_assigned = false;
 
             for (usize config_idx = configs_start; config_idx < configs_end && !course_assigned; config_idx++) {
-                // assigning is inherently sequential (due to parents), so it's done in only one thread per block
-                if (tid == 0) {
-                    usize subparts_start = configs_subparts_start[config_idx];
-                    usize subparts_end = configs_subparts_end[config_idx];
-                    usize n_subparts = subparts_end - subparts_start;
-                    for (usize j = 0; j < n_subparts && j < MAX_SUBPARTS; j++) {
-                        local_assignment[j] = NO_CLASS_ASSIGNED;
-                    }
-                    bool config_ok = true;
-                    for (usize subpart_idx = subparts_start; subpart_idx < subparts_end && config_ok; subpart_idx++) {
-                        usize classes_start = subparts_classes_start[subpart_idx];
-                        usize classes_end = subparts_classes_end[subpart_idx];
-                        bool subpart_assigned = false;
+                usize subparts_start = configs_subparts_start[config_idx];
+                usize subparts_end = configs_subparts_end[config_idx];
+                usize n_subparts = subparts_end - subparts_start;
+                for (usize j = 0; j < n_subparts && j < MAX_SUBPARTS; j++) {
+                    local_assignment[j] = NO_CLASS_ASSIGNED;
+                }
+                bool config_ok = true;
+                for (usize subpart_idx = subparts_start; subpart_idx < subparts_end && config_ok; subpart_idx++) {
+                    usize classes_start = subparts_classes_start[subpart_idx];
+                    usize classes_end = subparts_classes_end[subpart_idx];
+                    bool subpart_assigned = false;
 
-                        for (usize class_idx = classes_start; class_idx < classes_end && !subpart_assigned; class_idx
-                             ++) {
-                            usize trial[MAX_SUBPARTS];
-                            for (usize j = 0; j < n_subparts; j++) {
-                                trial[j] = local_assignment[j];
+                    for (usize class_idx = classes_start; class_idx < classes_end && !subpart_assigned; class_idx++) {
+                        usize trial[MAX_SUBPARTS];
+                        for (usize j = 0; j < n_subparts; j++) {
+                            trial[j] = local_assignment[j];
+                        }
+                        usize cur = class_idx;
+                        // resolve parents
+                        while (true) {
+                            usize subpart_offset = class_subpart_idx[cur] - subparts_start;
+                            if (subpart_offset < MAX_SUBPARTS) {
+                                trial[subpart_offset] = cur;
                             }
-                            usize cur = class_idx;
-                            // resolve parents
-                            while (true) {
-                                usize subpart_offset = class_subpart_idx[cur] - subparts_start;
-                                if (subpart_offset < MAX_SUBPARTS) {
-                                    trial[subpart_offset] = cur;
-                                }
-                                usize par = class_parent[cur];
-                                if (par == NO_PARENT) {
-                                    break;
-                                }
-                                cur = par;
+                            usize par = class_parent[cur];
+                            if (par == NO_PARENT) {
+                                break;
                             }
+                            cur = par;
+                        }
 
-                            // check limits
-                            bool ok = true;
+                        // check limits
+                        bool ok = true;
+                        for (usize j = 0; j < n_subparts && ok; j++) {
+                            if (trial[j] == NO_CLASS_ASSIGNED || sh_already_attending[trial[j]]) {
+                                continue;
+                            }
+                            u32 limit = class_limit[trial[j]];
+                            if (limit != NO_LIMIT && sh_class_count[trial[j]] + 1 > limit) {
+                                ok = false;
+                            }
+                        }
+
+                        // check time confilicts
+                        if (ok) {
                             for (usize j = 0; j < n_subparts && ok; j++) {
                                 if (trial[j] == NO_CLASS_ASSIGNED || sh_already_attending[trial[j]]) {
                                     continue;
                                 }
-                                u32 limit = class_limit[trial[j]];
-                                if (limit != NO_LIMIT && sh_class_count[trial[j]] + 1 > limit) {
-                                    ok = false;
-                                }
-                            }
-
-                            // check time confilicts
-                            if (ok) {
-                                for (usize j = 0; j < n_subparts && ok; j++) {
-                                    if (trial[j] == NO_CLASS_ASSIGNED || sh_already_attending[trial[j]]) {
+                                usize t_opt = pop_times[sol_offset + trial[j]];
+                                const parser::TimeSlots &new_time = time_opt_times[t_opt];
+                                // check against all classes the student already attends
+                                for (usize k = 0; k < n_classes && ok; k++) {
+                                    if (!sh_already_attending[k]) {
                                         continue;
                                     }
-                                    usize t_opt = pop_times[sol_offset + trial[j]];
-                                    const parser::TimeSlots &new_time = time_opt_times[t_opt];
-                                    // check against all classes the student already attends
-                                    for (usize k = 0; k < n_classes && ok; k++) {
-                                        if (!sh_already_attending[k]) {
-                                            continue;
-                                        }
-                                        usize at_opt = pop_times[sol_offset + k];
-                                        const parser::TimeSlots &at_time = time_opt_times[at_opt];
-                                        if (timeslots_overlap(new_time, at_time)) {
-                                            ok = false;
-                                        }
-                                    }
-                                    // also check against other trial classes
-                                    for (usize k = 0; k < j && ok; k++) {
-                                        if (trial[k] == NO_CLASS_ASSIGNED || sh_already_attending[trial[k]]) {
-                                            continue;
-                                        }
-                                        usize t = pop_times[sol_offset + trial[k]];
-                                        const parser::TimeSlots &t_time = time_opt_times[t];
-                                        if (timeslots_overlap(new_time, t_time)) {
-                                            ok = false;
-                                        }
+                                    usize at_opt = pop_times[sol_offset + k];
+                                    const parser::TimeSlots &at_time = time_opt_times[at_opt];
+                                    if (timeslots_overlap(new_time, at_time)) {
+                                        ok = false;
                                     }
                                 }
-                            }
-                            if (ok) {
-                                for (usize j = 0; j < n_subparts; j++) {
-                                    local_assignment[j] = trial[j];
+                                // also check against other trial classes
+                                for (usize k = 0; k < j && ok; k++) {
+                                    if (trial[k] == NO_CLASS_ASSIGNED || sh_already_attending[trial[k]]) {
+                                        continue;
+                                    }
+                                    usize t = pop_times[sol_offset + trial[k]];
+                                    const parser::TimeSlots &t_time = time_opt_times[t];
+                                    if (timeslots_overlap(new_time, t_time)) {
+                                        ok = false;
+                                    }
                                 }
-                                subpart_assigned = true;
                             }
                         }
-                        if (!subpart_assigned) {
-                            config_ok = false;
+                        if (ok) {
+                            for (usize j = 0; j < n_subparts; j++) {
+                                local_assignment[j] = trial[j];
+                            }
+                            subpart_assigned = true;
                         }
                     }
-                    if (config_ok) {
-                        // commit the assignment
-                        for (usize j = 0; j < n_subparts; j++) {
-                            usize c = local_assignment[j];
-                            if (c == NO_CLASS_ASSIGNED || sh_already_attending[c]) {
-                                continue;
-                            }
-                            u32 cnt = sh_class_count[c];
-                            usize offset = MAX_CLASS_LIMIT * (sol * n_classes + c);
-                            students_idxs[offset + cnt] = student_idx;
-                            sh_class_count[c] = cnt + 1;
-                            sh_already_attending[c] = true;
-                        }
-                        course_assigned = true;
+                    if (!subpart_assigned) {
+                        config_ok = false;
                     }
                 }
-                __syncthreads();
+                if (config_ok) {
+                    // commit the assignment
+                    for (usize j = 0; j < n_subparts; j++) {
+                        usize c = local_assignment[j];
+                        if (c == NO_CLASS_ASSIGNED || sh_already_attending[c]) {
+                            continue;
+                        }
+                        u32 cnt = sh_class_count[c];
+                        usize offset = MAX_CLASS_LIMIT * (sol * n_classes + c);
+                        students_idxs[offset + cnt] = student_idx;
+                        sh_class_count[c] = cnt + 1;
+                        sh_already_attending[c] = true;
+                    }
+                    course_assigned = true;
+                }
             }
         }
-        __syncthreads();
     }
-    for (usize i = tid; i < n_classes; i += blockDim.x) {
+    for (usize i = 0; i < n_classes; i++) {
         class_counts[sol_offset + i] = sh_class_count[i];
     }
 }
