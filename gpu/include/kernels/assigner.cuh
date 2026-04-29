@@ -6,6 +6,7 @@
 #include "population.cuh"
 
 constexpr usize MAX_CLASS_LIMIT = 2048;
+constexpr u16 MAX_SUBPARTS = 64;
 
 namespace kernels {
 

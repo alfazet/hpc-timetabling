@@ -60,10 +60,10 @@ FoundSolution Solver::solve() const {
     kernels::StudentAssignment assignment(n_classes, this->population_size);
 
     for (u32 gen = 1; gen <= generations; gen++) {
-        printf("starting assignment\n");
+        printf("assignment start\n");
         assignment.assign(d_data, population);
-        printf("ended assignment\n");
-        // kernels::evaluator::evaluate(d_data, population, assignment);
+        printf("evaluation start\n");
+        kernels::evaluator::evaluate(d_data, population, assignment);
     }
 
     return population.get_best_solution(assignment);
