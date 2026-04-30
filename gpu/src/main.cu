@@ -14,6 +14,10 @@ void main_(int argc, char **argv) {
 
     Solver solver(d_data, arg_list.generations, arg_list.population_size,
                   arg_list.seed);
+    auto best_solution = solver.solve();
+    auto output = best_solution.serialize(d_data);
+    auto xml = output.serialize(metadata);
+    serializer::utils::write_file(arg_list.output_path, xml);
 }
 
 int main(int argc, char **argv) {

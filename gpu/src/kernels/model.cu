@@ -339,4 +339,41 @@ TimetableData TimetableData::from_problem(const parser::Problem &p) {
         std::move(students)
     };
 }
+
+std::vector<parser::ClassId> TimetableData::get_class_ids() const {
+    std::vector<parser::ClassId> ids(classes.id.size());
+    thrust::copy(classes.id.begin(), classes.id.end(), ids.begin());
+
+    return ids;
+}
+
+std::vector<parser::RoomId> TimetableData::get_room_ids() const {
+    std::vector<u16> idxs(room_options.room_idx.size());
+    thrust::copy(room_options.room_idx.begin(), room_options.room_idx.end(), idxs.begin());
+    std::vector<parser::RoomId> all_ids(room_data.id.size());
+    thrust::copy(room_data.id.begin(), room_data.id.end(), all_ids.begin());
+
+    std::vector<parser::RoomId> ids(room_options.room_idx.size());
+    for (usize i = 0; i < ids.size(); i++) {
+        ids[i] = all_ids[idxs[i]];
+    }
+
+    return ids;
+}
+
+std::vector<parser::StudentId> TimetableData::get_student_ids() const {
+    std::vector<parser::StudentId> ids(students.id.size());
+    thrust::copy(students.id.begin(), students.id.end(), ids.begin());
+
+    return ids;
+}
+
+std::vector<parser::TimeSlots> TimetableData::get_time_slots() const {
+    std::vector<parser::TimeSlots> timeslots(time_options.times.size());
+    thrust::copy(time_options.times.begin(), time_options.times.end(), timeslots.begin());
+
+    return timeslots;
+}
+
+
 }

@@ -2,7 +2,6 @@
 #include <curand_kernel.h>
 
 namespace kernels {
-
 __global__ void k_init_population(u16 *times,
                                   u16 *rooms,
                                   usize n_classes, usize population_size,
@@ -39,6 +38,7 @@ __global__ void k_init_population(u16 *times,
 Population::Population(usize n_classes, usize population_size, u64 seed)
     : times(n_classes * population_size),
       rooms(n_classes * population_size),
+      penalty(population_size),
       seed(seed), n_classes(n_classes), population_size(population_size) {
 }
 
@@ -66,6 +66,34 @@ void Population::init(const TimetableData &d_data) {
         d_rooms_start, d_rooms_end, seed);
 
     cudaErrCheck(cudaDeviceSynchronize());
+}
+
+FoundSolution Population::get_best_solution(const StudentAssignment &assignment) const {
+    std::vector<Penalty> h_penalty(population_size);
+    thrust::copy(this->penalty.begin(), this->penalty.end(), h_penalty.begin());
+    auto iter = std::min_element(h_penalty.begin(), h_penalty.end());
+    usize idx = iter - h_penalty.begin();
+
+    auto penalty = std::make_pair(h_penalty[idx].hard, h_penalty[idx].soft);
+    std::vector<u16> times_idxs(n_classes), rooms_idxs(n_classes);
+    thrust::copy(this->times.begin() + idx * n_classes, this->times.begin() + (idx + 1) * n_classes,
+                 times_idxs.begin());
+    thrust::copy(this->rooms.begin() + idx * n_classes, this->rooms.begin() + (idx + 1) * n_classes,
+                 rooms_idxs.begin());
+
+    std::vector<std::vector<u16> > student_assignment(n_classes);
+    std::vector<u32> class_counts(n_classes);
+    thrust::copy(assignment.class_counts.begin() + idx * n_classes,
+                 assignment.class_counts.begin() + (idx + 1) * n_classes,
+                 class_counts.begin());
+    for (usize i = 0; i < n_classes; i++) {
+        student_assignment[i] = std::vector<u16>(class_counts[i]);
+        thrust::copy(assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT,
+                     assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT +
+                     class_counts[i], student_assignment[i].begin());
+    }
+
+    return {student_assignment, times_idxs, rooms_idxs, penalty};
 }
 
 }

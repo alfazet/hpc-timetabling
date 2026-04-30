@@ -9,9 +9,11 @@
 constexpr u32 DEFAULT_GENERATIONS = 600;
 constexpr u32 DEFAULT_POPULATION_SIZE = 24000;
 constexpr u32 DEFAULT_SEED = 21372137;
+constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
 
 struct ArgsList {
     std::string dataset_path;
+    std::string output_path = DEFAULT_OUTPUT_PATH;
     u32 generations = DEFAULT_GENERATIONS;
     u32 population_size = DEFAULT_POPULATION_SIZE;
     u32 seed = DEFAULT_SEED;
@@ -39,6 +41,8 @@ private:
     void parse_population_size(ArgsList &list) const;
 
     void parse_seed(ArgsList &list) const;
+
+    void parse_output_path(ArgsList &list) const;
 };
 
 #endif //GPU_TIMETABLING_CMD_ARGS_H

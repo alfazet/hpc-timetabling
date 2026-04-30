@@ -59,6 +59,7 @@ std::string read_file(const std::string &path) {
         throw ParseError("cannot open file " + path);
     std::ostringstream ss;
     ss << file.rdbuf();
+    file.close();
 
     return ss.str();
 }

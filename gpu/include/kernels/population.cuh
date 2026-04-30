@@ -1,9 +1,13 @@
 #ifndef GPU_TIMETABLING_POPULATION_CUH
 #define GPU_TIMETABLING_POPULATION_CUH
 
+#include "assigner.cuh"
 #include "model.cuh"
+#include "executor/solver.cuh"
 
 namespace kernels {
+
+struct StudentAssignment;
 
 // All data about all solutions is packed into a flat array of
 // size n_classes * population_size.
@@ -13,12 +17,11 @@ namespace kernels {
 // Indices refer to the TimetableData::time_options/room_options vectors.
 struct Population {
     // time slot assignments
-    // `times[i]` = idx of the TimeOption chosen for the `i`-th class
     thrust::device_vector<u16> times;
     // room assignments
-    // `times[i]` = idx of the RoomOption chosen for the `i`-th class
     // NO_ROOM if the class doesn't need a room
     thrust::device_vector<u16> rooms;
+    thrust::device_vector<Penalty> penalty;
     u32 seed;
     usize n_classes;
     usize population_size;
@@ -28,6 +31,9 @@ struct Population {
     // initialize the population with random solutions
     // (one thread per one solution)
     void init(const TimetableData &d_data);
+
+    // copy the solution with the least penalty to the host
+    FoundSolution get_best_solution(const StudentAssignment &assignment) const;
 };
 
 }

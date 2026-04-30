@@ -9,6 +9,7 @@ namespace serializer::utils {
 template <typename T>
 std::string bit_string(T value, u32 len);
 
+void write_file(const std::string& path, const std::string& content);
 }
 
 #endif //GPU_TIMETABLING_SERIALIZER_UTILS_H
