@@ -15,17 +15,15 @@ FoundSolution::FoundSolution(
       penalty(std::move(penalty)) {
 }
 
-serializer::Output
-FoundSolution::serialize(const std::vector<parser::RoomId> &room_ids,
-                         const std::vector<parser::StudentId> &student_ids,
-                         const std::vector<parser::ClassId> &class_ids,
-                         const std::vector<parser::TimeSlots> &time_slots) const {
+serializer::Output FoundSolution::serialize(const kernels::TimetableData& d_data) const {
     std::vector<serializer::Class> classes_out;
+    auto class_ids = d_data.get_class_ids();
+    auto room_ids = d_data.get_room_ids();
+    auto student_ids = d_data.get_student_ids();
+    auto time_slots = d_data.get_time_slots();
     for (usize i = 0; i < class_ids.size(); i++) {
         u16 room_idx = this->rooms_idxs[i];
-        auto room = room_idx == NO_ROOM
-                        ? std::optional<parser::RoomId>()
-                        : room_ids[room_idx];
+        auto room = room_idx == NO_ROOM ? std::optional<parser::RoomId>() : room_ids[room_idx];
 
         u16 time_idx = this->times_idxs[i];
         auto time = time_slots[time_idx];
@@ -35,8 +33,7 @@ FoundSolution::serialize(const std::vector<parser::RoomId> &room_ids,
             students.emplace_back(student_ids[student_idx]);
         }
 
-        classes_out.emplace_back(class_ids[i], time.days, time.weeks,
-                                 time.start, room, students);
+        classes_out.emplace_back(class_ids[i], time.days, time.weeks, time.start, room, students);
     }
 
     return {classes_out};
@@ -60,9 +57,7 @@ FoundSolution Solver::solve() const {
     kernels::StudentAssignment assignment(n_classes, this->population_size);
 
     for (u32 gen = 1; gen <= generations; gen++) {
-        printf("assignment start\n");
         assignment.assign(d_data, population);
-        printf("evaluation start\n");
         kernels::evaluator::evaluate(d_data, population, assignment);
     }
 

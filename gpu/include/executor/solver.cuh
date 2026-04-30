@@ -5,10 +5,10 @@
 #include "serializer/serializer.hpp"
 
 struct FoundSolution {
-    // student_assignment[i] = indices of students taking class with index `i`
+    // student_assignment[i] = ids of students taking class with index `i`
     std::vector<std::vector<u16> > student_assignment;
-    std::vector<u16> times_idxs;
-    std::vector<u16> rooms_idxs;
+    std::vector<u16> times_idxs; // idx of the time_option
+    std::vector<u16> rooms_idxs; // idx of the room_option (not of the room itself!)
     std::pair<u32, u32> penalty; // {hard, soft}
 
     FoundSolution(std::vector<std::vector<u16> > student_assignment,
@@ -16,12 +16,7 @@ struct FoundSolution {
                   std::vector<u16> rooms_idxs,
                   std::pair<u32, u32> penalty);
 
-    serializer::Output serialize(const std::vector<parser::RoomId> &room_ids,
-                                 const std::vector<parser::StudentId> &
-                                 student_ids,
-                                 const std::vector<parser::ClassId> &class_ids,
-                                 const std::vector<parser::TimeSlots> &time_slots)
-    const;
+    serializer::Output serialize(const kernels::TimetableData& d_data) const;
 };
 
 struct Solver {
