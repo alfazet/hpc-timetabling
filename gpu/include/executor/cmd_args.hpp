@@ -18,7 +18,8 @@ constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
     X("-p", population_size, u32, parse_u32, DEFAULT_POPULATION_SIZE, "population size")                               \
     X("-s", seed, u32, parse_u32, DEFAULT_SEED, "random seed")                                                         \
     X("-o", output_path, std::string, parse_string, DEFAULT_OUTPUT_PATH, "solution output path")                       \
-    X("--sel-frac", sel_frac, f32, parse_f32, DEFAULT_SEL_FRAC, "fraction of the population to use for tournament size")
+    X("--sel-frac", sel_frac, f32, parse_f32, DEFAULT_SEL_FRAC,                                                        \
+      "number of solutions to select for crossover (as a fraction of population size)")
 
 struct ArgsList {
     std::string dataset_path;

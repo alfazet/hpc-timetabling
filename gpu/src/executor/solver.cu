@@ -48,10 +48,12 @@ FoundSolution Solver::solve() const {
     population.init(d_data);
 
     for (u32 gen = 1; gen <= generations; gen++) {
+        printf("gen %u\n", gen);
         assignment.assign(d_data, population);
         kernels::evaluator::evaluate(d_data, population, assignment);
         // TODO: elitism
         selection.select(population);
+        // TODO: crossover on the selected solutions
     }
 
     return population.get_best_solution(assignment);

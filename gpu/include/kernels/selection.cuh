@@ -4,6 +4,8 @@
 #include "kernels/population.cuh"
 #include "typedefs.hpp"
 
+constexpr usize WARP_SIZE = 32;
+
 namespace kernels {
 
 struct Selection {
