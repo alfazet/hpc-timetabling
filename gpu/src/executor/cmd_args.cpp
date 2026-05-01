@@ -29,6 +29,13 @@ f32 parse_f32(const char *s, const char *arg_name) {
     return x;
 }
 
+std::string parse_string(const char *s, const char *arg_name) {
+    if (!s || *s == '\0') {
+        throw std::runtime_error(
+            "expected a string value for " + std::string(arg_name));
+    }
+    return std::string(s);
+}
 
 using ParserFn = void (ArgParser::*)(ArgsList &) const;
 std::unordered_map<std::string, ParserFn> ArgParser::flag_parsers = {

@@ -168,6 +168,12 @@ struct TimetableData {
         );
 
     static TimetableData from_problem(const parser::Problem &p);
+
+    // copy relevant data back to the host - needed to reconstruct the solution
+    std::vector<parser::ClassId> get_class_ids() const;
+    std::vector<parser::RoomId> get_room_ids() const;
+    std::vector<parser::StudentId> get_student_ids() const;
+    std::vector<parser::TimeSlots> get_time_slots() const;
 };
 }
 
