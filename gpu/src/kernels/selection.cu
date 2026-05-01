@@ -1,0 +1,56 @@
+#include "kernels/selection.cuh"
+#include <curand_kernel.h>
+
+namespace kernels {
+
+Selection::Selection(usize population_size, f32 frac) : selected(std::ceil(population_size * frac) + 1), frac(frac) {}
+
+__global__ void k_tournament_select(u16 *selected, const Penalty *penalty, usize n_selected, usize population_size,
+                                    u32 seed) {
+    usize warp_id = blockIdx.x * blockDim.x / WARP_SIZE + threadIdx.x / WARP_SIZE;
+    if (warp_id >= n_selected) {
+        return;
+    }
+    usize lane = threadIdx.x % WARP_SIZE;
+
+    curandState rng;
+    curand_init(seed, warp_id * WARP_SIZE + lane, 0, &rng);
+    u16 winner_idx = curand(&rng) % population_size;
+    Penalty winner_p = penalty[winner_idx];
+    constexpr u32 FULL_MASK = 0xFFFFFFFF;
+
+    // each of the 32 lanes selects a random solution
+    // the one with the least penalty becomes "selected"
+    for (u32 offset = WARP_SIZE / 2; offset > 0; offset /= 2) {
+        // __shfl_down_sync(..., var, offset) copies var from lane (x + offset) to lane x
+        u32 other_hard = __shfl_down_sync(FULL_MASK, winner_p.hard, offset);
+        u32 other_soft = __shfl_down_sync(FULL_MASK, winner_p.soft, offset);
+        u16 other_idx = __shfl_down_sync(FULL_MASK, winner_idx, offset);
+
+        Penalty other_p(other_hard, other_soft);
+        if (other_p < winner_p) {
+            winner_p = other_p;
+            winner_idx = other_idx;
+        }
+    }
+    if (lane == 0) {
+        selected[warp_id] = winner_idx;
+    }
+}
+
+void Selection::select(const Population &population) {
+    u32 n_selected = this->selected.size();
+    u16 *d_selected = thrust::raw_pointer_cast(this->selected.data());
+    const Penalty *d_penalty = thrust::raw_pointer_cast(population.penalty.data());
+    u32 seed = population.seed ^ n_selected; // for different results each time
+
+    // one warp selects one winner (so we need n_selected warps)
+    constexpr usize WARPS_PER_BLOCK = 32;
+    constexpr dim3 block_dim(1024);
+    dim3 grid_dim((n_selected + WARPS_PER_BLOCK - 1) / WARPS_PER_BLOCK);
+    k_tournament_select<<<grid_dim, block_dim>>>(d_selected, d_penalty, n_selected, population.population_size, seed);
+
+    cudaErrCheck(cudaDeviceSynchronize());
+}
+
+} // namespace kernels

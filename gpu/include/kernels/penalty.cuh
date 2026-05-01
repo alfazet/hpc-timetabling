@@ -13,7 +13,7 @@ struct Penalty {
 
     __host__ __device__ Penalty(u32 hard, u32 soft) : hard(hard), soft(soft) {}
 
-    bool operator <(const Penalty& p) const {
+    __host__ __device__ bool operator<(const Penalty &p) const {
         if (hard == p.hard) {
             return soft < p.soft;
         }
@@ -21,6 +21,6 @@ struct Penalty {
     }
 };
 
-}
+} // namespace kernels
 
 #endif // GPU_TIMETABLING_PENALTY_CUH

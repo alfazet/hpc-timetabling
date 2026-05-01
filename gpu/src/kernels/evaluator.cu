@@ -51,21 +51,17 @@ __device__ void apply_dist_penalty(u32 &hard, u32 &soft, const Penalty &p, u32 f
     soft += p.soft * factor;
 }
 
-__global__ void evaluate_kernel(
-    Penalty *penalties,
-    const u16 *pop_times,
-    const u16 *pop_rooms,
-    const u16 *students_idxs, const u32 *class_counts,
-    const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
-    const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
-    const u32 *class_limit, const u16 *class_parent,
-    const u32 *room_capacity, const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets,
-    const u32 *travel_time, usize n_rooms, usize n_unavail,
-    const u16 *student_course_idxs, const usize *student_course_offsets,
-    const u16 *courses_configs_start, const u16 *courses_configs_end, const u16 *configs_subparts_start,
-    const u16 *configs_subparts_end, const u16 *subparts_classes_start, const u16 *subparts_classes_end,
-    u32 opt_time, u32 opt_room, u32 opt_student,
-    usize n_classes, usize n_students) {
+__global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const u16 *students_idxs,
+                           const u32 *class_counts, const parser::TimeSlots *time_opt_times,
+                           const u32 *time_opt_penalty, const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
+                           const u32 *class_limit, const u16 *class_parent, const u32 *room_capacity,
+                           const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets,
+                           const u32 *travel_time, usize n_rooms, usize n_unavail, const u16 *student_course_idxs,
+                           const usize *student_course_offsets, const u16 *courses_configs_start,
+                           const u16 *courses_configs_end, const u16 *configs_subparts_start,
+                           const u16 *configs_subparts_end, const u16 *subparts_classes_start,
+                           const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student,
+                           usize n_classes, usize n_students) {
     usize sol = blockIdx.x;
     usize tid = threadIdx.y * blockDim.x + threadIdx.x;
     usize block_size = blockDim.x * blockDim.y;
@@ -109,9 +105,7 @@ __global__ void evaluate_kernel(
                 }
                 const parser::TimeSlots &cls_time = time_opt_times[t_opt_idx];
                 usize ua_start = room_unavail_offsets[room_idx];
-                usize ua_end = room_idx < n_rooms - 1
-                                   ? room_unavail_offsets[room_idx + 1]
-                                   : n_unavail;
+                usize ua_end = room_idx < n_rooms - 1 ? room_unavail_offsets[room_idx + 1] : n_unavail;
                 for (usize u = ua_start; u < ua_end; u++) {
                     if (timeslots_overlap(room_unavail[u], cls_time)) {
                         local_hard++;
@@ -209,11 +203,11 @@ __global__ void evaluate_kernel(
     }
     __syncthreads();
 
-    // conflits among a single student's assignments
+    // conflicts among a single student's assignments
     {
         u32 local_conflicts = 0;
         for (usize si = tid; si < n_students; si += blockDim.x) {
-            constexpr u16 MAX_ATTEND = 128; // should be enough
+            constexpr u16 MAX_ATTEND = 128;
             u16 attending[MAX_ATTEND];
             u16 n_att = 0;
             for (usize c = 0; c < n_classes && n_att < MAX_ATTEND; c++) {
@@ -260,8 +254,7 @@ void evaluate(const TimetableData &d_data, Population &population, const Student
 
     const u16 *d_pop_times = thrust::raw_pointer_cast(population.times.data());
     const u16 *d_pop_rooms = thrust::raw_pointer_cast(population.rooms.data());
-    Penalty *d_penalties =
-        thrust::raw_pointer_cast(population.penalty.data());
+    Penalty *d_penalties = thrust::raw_pointer_cast(population.penalty.data());
 
     const u16 *d_student_idxs = thrust::raw_pointer_cast(assignment.students_idxs.data());
     const u32 *d_class_counts = thrust::raw_pointer_cast(assignment.class_counts.data());
@@ -296,15 +289,13 @@ void evaluate(const TimetableData &d_data, Population &population, const Student
 
     constexpr dim3 block_dim(32, 32);
     dim3 grid_dim(static_cast<u32>(population.population_size));
-    evaluate_kernel<<<grid_dim, block_dim>>>(
-        d_penalties, d_pop_times, d_pop_rooms, d_student_idxs, d_class_counts, time_opt_times, time_opt_penalty, room_opt_room_idx,
-        room_opt_penalty,
-        d_limit, d_parent, d_room_capacity, d_room_unavail, d_room_unavail_offsets, d_travel, n_rooms, n_unavail, d_sc_idxs, d_sc_offsets,
-        d_cc_start, d_cc_end,
-        d_cs_start, d_cs_end, d_sc_start, d_sc_end, opt.time, opt.room,
-        opt.student, n_classes, n_students);
+    k_evaluate<<<grid_dim, block_dim>>>(
+        d_penalties, d_pop_times, d_pop_rooms, d_student_idxs, d_class_counts, time_opt_times, time_opt_penalty,
+        room_opt_room_idx, room_opt_penalty, d_limit, d_parent, d_room_capacity, d_room_unavail, d_room_unavail_offsets,
+        d_travel, n_rooms, n_unavail, d_sc_idxs, d_sc_offsets, d_cc_start, d_cc_end, d_cs_start, d_cs_end, d_sc_start,
+        d_sc_end, opt.time, opt.room, opt.student, n_classes, n_students);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }
 
-}
+} // namespace kernels::evaluator

@@ -2,14 +2,9 @@
 #include <curand_kernel.h>
 
 namespace kernels {
-__global__ void k_init_population(u16 *times,
-                                  u16 *rooms,
-                                  usize n_classes, usize population_size,
-                                  const u16 *times_start,
-                                  const u16 *times_end,
-                                  const u16 *rooms_start,
-                                  const u16 *rooms_end,
-                                  u32 seed) {
+__global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, usize population_size,
+                                  const u16 *times_start, const u16 *times_end, const u16 *rooms_start,
+                                  const u16 *rooms_end, u32 seed) {
     usize sol = blockIdx.x * blockDim.x + threadIdx.x;
     usize cls = blockIdx.y * blockDim.y + threadIdx.y;
     if (sol >= population_size || cls >= n_classes) {
@@ -36,34 +31,24 @@ __global__ void k_init_population(u16 *times,
 }
 
 Population::Population(usize n_classes, usize population_size, u64 seed)
-    : times(n_classes * population_size),
-      rooms(n_classes * population_size),
-      penalty(population_size),
-      seed(seed), n_classes(n_classes), population_size(population_size) {
-}
+    : times(n_classes * population_size), rooms(n_classes * population_size), penalty(population_size), seed(seed),
+      n_classes(n_classes), population_size(population_size) {}
 
 void Population::init(const TimetableData &d_data) {
-    const u16 *d_times_start =
-        thrust::raw_pointer_cast(d_data.classes.times_start.data());
-    const u16 *d_times_end =
-        thrust::raw_pointer_cast(d_data.classes.times_end.data());
-    const u16 *d_rooms_start =
-        thrust::raw_pointer_cast(d_data.classes.rooms_start.data());
-    const u16 *d_rooms_end =
-        thrust::raw_pointer_cast(d_data.classes.rooms_end.data());
+    const u16 *d_times_start = thrust::raw_pointer_cast(d_data.classes.times_start.data());
+    const u16 *d_times_end = thrust::raw_pointer_cast(d_data.classes.times_end.data());
+    const u16 *d_rooms_start = thrust::raw_pointer_cast(d_data.classes.rooms_start.data());
+    const u16 *d_rooms_end = thrust::raw_pointer_cast(d_data.classes.rooms_end.data());
 
     u16 *d_times = thrust::raw_pointer_cast(this->times.data());
     u16 *d_rooms = thrust::raw_pointer_cast(this->rooms.data());
 
     // x: solutions, y: classes
     constexpr dim3 block_dim(32, 32); // numbers that multiply to 1024
-    const dim3 grid_dim(
-        (static_cast<u32>(population_size) + block_dim.x - 1) / block_dim.x,
-        (static_cast<u32>(n_classes) + block_dim.y - 1) / block_dim.y);
-    k_init_population<<<grid_dim, block_dim>>>(
-        d_times, d_rooms, n_classes, population_size, d_times_start,
-        d_times_end,
-        d_rooms_start, d_rooms_end, seed);
+    const dim3 grid_dim((static_cast<u32>(population_size) + block_dim.x - 1) / block_dim.x,
+                        (static_cast<u32>(n_classes) + block_dim.y - 1) / block_dim.y);
+    k_init_population<<<grid_dim, block_dim>>>(d_times, d_rooms, n_classes, population_size, d_times_start, d_times_end,
+                                               d_rooms_start, d_rooms_end, seed);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }
@@ -81,19 +66,19 @@ FoundSolution Population::get_best_solution(const StudentAssignment &assignment)
     thrust::copy(this->rooms.begin() + idx * n_classes, this->rooms.begin() + (idx + 1) * n_classes,
                  rooms_idxs.begin());
 
-    std::vector<std::vector<u16> > student_assignment(n_classes);
+    std::vector<std::vector<u16>> student_assignment(n_classes);
     std::vector<u32> class_counts(n_classes);
     thrust::copy(assignment.class_counts.begin() + idx * n_classes,
-                 assignment.class_counts.begin() + (idx + 1) * n_classes,
-                 class_counts.begin());
+                 assignment.class_counts.begin() + (idx + 1) * n_classes, class_counts.begin());
     for (usize i = 0; i < n_classes; i++) {
         student_assignment[i] = std::vector<u16>(class_counts[i]);
         thrust::copy(assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT,
                      assignment.students_idxs.begin() + idx * n_classes * MAX_CLASS_LIMIT + i * MAX_CLASS_LIMIT +
-                     class_counts[i], student_assignment[i].begin());
+                         class_counts[i],
+                     student_assignment[i].begin());
     }
 
     return {student_assignment, times_idxs, rooms_idxs, penalty};
 }
 
-}
+} // namespace kernels
