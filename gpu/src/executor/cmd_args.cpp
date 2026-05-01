@@ -1,24 +1,21 @@
 #include <stdexcept>
+#include <charconv>
+#include <cstring>
 
 #include "executor/cmd_args.hpp"
 
-// list all optional arguments here
-std::unordered_map<std::string, void(ArgParser::*)(ArgsList &) const>
-ArgParser::flag_parsers{
-    {"-g", &ArgParser::parse_generations},
-    {"-p", &ArgParser::parse_population_size},
-    {"-s", &ArgParser::parse_seed}
-};
+// list all optional arguments in `include/executor/cmd_args.hpp`
 
 u32 parse_u32(const char *s, const char *arg_name) {
-    char *end = nullptr;
-    u32 x = std::strtoul(s, &end, 10);
-    if (*end != '\0') {
+    u32 value;
+    auto [ptr, ec] = std::from_chars(s, s + std::strlen(s), value);
+
+    if (ec != std::errc() || *ptr != '\0') {
         throw std::runtime_error(
-            "expected a uint value for " + std::string(arg_name));
+            "invalid uint value for " + std::string(arg_name));
     }
 
-    return x;
+    return value;
 }
 
 f32 parse_f32(const char *s, const char *arg_name) {
@@ -30,6 +27,34 @@ f32 parse_f32(const char *s, const char *arg_name) {
     }
 
     return x;
+}
+
+
+using ParserFn = void (ArgParser::*)(ArgsList &) const;
+std::unordered_map<std::string, ParserFn> ArgParser::flag_parsers = {
+#define X(flag, field, type, parser, default_val, help) \
+    {flag, &ArgParser::parse_##field},
+    ARG_TABLE(X)
+#undef X
+};
+
+#define X(flag, field, type, parser, default_val, help) \
+void ArgParser::parse_##field(ArgsList &list) const {         \
+    if (this->arg_i >= this->n_args) {                        \
+        display_help();                                       \
+        throw std::runtime_error("missing value for " #field);\
+    }                                                         \
+    list.field = parser(this->values[this->arg_i], #field);   \
+}
+ARG_TABLE(X)
+#undef X
+
+void ArgParser::display_help() {
+    printf("Arguments:\n<dataset_path> [flags]\nwhere:\n");
+#define X(flag, field, type, parser, default_val, help) \
+    printf("  %s : %s\n", flag, help);
+    ARG_TABLE(X)
+#undef X
 }
 
 ArgParser::ArgParser(usize n_args_, char **values_) : n_args(n_args_),
@@ -64,41 +89,4 @@ ArgsList ArgParser::parse_all() {
     }
 
     return list;
-}
-
-void ArgParser::parse_generations(ArgsList &list) const {
-    if (this->arg_i >= this->n_args) {
-        display_help();
-        throw std::runtime_error("missing value for generations");
-    }
-    list.generations = parse_u32(this->values[this->arg_i],
-                                 "generations");
-}
-
-void ArgParser::parse_population_size(ArgsList &list) const {
-    if (this->arg_i >= this->n_args) {
-        display_help();
-        throw std::runtime_error("missing value for population_size");
-    }
-    list.population_size = parse_u32(this->values[this->arg_i],
-                                     "population_size");
-}
-
-void ArgParser::parse_seed(ArgsList &list) const {
-    if (this->arg_i >= this->n_args) {
-        display_help();
-        throw std::runtime_error("missing value for seed");
-    }
-    list.seed = parse_u32(this->values[this->arg_i], "seed");
-}
-
-void ArgParser::display_help() {
-    printf(
-        "Arguments:\n"
-        "<dataset_path> [-g] [-p]\n"
-        "where:\n"
-        "- `-g` = number of generations\n"
-        "- `-p` = population size\n"
-        "\n"
-        );
 }

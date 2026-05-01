@@ -10,11 +10,18 @@ constexpr u32 DEFAULT_GENERATIONS = 600;
 constexpr u32 DEFAULT_POPULATION_SIZE = 24000;
 constexpr u32 DEFAULT_SEED = 21372137;
 
+// list all optional arguments here
+#define ARG_TABLE(X) \
+    X("-g", generations,     u32, parse_u32, DEFAULT_GENERATIONS, "number of generations") \
+    X("-p", population_size, u32, parse_u32, DEFAULT_POPULATION_SIZE, "population size") \
+    X("-s", seed,            u32, parse_u32, DEFAULT_SEED, "random seed")
+
 struct ArgsList {
     std::string dataset_path;
-    u32 generations = DEFAULT_GENERATIONS;
-    u32 population_size = DEFAULT_POPULATION_SIZE;
-    u32 seed = DEFAULT_SEED;
+#define X(flag, field, type, parser, default_val, help) \
+    type field = default_val;
+    ARG_TABLE(X)
+#undef X
 };
 
 class ArgParser {
@@ -34,11 +41,10 @@ private:
                                   ArgParser::*)(ArgsList &) const>
     flag_parsers;
 
-    void parse_generations(ArgsList &list) const;
-
-    void parse_population_size(ArgsList &list) const;
-
-    void parse_seed(ArgsList &list) const;
+#define X(flag, field, type, parser, default_val, help) \
+    void parse_##field(ArgsList &list) const;
+    ARG_TABLE(X)
+#undef X
 };
 
 #endif //GPU_TIMETABLING_CMD_ARGS_H
