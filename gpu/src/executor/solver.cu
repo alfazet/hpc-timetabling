@@ -4,18 +4,14 @@
 #include "kernels/evaluator.cuh"
 #include "kernels/model.cuh"
 #include "kernels/population.cuh"
+#include "kernels/selection.cuh"
 
-FoundSolution::FoundSolution(
-    std::vector<std::vector<u16> > student_assignment,
-    std::vector<u16> times_idxs,
-    std::vector<u16> rooms_idxs,
-    std::pair<u32, u32> penalty)
-    : student_assignment(std::move(student_assignment)),
-      times_idxs(std::move(times_idxs)), rooms_idxs(std::move(rooms_idxs)),
-      penalty(std::move(penalty)) {
-}
+FoundSolution::FoundSolution(std::vector<std::vector<u16>> student_assignment, std::vector<u16> times_idxs,
+                             std::vector<u16> rooms_idxs, std::pair<u32, u32> penalty)
+    : student_assignment(std::move(student_assignment)), times_idxs(std::move(times_idxs)),
+      rooms_idxs(std::move(rooms_idxs)), penalty(std::move(penalty)) {}
 
-serializer::Output FoundSolution::serialize(const kernels::TimetableData& d_data) const {
+serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data) const {
     std::vector<serializer::Class> classes_out;
     auto class_ids = d_data.get_class_ids();
     auto room_ids = d_data.get_room_ids();
@@ -39,26 +35,23 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData& d_data
     return {classes_out};
 }
 
-Solver::Solver(
-    kernels::TimetableData d_data, u32 generations, u32 population_size,
-    u32 seed)
-    : d_data(std::move(d_data)), generations(generations),
-      population_size(population_size),
-      seed(seed) {
-}
+Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, u32 seed)
+    : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
+      seed(seed) {}
 
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
 
-    kernels::Population
-        population(n_classes, this->population_size, this->seed);
-    population.init(d_data);
-
+    kernels::Population population(n_classes, this->population_size, this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
+    kernels::Selection selection(this->population_size, this->sel_frac);
+    population.init(d_data);
 
     for (u32 gen = 1; gen <= generations; gen++) {
         assignment.assign(d_data, population);
         kernels::evaluator::evaluate(d_data, population, assignment);
+        // TODO: elitism
+        selection.select(population);
     }
 
     return population.get_best_solution(assignment);
