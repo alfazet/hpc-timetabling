@@ -22,24 +22,37 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
     usize tid = threadIdx.x;
 
     extern __shared__ u8 sh_mem[];
-    auto sh_sol_offset = reinterpret_cast<usize*>(sh_mem);
+    auto sh_sol_offset = reinterpret_cast<usize *>(sh_mem);
+    // offset for the solution handled by this block
     // sh_sol_offset: sizeof(usize) bytes
-    auto *sh_class_count = reinterpret_cast<u16*>(sh_sol_offset + 1);
+    auto *sh_class_count = reinterpret_cast<u16 *>(sh_sol_offset + 1);
+    // number of students enrolled in the given class
     // sh_class_count: n_classes * sizeof(u16) bytes
     u16 *sh_trial = sh_class_count + n_classes;
+    // trial assignment of classes to subparts
     // sh_trial: MAX_SUBPARTS * sizeof(u16) bytes
     u16 *sh_n_subparts = sh_trial + MAX_SUBPARTS;
+    // the number of subparts in a given config of the given course
     // sh_n_subparts: sizeof(u16) bytes
-    auto sh_already_attending = reinterpret_cast<bool*>(sh_n_subparts + 1);
+    auto sh_already_attending = reinterpret_cast<bool *>(sh_n_subparts + 1);
+    // is the currently handled student already attending this class
     // sh_already_attending = n_classes * sizeof(bool) bytes
-    bool* sh_conflict = sh_already_attending + n_classes;
+    bool *sh_conflict = sh_already_attending + n_classes;
+    // is there a conflict between this class choice and any previous ones
     // sh_conflict: sizeof(bool) bytes
-    bool* sh_course_assigned = sh_conflict + 1;
+    bool *sh_course_assigned = sh_conflict + 1;
+    // has the course been assigned to the current student
     // sh_course_assigned = sizeof(bool) bytes
-    bool* sh_needs_conflict_check = sh_course_assigned + 1;
+    bool *sh_subpart_assigned = sh_course_assigned + 1;
+    // has any class been chosen in this subpart
+    // sh_subpart_assigned = sizeof(bool) bytes
+    bool *sh_needs_conflict_check = sh_subpart_assigned + 1;
     // sh_needs_conflict_check = sizeof(bool) bytes
-    bool* sh_done = sh_needs_conflict_check + 1;
+    bool *sh_done = sh_needs_conflict_check + 1;
     // sh_done = sizeof(bool) bytes
+
+    // total shared memory: n_classes * (sizeof(u16) + sizeof(bool)) = 3 * n_classes bytes
+    // which is fine since n_classes is about 5000 on the biggest instances
 
     for (usize i = tid; i < n_classes; i += blockDim.x) {
         sh_class_count[i] = 0;
@@ -57,7 +70,6 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
     u16 local_assignment[MAX_SUBPARTS];
     for (usize student_idx = 0; student_idx < n_students; student_idx++) {
         for (usize i = tid; i < n_classes; i += blockDim.x) {
-            sh_already_attending[i] = false;
             usize cnt = sh_class_count[i];
             usize offset = MAX_CLASS_LIMIT * (sol * n_classes + i);
             for (usize j = 0; j < cnt; j++) {
@@ -66,8 +78,10 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                     break;
                 }
             }
+            sh_already_attending[i] = false;
         }
         __syncthreads();
+        // at this point all classes this student attends are marked in sh_already_attending
 
         usize courses_start = student_course_offsets[student_idx];
         usize courses_end = student_course_offsets[student_idx + 1];
@@ -81,6 +95,8 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
             }
             __syncthreads();
 
+            // choose exactly one config for this course
+            // and exactly one class in each subpart of this config
             for (u16 config_idx = configs_start; config_idx < configs_end; config_idx++) {
                 if (*sh_course_assigned) {
                     break;
@@ -91,7 +107,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                     u16 subparts_end = configs_subparts_end[config_idx];
                     n_subparts = subparts_end - subparts_start;
                     *sh_n_subparts = n_subparts;
-                    for (u16 j = 0; j < n_subparts && j < MAX_SUBPARTS; j++) {
+                    for (u16 j = 0; j < n_subparts; j++) {
                         local_assignment[j] = NO_CLASS_ASSIGNED;
                     }
                 }
@@ -100,36 +116,33 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                 bool config_ok = true;
 
                 for (u16 sp = 0; sp < n_subparts; sp++) {
-                    u16 classes_start_val, classes_end_val;
-                    bool subpart_assigned = false;
+                    u16 classes_start_idx, classes_end_idx;
                     if (tid == 0) {
+                        *sh_subpart_assigned = false;
                         u16 subpart_idx = configs_subparts_start[config_idx] + sp;
-                        classes_start_val = subparts_classes_start[subpart_idx];
-                        classes_end_val = subparts_classes_end[subpart_idx];
+                        classes_start_idx = subparts_classes_start[subpart_idx];
+                        classes_end_idx = subparts_classes_end[subpart_idx];
                     }
 
                     u16 n_candidates = 0;
                     if (tid == 0) {
-                        n_candidates = classes_end_val - classes_start_val;
+                        n_candidates = classes_end_idx - classes_start_idx;
                     }
                     for (u16 ci = 0;; ci++) {
                         if (tid == 0) {
                             *sh_needs_conflict_check = false;
-                            *sh_done = ci >= n_candidates || subpart_assigned;
+                            *sh_done = ci >= n_candidates || *sh_subpart_assigned;
                             if (!*sh_done) {
-                                u16 class_idx = classes_start_val + ci;
+                                u16 class_idx = classes_start_idx + ci;
                                 u16 trial[MAX_SUBPARTS];
                                 for (u16 j = 0; j < n_subparts; j++) {
                                     trial[j] = local_assignment[j];
                                 }
                                 u16 cur = class_idx;
-                                // resolve parents
+                                // assing this class and its ancestors to the trial
                                 while (true) {
-                                    u16 subpart_offset_val =
-                                        class_subpart_idx[cur] - configs_subparts_start[config_idx];
-                                    if (subpart_offset_val < MAX_SUBPARTS) {
-                                        trial[subpart_offset_val] = cur;
-                                    }
+                                    u16 subpart_offset = class_subpart_idx[cur] - configs_subparts_start[config_idx];
+                                    trial[subpart_offset] = cur;
                                     u16 par = class_parent[cur];
                                     if (par == NO_PARENT) {
                                         break;
@@ -155,7 +168,8 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                         if (trial[j] == NO_CLASS_ASSIGNED || sh_already_attending[trial[j]]) {
                                             continue;
                                         }
-                                        const parser::TimeSlots &trial_time = time_opt_times[pop_times[sol_offset + trial[j]]];
+                                        const parser::TimeSlots &trial_time =
+                                            time_opt_times[pop_times[sol_offset + trial[j]]];
                                         for (u16 k = 0; k < j && ok; k++) {
                                             if (trial[k] == NO_CLASS_ASSIGNED || sh_already_attending[trial[k]]) {
                                                 continue;
@@ -170,7 +184,9 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                 }
 
                                 if (ok) {
-                                    // broadcast to shared memory for parallel conflict check
+                                    // all classes work within this trial assignment
+                                    // but we need to check them against all classes
+                                    // attended by this student
                                     for (u16 j = 0; j < n_subparts; j++) {
                                         sh_trial[j] = trial[j];
                                     }
@@ -180,7 +196,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                             }
                         }
                         __syncthreads();
-                        // all threads exit together when we exhausted the candidates or assigned the subpart
+                        // all threads exit together when we exhausted the candidate classes or assigned the subpart
                         if (*sh_done) {
                             break;
                         }
@@ -195,7 +211,8 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                     if (sh_trial[j] == NO_CLASS_ASSIGNED || sh_already_attending[sh_trial[j]]) {
                                         continue;
                                     }
-                                    const parser::TimeSlots &trial_time = time_opt_times[pop_times[sol_offset + sh_trial[j]]];
+                                    const parser::TimeSlots &trial_time =
+                                        time_opt_times[pop_times[sol_offset + sh_trial[j]]];
                                     if (timeslots_overlap(trial_time, at_time)) {
                                         *sh_conflict = true;
                                     }
@@ -203,24 +220,22 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                             }
                             __syncthreads();
 
-                            if (tid == 0) {
-                                if (!*sh_conflict) {
-                                    for (u16 j = 0; j < n_subparts; j++) {
-                                        local_assignment[j] = sh_trial[j];
-                                    }
-                                    subpart_assigned = true;
+                            if (tid == 0 && !*sh_conflict) {
+                                for (u16 j = 0; j < n_subparts; j++) {
+                                    local_assignment[j] = sh_trial[j];
                                 }
+                                *sh_subpart_assigned = true;
                             }
                             __syncthreads();
                         }
                     }
 
-                    if (tid == 0 && !subpart_assigned) {
+                    if (tid == 0 && !*sh_subpart_assigned) {
                         config_ok = false;
                         *sh_done = true;
                     }
                     __syncthreads();
-                    if (*sh_done) {
+                    if (*sh_done && !*sh_subpart_assigned) {
                         if (tid == 0) {
                             // reset for the next iteration
                             *sh_done = false;
@@ -230,7 +245,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                     }
                 }
 
-                // commit the assignment if config_ok
+                // commit the assignment if config_ok (a valid class was found in all subparts)
                 if (tid == 0 && config_ok) {
                     u16 subparts_start = configs_subparts_start[config_idx];
                     u16 subparts_end = configs_subparts_end[config_idx];
@@ -246,6 +261,8 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                         sh_class_count[c] = cnt + 1;
                         sh_already_attending[c] = true;
                     }
+                    // successfully found a valid config for this student and this course
+                    // the config loop will exit in the next iteration
                     *sh_course_assigned = true;
                 }
                 __syncthreads();
@@ -296,4 +313,4 @@ void StudentAssignment::assign(const TimetableData &d_data, const Population &po
     cudaErrCheck(cudaDeviceSynchronize());
 }
 
-}
+} // namespace kernels

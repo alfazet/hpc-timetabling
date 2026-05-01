@@ -244,6 +244,7 @@ static StudentData make_student_data(const parser::Problem &p,
             }
         }
     }
+    course_idxs_offsets.push_back(offset);
 
     return {student_id, course_idxs, course_idxs_offsets};
 }
