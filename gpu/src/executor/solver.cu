@@ -1,5 +1,4 @@
 #include "executor/solver.cuh"
-
 #include "kernels/assigner.cuh"
 #include "kernels/evaluator.cuh"
 #include "kernels/model.cuh"
@@ -48,7 +47,6 @@ FoundSolution Solver::solve() const {
     population.init(d_data);
 
     for (u32 gen = 1; gen <= generations; gen++) {
-        printf("gen %u\n", gen);
         assignment.assign(d_data, population);
         kernels::evaluator::evaluate(d_data, population, assignment);
         // TODO: elitism

@@ -22,6 +22,7 @@ __global__ void k_tournament_select(u16 *selected, const Penalty *penalty, usize
     // each of the 32 lanes selects a random solution
     // the one with the least penalty becomes "selected"
     for (u32 offset = WARP_SIZE / 2; offset > 0; offset /= 2) {
+        // __shfl_down_sync(..., var, offset) copies var from lane (x + offset) to lane x
         u32 other_hard = __shfl_down_sync(FULL_MASK, winner_p.hard, offset);
         u32 other_soft = __shfl_down_sync(FULL_MASK, winner_p.soft, offset);
         u16 other_idx = __shfl_down_sync(FULL_MASK, winner_idx, offset);
