@@ -12,7 +12,8 @@ void main_(int argc, char **argv) {
     auto d_data = kernels::TimetableData::from_problem(problem);
     auto metadata = serializer::OutputMetadata::from_problem(problem);
 
-    Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.seed);
+    Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate,
+                  arg_list.elites_frac, arg_list.seed);
     auto best_solution = solver.solve();
     auto output = best_solution.serialize(d_data);
     auto xml = output.serialize(metadata);
