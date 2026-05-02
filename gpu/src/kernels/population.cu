@@ -67,7 +67,6 @@ FoundSolution Population::get_best_solution(const StudentAssignment &assignment)
     auto iter = std::min_element(h_penalty.begin(), h_penalty.end());
     usize idx = iter - h_penalty.begin();
 
-    auto penalty = std::make_pair(h_penalty[idx].hard, h_penalty[idx].soft);
     std::vector<u16> times_idxs(n_classes), rooms_idxs(n_classes);
     thrust::copy(this->times.begin() + idx * n_classes, this->times.begin() + (idx + 1) * n_classes,
                  times_idxs.begin());
@@ -86,7 +85,7 @@ FoundSolution Population::get_best_solution(const StudentAssignment &assignment)
                      student_assignment[i].begin());
     }
 
-    return {student_assignment, times_idxs, rooms_idxs, penalty};
+    return {student_assignment, times_idxs, rooms_idxs, h_penalty[idx]};
 }
 
 } // namespace kernels

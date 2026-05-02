@@ -5,9 +5,10 @@
 #include "kernels/model.cuh"
 #include "kernels/population.cuh"
 #include "kernels/selection.cuh"
+#include "kernels/penalty.cuh"
 
 FoundSolution::FoundSolution(std::vector<std::vector<u16>> student_assignment, std::vector<u16> times_idxs,
-                             std::vector<u16> rooms_idxs, std::pair<u32, u32> penalty)
+                             std::vector<u16> rooms_idxs, kernels::Penalty penalty)
     : student_assignment(std::move(student_assignment)), times_idxs(std::move(times_idxs)),
       rooms_idxs(std::move(rooms_idxs)), penalty(std::move(penalty)) {}
 
@@ -68,6 +69,13 @@ FoundSolution Solver::solve() const {
         population.sort();
         selection.select(population);
         crossover.next_population(selection, population);
+
+        if (gen % ((generations + 100 - 1) / 100) == 0) {
+            FoundSolution sol = population.get_best_solution(assignment);
+            printf("Min penalty after %d generations: ", gen);
+            sol.penalty.print();
+            printf("\n");
+        }
     }
 
     return population.get_best_solution(assignment);

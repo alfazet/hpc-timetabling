@@ -9,10 +9,10 @@ struct FoundSolution {
     std::vector<std::vector<u16>> student_assignment;
     std::vector<u16> times_idxs; // idx of the time_option
     std::vector<u16> rooms_idxs; // idx of the room_option (not of the room itself!)
-    std::pair<u32, u32> penalty; // {hard, soft}
+    kernels::Penalty penalty;
 
     FoundSolution(std::vector<std::vector<u16>> student_assignment, std::vector<u16> times_idxs,
-                  std::vector<u16> rooms_idxs, std::pair<u32, u32> penalty);
+                  std::vector<u16> rooms_idxs, kernels::Penalty penalty);
 
     serializer::Output serialize(const kernels::TimetableData &d_data) const;
 };

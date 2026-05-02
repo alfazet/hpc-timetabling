@@ -19,6 +19,8 @@ struct Penalty {
         }
         return hard < p.hard;
     }
+
+    void print() const;
 };
 
 } // namespace kernels
