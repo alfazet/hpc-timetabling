@@ -2,8 +2,8 @@
 #define GPU_TIMETABLING_POPULATION_CUH
 
 #include "assigner.cuh"
-#include "model.cuh"
 #include "executor/solver.cuh"
+#include "model.cuh"
 
 namespace kernels {
 
@@ -22,20 +22,26 @@ struct Population {
     // NO_ROOM if the class doesn't need a room
     thrust::device_vector<u16> rooms;
     thrust::device_vector<Penalty> penalty;
+    // indices of solution sorted by increasing penalty
+    thrust::device_vector<u16> order;
     u32 seed;
     usize n_classes;
     usize population_size;
+    usize n_elites;
 
-    Population(usize n_classes, usize population_size, u64 seed);
+    Population(usize n_classes, usize population_size, f32 elites_frac, u64 seed);
 
     // initialize the population with random solutions
     // (one thread per one solution)
     void init(const TimetableData &d_data);
 
+    // sort by penalty
+    void sort();
+
     // copy the solution with the least penalty to the host
     FoundSolution get_best_solution(const StudentAssignment &assignment) const;
 };
 
-}
+} // namespace kernels
 
 #endif // GPU_TIMETABLING_POPULATION_CUH

@@ -1,5 +1,9 @@
-#include "kernels/population.cuh"
 #include <curand_kernel.h>
+#include <numeric>
+#include <thrust/sequence.h>
+#include <thrust/sort.h>
+
+#include "kernels/population.cuh"
 
 namespace kernels {
 __global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, usize population_size,
@@ -30,9 +34,10 @@ __global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, usize
     }
 }
 
-Population::Population(usize n_classes, usize population_size, u64 seed)
-    : times(n_classes * population_size), rooms(n_classes * population_size), penalty(population_size), seed(seed),
-      n_classes(n_classes), population_size(population_size) {}
+Population::Population(usize n_classes, usize population_size, f32 elites_frac, u64 seed)
+    : times(n_classes * population_size), rooms(n_classes * population_size), penalty(population_size),
+      order(population_size), seed(seed), n_classes(n_classes), population_size(population_size),
+      n_elites(std::ceil(population_size * elites_frac)) {}
 
 void Population::init(const TimetableData &d_data) {
     const u16 *d_times_start = thrust::raw_pointer_cast(d_data.classes.times_start.data());
@@ -49,9 +54,12 @@ void Population::init(const TimetableData &d_data) {
                         (static_cast<u32>(n_classes) + block_dim.y - 1) / block_dim.y);
     k_init_population<<<grid_dim, block_dim>>>(d_times, d_rooms, n_classes, population_size, d_times_start, d_times_end,
                                                d_rooms_start, d_rooms_end, seed);
+    thrust::sequence(order.begin(), order.end());
 
     cudaErrCheck(cudaDeviceSynchronize());
 }
+
+void Population::sort() { thrust::sort_by_key(order.begin(), order.end(), penalty.begin()); }
 
 FoundSolution Population::get_best_solution(const StudentAssignment &assignment) const {
     std::vector<Penalty> h_penalty(population_size);

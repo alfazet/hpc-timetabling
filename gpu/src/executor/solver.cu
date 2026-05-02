@@ -1,5 +1,6 @@
 #include "executor/solver.cuh"
 #include "kernels/assigner.cuh"
+#include "kernels/crossover.cuh"
 #include "kernels/evaluator.cuh"
 #include "kernels/model.cuh"
 #include "kernels/population.cuh"
@@ -34,24 +35,39 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
     return {classes_out};
 }
 
-Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, u32 seed)
+Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
+               f32 elites_frac, u32 seed)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
-      seed(seed) {}
+      cross_rate(cross_rate), elites_frac(elites_frac), seed(seed) {}
+
+void Solver::print_metadata() const {
+    printf("Solver started...\n");
+    printf("Generations: %u\n", generations);
+    printf("Population size: %u\n", population_size);
+    printf("Selection: %.1f%%\n", sel_frac * 100);
+    printf("Crossover rate: %.4f\n", cross_rate);
+    printf("Elites: %.1f%%\n", elites_frac * 100);
+    printf("Seed: %u\n", seed);
+}
 
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
 
-    kernels::Population population(n_classes, this->population_size, this->seed);
+    kernels::Evaluator evaluator;
+    kernels::Population population(n_classes, this->population_size, this->elites_frac, this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
+    kernels::Crossover crossover(this->cross_rate);
     kernels::Selection selection(this->population_size, this->sel_frac);
     population.init(d_data);
 
+    this->print_metadata();
     for (u32 gen = 1; gen <= generations; gen++) {
+        // TODO: local search, extracting stats, mutations
         assignment.assign(d_data, population);
-        kernels::evaluator::evaluate(d_data, population, assignment);
-        // TODO: elitism
+        evaluator.evaluate(d_data, population, assignment);
+        population.sort();
         selection.select(population);
-        // TODO: crossover on the selected solutions
+        crossover.next_population(selection, population);
     }
 
     return population.get_best_solution(assignment);
