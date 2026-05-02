@@ -6,8 +6,8 @@
 
 #include "typedefs.hpp"
 
-constexpr u32 DEFAULT_GENERATIONS = 600;
-constexpr u32 DEFAULT_POPULATION_SIZE = 1000;
+constexpr u32 DEFAULT_GENERATIONS = 256;
+constexpr u32 DEFAULT_POPULATION_SIZE = 2048;
 constexpr u32 DEFAULT_SEED = 21372137;
 constexpr f32 DEFAULT_SEL_FRAC = 0.25;
 constexpr f32 DEFAULT_CROSSOVER_RATE = 0.9;

@@ -2,7 +2,7 @@
 
 namespace kernels {
 
-__device__ bool timeslots_overlap(const parser::TimeSlots &a, const parser::TimeSlots &b) {
+__device__ static bool timeslots_overlap(const parser::TimeSlots &a, const parser::TimeSlots &b) {
     if ((a.weeks.bits & b.weeks.bits) == 0) {
         return false;
     }

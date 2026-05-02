@@ -1,8 +1,8 @@
 #include "kernels/evaluator.cuh"
 
-namespace kernels::evaluator {
+namespace kernels {
 
-__device__ bool timeslots_overlap(const parser::TimeSlots &a, const parser::TimeSlots &b) {
+__device__ static bool timeslots_overlap(const parser::TimeSlots &a, const parser::TimeSlots &b) {
     if ((a.weeks.bits & b.weeks.bits) == 0) {
         return false;
     }
@@ -249,7 +249,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
     }
 }
 
-void evaluate(const TimetableData &d_data, Population &population, const StudentAssignment &assignment) {
+void Evaluator::evaluate(const TimetableData &d_data, Population &population, const StudentAssignment &assignment) {
     const usize n_classes = population.n_classes;
 
     const u16 *d_pop_times = thrust::raw_pointer_cast(population.times.data());
@@ -298,4 +298,4 @@ void evaluate(const TimetableData &d_data, Population &population, const Student
     cudaErrCheck(cudaDeviceSynchronize());
 }
 
-} // namespace kernels::evaluator
+} // namespace kernels

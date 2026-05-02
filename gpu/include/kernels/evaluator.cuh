@@ -4,12 +4,14 @@
 #include "assigner.cuh"
 #include "population.cuh"
 
-namespace kernels::evaluator {
+namespace kernels {
 
-// compute the penalty of all solutions in the population
-// (one block per one solution)
-void evaluate(const TimetableData &d_data, Population &population, const StudentAssignment &assignment);
+struct Evaluator {
+    // compute the penalty of all solutions in the population
+    // (one block per one solution)
+    static void evaluate(const TimetableData &d_data, Population &population, const StudentAssignment &assignment);
+};
 
-}
+} // namespace kernels
 
-#endif //GPU_TIMETABLING_EVALUATOR_CUH
+#endif // GPU_TIMETABLING_EVALUATOR_CUH
