@@ -59,13 +59,15 @@ void Population::init(const TimetableData &d_data) {
     cudaErrCheck(cudaDeviceSynchronize());
 }
 
-void Population::sort() { thrust::sort_by_key(penalty.begin(), penalty.end(), order.begin()); }
+void Population::sort() {
+    thrust::sequence(order.begin(), order.end());
+    thrust::sort_by_key(penalty.begin(), penalty.end(), order.begin());
+}
 
 FoundSolution Population::get_best_solution(const StudentAssignment &assignment) const {
-    std::vector<Penalty> h_penalty(population_size);
-    thrust::copy(this->penalty.begin(), this->penalty.end(), h_penalty.begin());
-    auto iter = std::min_element(h_penalty.begin(), h_penalty.end());
-    usize idx = iter - h_penalty.begin();
+    // assuming `Population::sort` was called earlier this generation
+    usize idx = this->order[0];
+    Penalty penalty = this->penalty[0];
 
     std::vector<u16> times_idxs(n_classes), rooms_idxs(n_classes);
     thrust::copy(this->times.begin() + idx * n_classes, this->times.begin() + (idx + 1) * n_classes,
@@ -85,7 +87,7 @@ FoundSolution Population::get_best_solution(const StudentAssignment &assignment)
                      student_assignment[i].begin());
     }
 
-    return {student_assignment, times_idxs, rooms_idxs, h_penalty[idx]};
+    return {student_assignment, times_idxs, rooms_idxs, penalty};
 }
 
 } // namespace kernels
