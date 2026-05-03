@@ -1,4 +1,5 @@
 #include <curand_kernel.h>
+#include <thrust/sequence.h>
 
 #include "kernels/crossover.cuh"
 
@@ -62,6 +63,7 @@ void Crossover::next_population(const Selection &selection, Population &populati
     cudaErrCheck(cudaDeviceSynchronize());
     population.times.swap(new_times);
     population.rooms.swap(new_rooms);
+    thrust::sequence(population.order.begin(), population.order.end());
 }
 
 } // namespace kernels

@@ -59,7 +59,7 @@ void Population::init(const TimetableData &d_data) {
     cudaErrCheck(cudaDeviceSynchronize());
 }
 
-void Population::sort() { thrust::sort_by_key(order.begin(), order.end(), penalty.begin()); }
+void Population::sort() { thrust::sort_by_key(penalty.begin(), penalty.end(), order.begin()); }
 
 FoundSolution Population::get_best_solution(const StudentAssignment &assignment) const {
     std::vector<Penalty> h_penalty(population_size);
