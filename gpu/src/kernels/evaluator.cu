@@ -51,17 +51,17 @@ __device__ void apply_dist_penalty(u32 &hard, u32 &soft, const Penalty &p, u32 f
     soft += p.soft * factor;
 }
 
-__global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const u16 *students_idxs,
-                           const u32 *class_counts, const parser::TimeSlots *time_opt_times,
-                           const u32 *time_opt_penalty, const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
-                           const u32 *class_limit, const u16 *class_parent, const u32 *room_capacity,
-                           const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets,
-                           const u32 *travel_time, usize n_rooms, usize n_unavail, const u16 *student_course_idxs,
-                           const usize *student_course_offsets, const u16 *courses_configs_start,
-                           const u16 *courses_configs_end, const u16 *configs_subparts_start,
-                           const u16 *configs_subparts_end, const u16 *subparts_classes_start,
-                           const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student,
-                           usize n_classes, usize n_students) {
+__global__ void
+k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const u16 *students_idxs,
+           const u32 *class_counts, const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
+           const u16 *room_opt_room_idx, const u32 *room_opt_penalty, const u32 *class_limit, const u16 *class_parent,
+           const u32 *room_capacity, const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets,
+           const u32 *travel_time, usize n_rooms, usize n_unavail, const u16 *student_course_idxs,
+           const usize *student_course_offsets, const u16 *courses_configs_start, const u16 *courses_configs_end,
+           const u16 *configs_subparts_start, const u16 *configs_subparts_end, const u16 *subparts_classes_start,
+           const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student, usize n_classes,
+           usize n_students, const parser::DistributionKind *dist_kind, const u16 *dist_class_idxs,
+           const usize *dist_class_idxs_offsets, const Penalty *dist_penalty, usize n_distributions) {
     usize sol = blockIdx.x;
     usize block_size = blockDim.x * blockDim.y;
     usize tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -242,7 +242,84 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
     }
     __syncthreads();
 
-    // TODO: distribution penalties
+    // TODO: more distribution penalties, tests
+
+    // distribution penalties (SameStart, SameTime)
+    {
+        u32 local_hard = 0;
+        u32 local_soft = 0;
+
+        for (usize d = threadIdx.x; d < n_distributions; d += blockDim.x) {
+            parser::DistributionKind kind = dist_kind[d];
+            Penalty pen = dist_penalty[d];
+
+            usize begin = dist_class_idxs_offsets[d];
+            usize end = dist_class_idxs_offsets[d + 1];
+
+            for (usize i = begin; i < end; i++) {
+                u16 ci = dist_class_idxs[i];
+                const parser::TimeSlots &ti = time_opt_times[pop_times[sol_offset + ci]];
+
+                for (usize j = i + 1; j < end; j++) {
+                    u16 cj = dist_class_idxs[j];
+                    const parser::TimeSlots &tj = time_opt_times[pop_times[sol_offset + cj]];
+
+                    u8 di = ti.days.bits;
+                    u8 dj = tj.days.bits;
+                    u16 wi = ti.weeks.bits;
+                    u16 wj = tj.weeks.bits;
+
+                    if (std::holds_alternative<parser::SameStart>(kind)) {
+                        if (ti.start != tj.start) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+                    } else if (std::holds_alternative<parser::SameTime>(kind)) {
+                        bool contains = (tj.start <= ti.start && ti.start + ti.length <= tj.start + tj.length) ||
+                                        (ti.start <= tj.start && tj.start + tj.length <= ti.start + ti.length);
+
+                        if (!contains) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+                    } else if (std::holds_alternative<parser::DifferentTime>(kind)) {
+                        if (!((tj.start + tj.length <= ti.start) || (ti.start + ti.length <= tj.start))) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+
+                    } else if (std::holds_alternative<parser::SameDays>(kind)) {
+                        if (!(((dj | di) == dj) || ((dj | di) == di))) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+
+                    } else if (std::holds_alternative<parser::DifferentDays>(kind)) {
+                        if ((di & dj) != 0) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+
+                    } else if (std::holds_alternative<parser::SameWeeks>(kind)) {
+                        if (!(((wj | wi) == wj) || ((wj | wi) == wi))) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+
+                    } else if (std::holds_alternative<parser::DifferentWeeks>(kind)) {
+                        if ((wi & wj) != 0) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+                    }
+                }
+            }
+        }
+
+        atomicAdd(&sh_hard, local_hard);
+        atomicAdd(&sh_soft, local_soft);
+    }
+    __syncthreads();
 
     if (tid == 0) {
         penalties[sol] = Penalty(sh_hard, sh_soft);
@@ -287,13 +364,21 @@ void Evaluator::evaluate(const TimetableData &d_data, Population &population, co
     const u16 *d_sc_end = thrust::raw_pointer_cast(d_data.subparts.classes_end.data());
     const auto &opt = d_data.optimization;
 
+    const auto &dist = d_data.distributions;
+    const parser::DistributionKind *d_dist_kind = thrust::raw_pointer_cast(dist.kind.data());
+    const u16 *d_dist_class_idxs = thrust::raw_pointer_cast(dist.class_idxs.data());
+    const usize *d_dist_offsets = thrust::raw_pointer_cast(dist.class_idxs_offsets.data());
+    const Penalty *d_dist_penalty = thrust::raw_pointer_cast(dist.penalty.data());
+    usize n_distributions = dist.kind.size();
+
     constexpr dim3 block_dim(32, 32);
     dim3 grid_dim(static_cast<u32>(population.population_size));
     k_evaluate<<<grid_dim, block_dim>>>(
         d_penalties, d_pop_times, d_pop_rooms, d_student_idxs, d_class_counts, time_opt_times, time_opt_penalty,
         room_opt_room_idx, room_opt_penalty, d_limit, d_parent, d_room_capacity, d_room_unavail, d_room_unavail_offsets,
         d_travel, n_rooms, n_unavail, d_sc_idxs, d_sc_offsets, d_cc_start, d_cc_end, d_cs_start, d_cs_end, d_sc_start,
-        d_sc_end, opt.time, opt.room, opt.student, n_classes, n_students);
+        d_sc_end, opt.time, opt.room, opt.student, n_classes, n_students, d_dist_kind, d_dist_class_idxs,
+        d_dist_offsets, d_dist_penalty, n_distributions);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }
