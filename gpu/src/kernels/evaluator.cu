@@ -315,6 +315,64 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
+                    } else if (std::holds_alternative<parser::Overlap>(kind) ||
+                               std::holds_alternative<parser::NotOverlap>(kind)) {
+                        bool overlap = (tj.start < ti.start + ti.length) && (ti.start < tj.start + tj.length) &&
+                                       ((di & dj) != 0) && ((wi & wj) != 0);
+                        bool should_overlap = std::holds_alternative<parser::Overlap>(kind);
+                        bool violation = (should_overlap && !overlap) || (!should_overlap && overlap);
+                        if (violation) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+                    } else if (std::holds_alternative<parser::SameRoom>(kind) ||
+                               std::holds_alternative<parser::DifferentRoom>(kind)) {
+                        u16 ri = pop_rooms[sol_offset + ci];
+                        u16 rj = pop_rooms[sol_offset + cj];
+
+                        bool same_room =
+                            (ri == NO_ROOM && rj == NO_ROOM) ||
+                            (ri != NO_ROOM && rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]);
+
+                        bool should_same = std::holds_alternative<parser::SameRoom>(kind);
+                        bool violation = (should_same && !same_room) || (!should_same && same_room);
+                        if (violation) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+                    } else if (std::holds_alternative<parser::SameAttendees>(kind)) {
+                        u16 ri = pop_rooms[sol_offset + ci];
+                        u16 rj = pop_rooms[sol_offset + cj];
+
+                        if (ri == NO_ROOM || rj == NO_ROOM) {
+                            continue;
+                        }
+
+                        if ((di & dj) == 0 || (wi & wj) == 0) {
+                            continue;
+                        }
+
+                        u16 room_i = room_opt_room_idx[ri];
+                        u16 room_j = room_opt_room_idx[rj];
+
+                        // symmetric travel: take max(i->j, j->i)
+                        u32 travel_ij = travel_time[room_i * n_rooms + room_j];
+                        u32 travel_ji = travel_time[room_j * n_rooms + room_i];
+
+                        if (travel_ij == NO_TRAVEL)
+                            travel_ij = 0;
+                        if (travel_ji == NO_TRAVEL)
+                            travel_ji = 0;
+
+                        u32 travel = max(travel_ij, travel_ji);
+
+                        bool ok =
+                            (tj.start + tj.length + travel <= ti.start) || (ti.start + ti.length + travel <= tj.start);
+
+                        if (!ok) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
                     }
                 }
             }
