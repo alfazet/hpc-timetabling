@@ -122,12 +122,16 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
     // two classes assigned to the same room with overlapping timeslots
     {
         u32 local_hard = 0;
-        for (usize idx_i = threadIdx.x; idx_i < n_classes; idx_i += blockDim.x) {
-            for (usize idx_j = idx_i + 1; idx_j < n_classes; idx_j += blockDim.y) {
-                u16 ri = pop_rooms[sol_offset + idx_i];
+        for (usize idx_i = tid; idx_i < n_classes; idx_i += block_size) {
+            u16 ri = pop_rooms[sol_offset + idx_i];
+            if (ri == NO_ROOM) {
+                continue;
+            }
+            const parser::TimeSlots &ti = time_opt_times[pop_times[sol_offset + idx_i]];
+
+            for (usize idx_j = idx_i + 1; idx_j < n_classes; idx_j++) {
                 u16 rj = pop_rooms[sol_offset + idx_j];
-                if (ri != NO_ROOM && rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]) {
-                    const parser::TimeSlots &ti = time_opt_times[pop_times[sol_offset + idx_i]];
+                if (rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]) {
                     const parser::TimeSlots &tj = time_opt_times[pop_times[sol_offset + idx_j]];
                     if (timeslots_overlap(ti, tj))
                         local_hard++;
@@ -141,7 +145,7 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
     // students not enrolled in parent classes
     {
         u32 local_hard = 0;
-        for (usize c = tid; c < n_classes; c += blockDim.x) {
+        for (usize c = tid; c < n_classes; c += block_size) {
             u16 par = class_parent[c];
             if (par == NO_PARENT) {
                 continue;
@@ -162,7 +166,7 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
     // students not enrolled in exactly one subpart per config
     {
         u32 local_hard = 0;
-        for (usize si = tid; si < n_students; si += blockDim.x) {
+        for (usize si = tid; si < n_students; si += block_size) {
             usize course_begin = student_course_offsets[si];
             usize course_end = student_course_offsets[si + 1];
             for (usize i = course_begin; i < course_end; i++) {
@@ -206,7 +210,7 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
     // conflicts among a single student's assignments
     {
         u32 local_conflicts = 0;
-        for (usize si = tid; si < n_students; si += blockDim.x) {
+        for (usize si = tid; si < n_students; si += block_size) {
             constexpr u16 MAX_ATTEND = 128;
             u16 attending[MAX_ATTEND];
             u16 n_att = 0;
@@ -244,12 +248,12 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
 
     // TODO: more distribution penalties, tests
 
-    // distribution penalties (SameStart, SameTime)
+    // distribution penalties
     {
         u32 local_hard = 0;
         u32 local_soft = 0;
 
-        for (usize d = threadIdx.x; d < n_distributions; d += blockDim.x) {
+        for (usize d = tid; d < n_distributions; d += block_size) {
             parser::DistributionKind kind = dist_kind[d];
             Penalty pen = dist_penalty[d];
 
