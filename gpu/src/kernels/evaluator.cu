@@ -51,17 +51,19 @@ __device__ void apply_dist_penalty(u32 &hard, u32 &soft, const Penalty &p, u32 f
     soft += p.soft * factor;
 }
 
-__global__ void
-k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const u16 *students_idxs,
-           const u32 *class_counts, const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
-           const u16 *room_opt_room_idx, const u32 *room_opt_penalty, const u32 *class_limit, const u16 *class_parent,
-           const u32 *room_capacity, const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets,
-           const u32 *travel_time, usize n_rooms, usize n_unavail, const u16 *student_course_idxs,
-           const usize *student_course_offsets, const u16 *courses_configs_start, const u16 *courses_configs_end,
-           const u16 *configs_subparts_start, const u16 *configs_subparts_end, const u16 *subparts_classes_start,
-           const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student, usize n_classes,
-           usize n_students, const parser::DistributionKind *dist_kind, const u16 *dist_class_idxs,
-           const usize *dist_class_idxs_offsets, const Penalty *dist_penalty, usize n_distributions) {
+__global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const u16 *students_idxs,
+                           const u32 *class_counts, const parser::TimeSlots *time_opt_times,
+                           const u32 *time_opt_penalty, const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
+                           const u32 *class_limit, const u16 *class_parent, const u32 *room_capacity,
+                           const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets,
+                           const u32 *travel_time, usize n_rooms, usize n_unavail, const u16 *student_course_idxs,
+                           const usize *student_course_offsets, const u16 *courses_configs_start,
+                           const u16 *courses_configs_end, const u16 *configs_subparts_start,
+                           const u16 *configs_subparts_end, const u16 *subparts_classes_start,
+                           const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student,
+                           usize n_classes, usize n_students, const parser::DistributionKind *dist_kind,
+                           const u16 *dist_class_idxs, const usize *dist_class_idxs_offsets,
+                           const Penalty *dist_penalty, usize n_distributions, u32 n_days, u32 n_weeks) {
     usize sol = blockIdx.x;
     usize block_size = blockDim.x * blockDim.y;
     usize tid = threadIdx.y * blockDim.x + threadIdx.x;
@@ -246,8 +248,7 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
     }
     __syncthreads();
 
-    // TODO: more distribution penalties, tests
-
+    // TODO: MaxBreaks, MaxBlock, tests
     // distribution penalties
     {
         u32 local_hard = 0;
@@ -260,17 +261,83 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
             usize begin = dist_class_idxs_offsets[d];
             usize end = dist_class_idxs_offsets[d + 1];
 
+            if (std::holds_alternative<parser::MaxDays>(kind)) {
+                u8 d = std::get<parser::MaxDays>(kind).d;
+
+                u8 days_mask = 0;
+
+                for (usize i = begin; i < end; i++) {
+                    u16 ci = dist_class_idxs[i];
+                    const parser::TimeSlots &ti = time_opt_times[pop_times[sol_offset + ci]];
+                    days_mask |= ti.days.bits;
+                }
+
+                u8 used_days = __popc(days_mask);
+
+                if (used_days > d) {
+                    local_hard += pen.hard;
+                    local_soft += pen.soft * (used_days - d);
+                }
+
+                continue;
+            }
+            if (std::holds_alternative<parser::MaxDayLoad>(kind)) {
+                u16 s = std::get<parser::MaxDayLoad>(kind).s;
+
+                constexpr int MAX_WEEKS = 32;
+                constexpr int MAX_DAYS = 7;
+                u32 load[MAX_WEEKS][MAX_DAYS];
+
+                for (u8 w = 0; w < n_weeks; w++) {
+                    for (u8 d = 0; d < n_days; d++) {
+                        load[w][d] = 0;
+                    }
+                }
+
+                for (usize i = begin; i < end; i++) {
+                    u16 c = dist_class_idxs[i];
+                    const parser::TimeSlots &t = time_opt_times[pop_times[sol_offset + c]];
+
+                    for (u8 w = 0; w < n_weeks; w++) {
+                        if (!(t.weeks.bits & (1u << w)))
+                            continue;
+
+                        for (u32 d = 0; d < n_days; d++) {
+                            if (!(t.days.bits & (1u << d)))
+                                continue;
+
+                            load[w][d] += t.length;
+                        }
+                    }
+                }
+
+                u32 factor = 0;
+
+                for (u8 w = 0; w < n_weeks; w++) {
+                    for (u8 d = 0; d < n_days; d++) {
+                        if (load[w][d] > s) {
+                            factor += (load[w][d] - s);
+                        }
+                    }
+                }
+
+                if (factor > 0) {
+                    local_hard += pen.hard;
+                    local_soft += (pen.soft * factor) / n_weeks;
+                }
+                continue;
+            }
+
             for (usize i = begin; i < end; i++) {
                 u16 ci = dist_class_idxs[i];
                 const parser::TimeSlots &ti = time_opt_times[pop_times[sol_offset + ci]];
+                u8 di = ti.days.bits;
+                u16 wi = ti.weeks.bits;
 
                 for (usize j = i + 1; j < end; j++) {
                     u16 cj = dist_class_idxs[j];
                     const parser::TimeSlots &tj = time_opt_times[pop_times[sol_offset + cj]];
-
-                    u8 di = ti.days.bits;
                     u8 dj = tj.days.bits;
-                    u16 wi = ti.weeks.bits;
                     u16 wj = tj.weeks.bits;
 
                     if (std::holds_alternative<parser::SameStart>(kind)) {
@@ -373,6 +440,55 @@ k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
+                    } else if (std::holds_alternative<parser::Precedence>(kind)) {
+                        u16 _wi = __ffs(wi) - 1;
+                        u16 _wj = __ffs(wj) - 1;
+
+                        u16 _di = __ffs(di) - 1;
+                        u16 _dj = __ffs(dj) - 1;
+
+                        bool weeks_lower = _wi < _wj;
+                        bool weeks_equal = _wi == _wj;
+
+                        bool days_lower = _di < _dj;
+                        bool days_equal = _di == _dj;
+
+                        bool ends_before_start = ti.start + ti.length <= tj.start;
+
+                        bool ok = weeks_lower || (weeks_equal && (days_lower || (days_equal && ends_before_start)));
+
+                        if (!ok) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+                    } else if (std::holds_alternative<parser::WorkDay>(kind)) {
+                        if ((di & dj) || (wi & wj) == 0) {
+                            continue;
+                        }
+
+                        u32 end_i = ti.start + ti.length;
+                        u32 end_j = tj.start + tj.length;
+
+                        u32 span = max(end_i, end_j) - min(ti.start, tj.start);
+
+                        u16 s = std::get<parser::WorkDay>(kind).s;
+                        if (span > s) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
+                    } else if (std::holds_alternative<parser::MinGap>(kind)) {
+                        if ((di & dj) || (wi & wj) == 0) {
+                            continue;
+                        }
+
+                        u16 g = std::get<parser::MinGap>(kind).g;
+                        u16 end_i = ti.start + ti.length + g;
+                        u16 end_j = tj.start + tj.length + g;
+
+                        if (end_i > tj.start && end_j > ti.start) {
+                            local_hard += pen.hard;
+                            local_soft += pen.soft;
+                        }
                     }
                 }
             }
@@ -440,7 +556,7 @@ void Evaluator::evaluate(const TimetableData &d_data, Population &population, co
         room_opt_room_idx, room_opt_penalty, d_limit, d_parent, d_room_capacity, d_room_unavail, d_room_unavail_offsets,
         d_travel, n_rooms, n_unavail, d_sc_idxs, d_sc_offsets, d_cc_start, d_cc_end, d_cs_start, d_cs_end, d_sc_start,
         d_sc_end, opt.time, opt.room, opt.student, n_classes, n_students, d_dist_kind, d_dist_class_idxs,
-        d_dist_offsets, d_dist_penalty, n_distributions);
+        d_dist_offsets, d_dist_penalty, n_distributions, d_data.n_days, d_data.n_weeks);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }
