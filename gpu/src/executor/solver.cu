@@ -3,9 +3,10 @@
 #include "kernels/crossover.cuh"
 #include "kernels/evaluator.cuh"
 #include "kernels/model.cuh"
+#include "kernels/mutation.cuh"
+#include "kernels/penalty.cuh"
 #include "kernels/population.cuh"
 #include "kernels/selection.cuh"
-#include "kernels/penalty.cuh"
 
 FoundSolution::FoundSolution(std::vector<std::vector<u16>> student_assignment, std::vector<u16> times_idxs,
                              std::vector<u16> rooms_idxs, kernels::Penalty penalty)
@@ -37,9 +38,9 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 elites_frac, u32 seed)
+               f32 mut_rate, f32 elites_frac, u32 seed)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
-      cross_rate(cross_rate), elites_frac(elites_frac), seed(seed) {}
+      cross_rate(cross_rate), mut_rate(mut_rate), elites_frac(elites_frac), seed(seed) {}
 
 void Solver::print_metadata() const {
     printf("Solver started...\n");
@@ -58,13 +59,14 @@ FoundSolution Solver::solve() const {
     kernels::Population population(n_classes, this->population_size, this->elites_frac, this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
     kernels::Crossover crossover(this->cross_rate);
+    kernels::Mutation mutation(this->mut_rate);
     kernels::Selection selection(this->population_size, this->sel_frac);
     population.init(d_data);
 
     this->print_metadata();
     FoundSolution sol = population.get_best_solution(assignment);
     for (u32 gen = 1; gen <= generations; gen++) {
-        // TODO: local search, extracting stats, mutations
+        // TODO: local search
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
@@ -78,6 +80,7 @@ FoundSolution Solver::solve() const {
 
         selection.select(population);
         crossover.next_population(selection, population);
+        mutation.apply_mutations(population, d_data);
     }
 
     return sol;

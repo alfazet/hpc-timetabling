@@ -63,8 +63,8 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                            const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student,
                            usize n_classes, usize n_students) {
     usize sol = blockIdx.x;
-    usize tid = threadIdx.y * blockDim.x + threadIdx.x;
     usize block_size = blockDim.x * blockDim.y;
+    usize tid = threadIdx.y * blockDim.x + threadIdx.x;
     usize sol_offset = sol * n_classes;
 
     __shared__ u32 sh_hard;

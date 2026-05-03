@@ -9,7 +9,7 @@ namespace kernels {
 struct Evaluator {
     // compute the penalty of all solutions in the population
     // (one block per one solution)
-    static void evaluate(const TimetableData &d_data, Population &population, const StudentAssignment &assignment);
+    void evaluate(const TimetableData &d_data, Population &population, const StudentAssignment &assignment);
 };
 
 } // namespace kernels

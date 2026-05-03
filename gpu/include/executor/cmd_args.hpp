@@ -6,11 +6,12 @@
 
 #include "typedefs.hpp"
 
-constexpr u32 DEFAULT_GENERATIONS = 256;
+constexpr u32 DEFAULT_GENERATIONS = 512;
 constexpr u32 DEFAULT_POPULATION_SIZE = 2048;
 constexpr u32 DEFAULT_SEED = 21372137;
 constexpr f32 DEFAULT_SEL_FRAC = 0.25;
 constexpr f32 DEFAULT_CROSSOVER_RATE = 0.9;
+constexpr f32 DEFAULT_MUTATION_RATE = 0.1;
 constexpr f32 DEFAULT_ELITES_FRAC = 0.05;
 constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
 
@@ -20,6 +21,7 @@ constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
     X("-p", population_size, u32, parse_u32, DEFAULT_POPULATION_SIZE, "population size")                               \
     X("--sel-frac", sel_frac, f32, parse_f32, DEFAULT_SEL_FRAC, "fraction of population size to select for crossover") \
     X("--cross", cross_rate, f32, parse_f32, DEFAULT_CROSSOVER_RATE, "crossover rate")                                 \
+    X("--mut", mut_rate, f32, parse_f32, DEFAULT_MUTATION_RATE, "mutation rate")                                       \
     X("--elit-frac", elites_frac, f32, parse_f32, DEFAULT_ELITES_FRAC, "fraction of population to keep as elite")      \
     X("-s", seed, u32, parse_u32, DEFAULT_SEED, "random seed")                                                         \
     X("-o", output_path, std::string, parse_string, DEFAULT_OUTPUT_PATH, "solution output path")
