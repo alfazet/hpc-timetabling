@@ -1,4 +1,6 @@
 #include "executor/solver.cuh"
+
+#include "executor/adjuster.cuh"
 #include "kernels/assigner.cuh"
 #include "kernels/crossover.cuh"
 #include "kernels/evaluator.cuh"
@@ -55,6 +57,9 @@ void Solver::print_metadata() const {
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
 
+    Adjuster adjuster(0.025, 0.1, 0.9, 0.1, 0.9);
+    Stats stats;
+
     kernels::Evaluator evaluator;
     kernels::Population population(n_classes, this->population_size, this->elites_frac, this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
@@ -66,16 +71,16 @@ FoundSolution Solver::solve() const {
     this->print_metadata();
     FoundSolution sol = population.get_best_solution(assignment);
     for (u32 gen = 1; gen <= generations; gen++) {
-        // TODO: local search
+        // TODO: local search, finish adjuster
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
 
         if (gen % ((generations + 100 - 1) / 100) == 0) {
             sol = population.get_best_solution(assignment);
-            printf("Min penalty after %d generations: ", gen);
-            sol.penalty.print();
-            printf("\n");
+            stats.update(gen, sol.penalty);
+            stats.print();
+            adjuster.adjust(stats, mutation, crossover);
         }
 
         selection.select(population);

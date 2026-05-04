@@ -20,8 +20,14 @@ struct Penalty {
         return hard < p.hard;
     }
 
+    __host__ __device__ bool operator==(const Penalty &p) const { return soft == p.soft && hard == p.hard; }
+
+    __host__ __device__ bool operator!=(const Penalty &p) const { return !(*this == p); }
+
     void print() const;
 };
+
+static Penalty MAX_PENALTY(UINT32_MAX, UINT32_MAX);
 
 } // namespace kernels
 
