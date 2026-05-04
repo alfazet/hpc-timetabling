@@ -13,7 +13,7 @@
 FoundSolution::FoundSolution(std::vector<std::vector<u16>> student_assignment, std::vector<u16> times_idxs,
                              std::vector<u16> rooms_idxs, kernels::Penalty penalty)
     : student_assignment(std::move(student_assignment)), times_idxs(std::move(times_idxs)),
-      rooms_idxs(std::move(rooms_idxs)), penalty(std::move(penalty)) {}
+      rooms_idxs(std::move(rooms_idxs)), penalty(penalty) {}
 
 serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data) const {
     std::vector<serializer::Class> classes_out;
@@ -57,7 +57,7 @@ void Solver::print_metadata() const {
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
 
-    Adjuster adjuster(0.025, 0.1, 0.9, 0.1, 0.9);
+    Adjuster adjuster(0.05, 0.1, 0.9, 0.1, 0.9);
     Stats stats;
 
     kernels::Evaluator evaluator;
@@ -71,7 +71,7 @@ FoundSolution Solver::solve() const {
     this->print_metadata();
     FoundSolution sol = population.get_best_solution(assignment);
     for (u32 gen = 1; gen <= generations; gen++) {
-        // TODO: local search, finish adjuster
+        // TODO: local search
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();

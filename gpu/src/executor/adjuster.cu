@@ -30,5 +30,12 @@ Adjuster::Adjuster(f32 delta, f32 min_mut, f32 max_mut, f32 min_cross, f32 max_c
     : delta(delta), min_mut(min_mut), max_mut(max_mut), min_cross(min_cross), max_cross(max_cross) {}
 
 void Adjuster::adjust(const Stats &stats, kernels::Mutation &mut, kernels::Crossover &cross) const {
-    // TODO
+    if (stats.stagnation > 0) {
+        f32 scale = log2f(1.0f + static_cast<f32>(stats.stagnation));
+        mut.prob = fminf(mut.prob + delta * scale, max_mut);
+        cross.prob = fmaxf(cross.prob - delta * scale, min_cross);
+    } else if (stats.progress > 0) {
+        mut.prob = fmaxf(mut.prob - delta, min_mut);
+        cross.prob = fminf(cross.prob + delta, max_cross);
+    }
 }
