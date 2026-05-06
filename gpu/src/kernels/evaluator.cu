@@ -1,16 +1,7 @@
 #include "kernels/evaluator.cuh"
+#include "kernels/utils.cuh"
 
 namespace kernels {
-
-__device__ static bool timeslots_overlap(const parser::TimeSlots &a, const parser::TimeSlots &b) {
-    if ((a.weeks.bits & b.weeks.bits) == 0) {
-        return false;
-    }
-    if ((a.days.bits & b.days.bits) == 0) {
-        return false;
-    }
-    return a.start < b.start + b.length && b.start < a.start + a.length;
-}
 
 __device__ bool insufficient_travel_time(const parser::TimeSlots &a, const parser::TimeSlots &b, u32 travel) {
     if ((a.weeks.bits & b.weeks.bits) == 0) {
@@ -109,7 +100,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                 usize ua_start = room_unavail_offsets[room_idx];
                 usize ua_end = room_idx < n_rooms - 1 ? room_unavail_offsets[room_idx + 1] : n_unavail;
                 for (usize u = ua_start; u < ua_end; u++) {
-                    if (timeslots_overlap(room_unavail[u], cls_time)) {
+                    if (utils::timeslots_overlap(room_unavail[u], cls_time)) {
                         local_hard++;
                         break;
                     }
@@ -135,8 +126,9 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                 u16 rj = pop_rooms[sol_offset + idx_j];
                 if (rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]) {
                     const parser::TimeSlots &tj = time_opt_times[pop_times[sol_offset + idx_j]];
-                    if (timeslots_overlap(ti, tj))
+                    if (utils::timeslots_overlap(ti, tj)) {
                         local_hard++;
+                    }
                 }
             }
         }
@@ -231,7 +223,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                     u16 tb = pop_times[sol_offset + cb];
                     u16 rb = pop_rooms[sol_offset + cb];
                     const parser::TimeSlots &time_b = time_opt_times[tb];
-                    if (timeslots_overlap(time_a, time_b)) {
+                    if (utils::timeslots_overlap(time_a, time_b)) {
                         local_conflicts++;
                     } else if (ra != NO_ROOM && rb != NO_ROOM) {
                         u16 room_a = room_opt_room_idx[ra];

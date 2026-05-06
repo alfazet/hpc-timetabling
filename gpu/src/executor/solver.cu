@@ -4,6 +4,7 @@
 #include "kernels/assigner.cuh"
 #include "kernels/crossover.cuh"
 #include "kernels/evaluator.cuh"
+#include "kernels/local_search.cuh"
 #include "kernels/model.cuh"
 #include "kernels/mutation.cuh"
 #include "kernels/penalty.cuh"
@@ -40,9 +41,10 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, f32 elites_frac, u32 seed)
+               f32 mut_rate, f32 elites_frac, u32 ls_iters, u32 ls_trials, u32 seed)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
-      cross_rate(cross_rate), mut_rate(mut_rate), elites_frac(elites_frac), seed(seed) {}
+      cross_rate(cross_rate), mut_rate(mut_rate), elites_frac(elites_frac), ls_iters(ls_iters), ls_trials(ls_trials),
+      seed(seed) {}
 
 void Solver::print_metadata() const {
     printf("Solver started...\n");
@@ -51,6 +53,8 @@ void Solver::print_metadata() const {
     printf("Selection: %.1f%%\n", sel_frac * 100);
     printf("Crossover rate: %.4f\n", cross_rate);
     printf("Elites: %.1f%%\n", elites_frac * 100);
+    printf("Local search iterations: %u\n", ls_iters);
+    printf("Local search trials per iter: %u\n", ls_trials);
     printf("Seed: %u\n", seed);
 }
 
@@ -66,12 +70,13 @@ FoundSolution Solver::solve() const {
     kernels::Crossover crossover(this->cross_rate);
     kernels::Mutation mutation(this->mut_rate);
     kernels::Selection selection(this->population_size, this->sel_frac);
+    kernels::LocalSearch local_search(this->ls_iters, this->ls_trials);
     population.init(d_data);
 
     this->print_metadata();
     FoundSolution sol = population.get_best_solution(assignment);
     for (u32 gen = 1; gen <= generations; gen++) {
-        // TODO: local search
+        local_search.search(population, d_data);
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
@@ -79,8 +84,8 @@ FoundSolution Solver::solve() const {
         if (gen % ((generations + 100 - 1) / 100) == 0) {
             sol = population.get_best_solution(assignment);
             stats.update(gen, sol.penalty);
-            stats.print();
             adjuster.adjust(stats, mutation, crossover);
+            stats.print();
         }
 
         selection.select(population);
