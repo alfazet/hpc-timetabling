@@ -13,7 +13,7 @@ void Stats::update(usize cur_generation, kernels::Penalty cur_penalty) {
     generation = cur_generation;
 }
 
-void Stats::print() const {
+void Stats::print(f32 mut_rate, f32 cross_rate) const {
     printf("\n");
     printf("min penalty after %lu generations: ", generation);
     min_penalty.print();
@@ -23,6 +23,7 @@ void Stats::print() const {
     } else {
         printf("progressing for %lu generations\n", progress);
     }
+    printf("mutation rate: %.4f, crossover rate: %.4f\n", mut_rate, cross_rate);
     printf("\n");
 }
 

@@ -41,10 +41,10 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, f32 elites_frac, u32 ls_iters, u32 ls_trials, u32 seed)
+               f32 mut_rate, u32 mut_trials, f32 elites_frac, u32 ls_iters, u32 ls_trials, u32 seed)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
-      cross_rate(cross_rate), mut_rate(mut_rate), elites_frac(elites_frac), ls_iters(ls_iters), ls_trials(ls_trials),
-      seed(seed) {}
+      cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac), ls_iters(ls_iters),
+      ls_trials(ls_trials), seed(seed) {}
 
 void Solver::print_metadata() const {
     printf("Solver started...\n");
@@ -52,6 +52,8 @@ void Solver::print_metadata() const {
     printf("Population size: %u\n", population_size);
     printf("Selection: %.1f%%\n", sel_frac * 100);
     printf("Crossover rate: %.4f\n", cross_rate);
+    printf("Mutation rate: %.4f\n", mut_rate);
+    printf("Mutation trials per iter: %u\n", mut_trials);
     printf("Elites: %.1f%%\n", elites_frac * 100);
     printf("Local search iterations: %u\n", ls_iters);
     printf("Local search trials per iter: %u\n", ls_trials);
@@ -68,7 +70,7 @@ FoundSolution Solver::solve() const {
     kernels::Population population(n_classes, this->population_size, this->elites_frac, this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
     kernels::Crossover crossover(this->cross_rate);
-    kernels::Mutation mutation(this->mut_rate);
+    kernels::Mutation mutation(this->mut_rate, this->mut_trials);
     kernels::Selection selection(this->population_size, this->sel_frac);
     kernels::LocalSearch local_search(this->ls_iters, this->ls_trials);
     population.init(d_data);
@@ -85,7 +87,7 @@ FoundSolution Solver::solve() const {
             sol = population.get_best_solution(assignment);
             stats.update(gen, sol.penalty);
             adjuster.adjust(stats, mutation, crossover);
-            stats.print();
+            stats.print(mutation.prob, crossover.prob);
         }
 
         selection.select(population);

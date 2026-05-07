@@ -8,8 +8,9 @@ namespace kernels {
 
 struct Mutation {
     f32 prob;
+    u32 n_trials;
 
-    explicit Mutation(f32 prob);
+    Mutation(f32 prob, u32 n_trials);
 
     // apply mutations - only to the part of the population
     // that was created by crossing-over (not the elites

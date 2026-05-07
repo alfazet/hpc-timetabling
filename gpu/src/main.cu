@@ -14,7 +14,8 @@ void main_(int argc, char **argv) {
 
     srand(arg_list.seed);
     Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate,
-                  arg_list.mut_rate, arg_list.elites_frac, arg_list.ls_iters, arg_list.ls_trials, arg_list.seed);
+                  arg_list.mut_rate, arg_list.mut_trials, arg_list.elites_frac, arg_list.ls_iters, arg_list.ls_trials,
+                  arg_list.seed);
     auto best_solution = solver.solve();
     auto output = best_solution.serialize(d_data);
     auto xml = output.serialize(metadata);
