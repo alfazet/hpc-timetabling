@@ -11,7 +11,7 @@ struct Crossover {
     explicit Crossover(f32 prob);
 
     // replace the population with new solutions generated from the best ones + elites
-    void next_population(const Selection &selection, Population &population);
+    void next_population(const Selection &selection, Population &population, const TimetableData &data);
 };
 } // namespace kernels
 

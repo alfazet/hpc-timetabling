@@ -91,7 +91,7 @@ FoundSolution Solver::solve() const {
         }
 
         selection.select(population);
-        crossover.next_population(selection, population);
+        crossover.next_population(selection, population, d_data);
         mutation.apply_mutations(population, d_data);
     }
 
