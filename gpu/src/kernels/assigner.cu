@@ -1,16 +1,7 @@
 #include "kernels/assigner.cuh"
+#include "kernels/utils.cuh"
 
 namespace kernels {
-
-__device__ static bool timeslots_overlap(const parser::TimeSlots &a, const parser::TimeSlots &b) {
-    if ((a.weeks.bits & b.weeks.bits) == 0) {
-        return false;
-    }
-    if ((a.days.bits & b.days.bits) == 0) {
-        return false;
-    }
-    return a.start < b.start + b.length && b.start < a.start + a.length;
-}
 
 __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u16 *pop_times,
                                   const u16 *courses_configs_start, const u16 *courses_configs_end,
@@ -176,7 +167,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                             }
                                             u16 t = pop_times[sol_offset + trial[k]];
                                             const parser::TimeSlots &time = time_opt_times[t];
-                                            if (timeslots_overlap(trial_time, time)) {
+                                            if (utils::timeslots_overlap(trial_time, time)) {
                                                 ok = false;
                                             }
                                         }
@@ -213,7 +204,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                     }
                                     const parser::TimeSlots &trial_time =
                                         time_opt_times[pop_times[sol_offset + sh_trial[j]]];
-                                    if (timeslots_overlap(trial_time, at_time)) {
+                                    if (utils::timeslots_overlap(trial_time, at_time)) {
                                         *sh_conflict = true;
                                     }
                                 }
@@ -285,7 +276,6 @@ void StudentAssignment::assign(const TimetableData &d_data, const Population &po
 
     u16 *d_students_idxs = thrust::raw_pointer_cast(this->students_idxs.data());
     u32 *d_class_counts = thrust::raw_pointer_cast(this->class_counts.data());
-
     const u16 *d_pop_times = thrust::raw_pointer_cast(population.times.data());
     const u16 *d_courses_configs_start = thrust::raw_pointer_cast(d_data.courses.configs_start.data());
     const u16 *d_courses_configs_end = thrust::raw_pointer_cast(d_data.courses.configs_end.data());

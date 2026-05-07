@@ -14,7 +14,7 @@ struct Stats {
 
     void update(usize cur_generation, kernels::Penalty cur_penalty);
 
-    void print() const;
+    void print(f32 mut_rate, f32 cross_rate) const;
 };
 
 struct Adjuster {

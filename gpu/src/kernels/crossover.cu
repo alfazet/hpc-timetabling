@@ -7,9 +7,10 @@ namespace kernels {
 
 Crossover::Crossover(f32 prob) : prob(prob) {}
 
-__global__ void k_one_point_crossover(u16 *new_times, u16 *new_rooms, const u16 *old_times, const u16 *old_rooms,
-                                      const u16 *selected, usize n_selected, usize n_classes, usize n_new, f32 prob,
-                                      u32 seed) {
+// each subpart of every child is taken entirely either from one parent or the other
+__global__ void k_subpart_crossover(u16 *new_times, u16 *new_rooms, const u16 *old_times, const u16 *old_rooms,
+                                    const u16 *selected, usize n_selected, usize n_classes, usize n_new,
+                                    const u16 *class_subpart_idx, f32 prob, u32 seed) {
     usize tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid >= n_new) {
         return;
@@ -19,16 +20,27 @@ __global__ void k_one_point_crossover(u16 *new_times, u16 *new_rooms, const u16 
     curand_init(seed, tid, 0, &rng);
     u16 p1 = selected[curand(&rng) % n_selected];
     u16 p2 = selected[curand(&rng) % n_selected];
-    usize crossover_point = curand_uniform(&rng) < prob ? curand(&rng) % n_classes : n_classes;
+
+    bool do_crossover = curand_uniform(&rng) < prob;
+    u32 child_rand = curand(&rng);
     usize dst_offset = n_classes * tid;
     for (usize i = 0; i < n_classes; i++) {
-        usize src_offset = i < crossover_point ? n_classes * p1 : n_classes * p2;
+        usize src_offset;
+        if (!do_crossover) {
+            src_offset = n_classes * p1;
+        } else {
+            // Knuth hashing, the magic constant is (2^32 * golden ratio) truncated to 32 bits,
+            // makes it so that data for every class belonging to one subpart will be taken from the same parent
+            u32 hash = (static_cast<u32>(class_subpart_idx[i]) * 2654435761u) ^ child_rand;
+            u32 rem = hash & 1;
+            src_offset = n_classes * (rem * p1 + (1 - rem) * p2);
+        }
         new_times[dst_offset + i] = old_times[src_offset + i];
         new_rooms[dst_offset + i] = old_rooms[src_offset + i];
     }
 }
 
-void Crossover::next_population(const Selection &selection, Population &population) {
+void Crossover::next_population(const Selection &selection, Population &population, const TimetableData &data) {
     usize n_classes = population.n_classes;
     usize pop_size = population.population_size;
     usize n_elites = population.n_elites;
@@ -54,12 +66,13 @@ void Crossover::next_population(const Selection &selection, Population &populati
 
     /// ... and add new ones generated from the selection
     const u16 *d_selected = thrust::raw_pointer_cast(selection.selected.data());
+    const u16 *d_subpart_idx = thrust::raw_pointer_cast(data.classes.subpart_idx.data());
     u32 seed = population.seed ^ static_cast<u32>(rand());
     constexpr u32 block_dim = 1024;
     u32 grid_dim = (n_new + block_dim - 1) / block_dim;
-    k_one_point_crossover<<<grid_dim, block_dim>>>(d_new_times + n_elites * n_classes,
-                                                   d_new_rooms + n_elites * n_classes, d_old_times, d_old_rooms,
-                                                   d_selected, n_selected, n_classes, n_new, prob, seed);
+    k_subpart_crossover<<<grid_dim, block_dim>>>(d_new_times + n_elites * n_classes, d_new_rooms + n_elites * n_classes,
+                                                 d_old_times, d_old_rooms, d_selected, n_selected, n_classes, n_new,
+                                                 d_subpart_idx, prob, seed);
     cudaErrCheck(cudaDeviceSynchronize());
     population.times.swap(new_times);
     population.rooms.swap(new_rooms);
