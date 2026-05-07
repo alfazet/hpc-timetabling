@@ -94,7 +94,9 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
     usize sol_offset = sol * n_classes;
 
     extern __shared__ u8 sh_mem[];
-    auto *sh_times = reinterpret_cast<u16 *>(sh_mem);
+    auto *sh_delta = reinterpret_cast<int2 *>(sh_mem);
+    // sh_delta: block_size * sizeof(int2)
+    auto *sh_times = reinterpret_cast<u16 *>(sh_delta + block_size);
     // sh_times: n_classes * sizeof(u16) bytes
     u16 *sh_rooms = sh_times + n_classes;
     // sh_rooms: n_classes * sizeof(u16) bytes
@@ -104,8 +106,6 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
     // sh_time: block_size * sizeof(u16)
     u16 *sh_room = sh_time + block_size;
     // sh_room: block_size * sizeof(u16)
-    auto *sh_delta = reinterpret_cast<int2 *>(sh_room + block_size);
-    // sh_delta: block_size * sizeof(int2)
 
     for (usize i = tid; i < n_classes; i += block_size) {
         sh_times[i] = pop_times[sol_offset + i];
