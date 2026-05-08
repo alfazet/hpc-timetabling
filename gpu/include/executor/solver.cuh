@@ -28,10 +28,11 @@ struct Solver {
     f32 elites_frac;
     u32 ls_iters;
     u32 ls_trials;
+    f32 repl_rate;
     u32 seed;
 
     Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-           f32 mut_rate, u32 mut_trials, f32 elites_frac, u32 ls_iters, u32 ls_trials, u32 seed);
+           f32 mut_rate, u32 mut_trials, f32 elites_frac, u32 ls_iters, u32 ls_trials, f32 repl_rate, u32 seed);
 
     void print_metadata() const;
 

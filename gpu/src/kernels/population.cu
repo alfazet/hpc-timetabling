@@ -7,11 +7,13 @@
 
 namespace kernels {
 
-__global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, const u16 *times_start, const u16 *times_end,
-                                  const u16 *rooms_start, const u16 *rooms_end, const parser::TimeSlots *time_opt_times,
+__global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, const u16 *sol_indices,
+                                  const u16 *times_start, const u16 *times_end, const u16 *rooms_start,
+                                  const u16 *rooms_end, const parser::TimeSlots *time_opt_times,
                                   const u16 *room_opt_room_idx, const parser::TimeSlots *room_unavail,
                                   const usize *room_unavail_offsets, usize n_rooms, usize n_unavail, u32 seed) {
-    usize sol = blockIdx.x;
+    // sol_indices are non-null when this kernel is used to re-init the worst solutions
+    usize sol = sol_indices ? static_cast<usize>(sol_indices[blockIdx.x]) : blockIdx.x;
     usize tid = threadIdx.x;
     usize block_size = blockDim.x;
     usize sol_offset = sol * n_classes;
@@ -39,7 +41,6 @@ __global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, const
         u16 r_end = rooms_end[cls];
         bool needs_room = r_start != r_end;
 
-        // each thread generates a random candidate
         u16 cand_t = t_start + (n_times > 0 ? curand(&rng) % n_times : 0);
         u16 cand_r;
         if (!needs_room) {
@@ -122,10 +123,44 @@ void Population::init(const TimetableData &d_data) {
     u32 grid_dim = static_cast<u32>(population_size);
     usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
     k_init_population<<<grid_dim, block_dim, sh_mem_size>>>(
-        d_times, d_rooms, n_classes, d_times_start, d_times_end, d_rooms_start, d_rooms_end, time_opt_times,
+        d_times, d_rooms, n_classes, nullptr, d_times_start, d_times_end, d_rooms_start, d_rooms_end, time_opt_times,
         room_opt_room_idx, room_unavail, room_unavail_offsets, n_rooms, n_unavail, seed);
     thrust::sequence(order.begin(), order.end());
 
+    cudaErrCheck(cudaDeviceSynchronize());
+}
+
+void Population::replace_worst(const TimetableData &d_data, usize n_replace) {
+    if (n_replace == 0) {
+        return;
+    }
+
+    // assuming `Population::sort` was called earlier this generation, so that the
+    // worst solutions are at the end
+    const u16 *d_worst = thrust::raw_pointer_cast(order.data() + population_size - n_replace);
+
+    u16 *d_times = thrust::raw_pointer_cast(times.data());
+    u16 *d_rooms = thrust::raw_pointer_cast(rooms.data());
+    const u16 *d_times_start = thrust::raw_pointer_cast(d_data.classes.times_start.data());
+    const u16 *d_times_end = thrust::raw_pointer_cast(d_data.classes.times_end.data());
+    const u16 *d_rooms_start = thrust::raw_pointer_cast(d_data.classes.rooms_start.data());
+    const u16 *d_rooms_end = thrust::raw_pointer_cast(d_data.classes.rooms_end.data());
+
+    const parser::TimeSlots *time_opt_times = thrust::raw_pointer_cast(d_data.time_options.times.data());
+    const u16 *room_opt_room_idx = thrust::raw_pointer_cast(d_data.room_options.room_idx.data());
+    const parser::TimeSlots *room_unavail = thrust::raw_pointer_cast(d_data.room_data.unavail.data());
+    const usize *room_unavail_offsets = thrust::raw_pointer_cast(d_data.room_data.unavail_offsets.data());
+    usize n_rooms = d_data.room_data.n_rooms;
+    usize n_unavail = d_data.room_data.unavail.size();
+
+    u32 seed_val = this->seed ^ static_cast<u32>(rand());
+    constexpr u32 block_dim = 1024;
+    u32 grid_dim = static_cast<u32>(n_replace);
+    usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
+
+    k_init_population<<<grid_dim, block_dim, sh_mem_size>>>(
+        d_times, d_rooms, n_classes, d_worst, d_times_start, d_times_end, d_rooms_start, d_rooms_end, time_opt_times,
+        room_opt_room_idx, room_unavail, room_unavail_offsets, n_rooms, n_unavail, seed_val);
     cudaErrCheck(cudaDeviceSynchronize());
 }
 

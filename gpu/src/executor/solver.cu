@@ -41,10 +41,10 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, u32 mut_trials, f32 elites_frac, u32 ls_iters, u32 ls_trials, u32 seed)
+               f32 mut_rate, u32 mut_trials, f32 elites_frac, u32 ls_iters, u32 ls_trials, f32 repl_rate, u32 seed)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
       cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac), ls_iters(ls_iters),
-      ls_trials(ls_trials), seed(seed) {}
+      ls_trials(ls_trials), repl_rate(repl_rate), seed(seed) {}
 
 void Solver::print_metadata() const {
     printf("Solver started...\n");
@@ -57,6 +57,7 @@ void Solver::print_metadata() const {
     printf("Elites: %.1f%%\n", elites_frac * 100);
     printf("Local search iterations: %u\n", ls_iters);
     printf("Local search trials per iter: %u\n", ls_trials);
+    printf("Replacement rate: %.4f\n", repl_rate);
     printf("Seed: %u\n", seed);
 }
 
@@ -82,6 +83,11 @@ FoundSolution Solver::solve() const {
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
+        // TODO: dynamically change replacement_rate in the adjuster
+        // for example when stagnating for a lot of generations
+        // we would like to replace almost every non-elite solution
+        usize n_replace = std::ceil(population_size * repl_rate);
+        population.replace_worst(d_data, n_replace);
 
         if (gen % ((generations + 100 - 1) / 100) == 0) {
             sol = population.get_best_solution(assignment);
