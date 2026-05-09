@@ -27,9 +27,10 @@ struct Population {
     u32 seed;
     usize n_classes;
     usize population_size;
-    usize n_elites;
+    f32 elites_frac;
+    f32 worst_frac;
 
-    Population(usize n_classes, usize population_size, f32 elites_frac, u64 seed);
+    Population(usize n_classes, usize population_size, f32 elites_frac, f32 worst_frac, u32 seed);
 
     // initialize the population with random solutions
     // (one thread per one solution)
@@ -38,8 +39,8 @@ struct Population {
     // sort by penalty
     void sort();
 
-    // replace the worst `n_replace` solutions with random assignments
-    void replace_worst(const TimetableData &d_data, usize n_replace);
+    // replace the worst solutions with random assignments
+    void replace_worst(const TimetableData &d_data);
 
     // copy the solution with the least penalty to the host
     FoundSolution get_best_solution(const StudentAssignment &assignment) const;

@@ -145,7 +145,7 @@ __global__ void k_mutations(u16 *pop_times, u16 *pop_rooms, usize n_classes, usi
 void Mutation::apply_mutations(Population &population, const TimetableData &data) {
     // skip the elites
     usize n_classes = population.n_classes;
-    usize n_elites = population.n_elites;
+    usize n_elites = std::ceil(population.population_size * population.elites_frac);
     u16 *pop_times = thrust::raw_pointer_cast(population.times.data());
     u16 *pop_rooms = thrust::raw_pointer_cast(population.rooms.data());
     const u16 *class_times_start = thrust::raw_pointer_cast(data.classes.times_start.data());

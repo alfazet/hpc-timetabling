@@ -43,7 +43,7 @@ __global__ void k_subpart_crossover(u16 *new_times, u16 *new_rooms, const u16 *o
 void Crossover::next_population(const Selection &selection, Population &population, const TimetableData &data) {
     usize n_classes = population.n_classes;
     usize pop_size = population.population_size;
-    usize n_elites = population.n_elites;
+    usize n_elites = std::ceil(population.population_size * population.elites_frac);
     usize n_new = pop_size - n_elites;
     usize n_selected = selection.selected.size();
 
