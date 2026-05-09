@@ -61,15 +61,16 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
     u16 local_assignment[MAX_SUBPARTS];
     for (usize student_idx = 0; student_idx < n_students; student_idx++) {
         for (usize i = tid; i < n_classes; i += blockDim.x) {
+            bool found = false;
             usize cnt = sh_class_count[i];
             usize offset = MAX_CLASS_LIMIT * (sol * n_classes + i);
             for (usize j = 0; j < cnt; j++) {
                 if (students_idxs[offset + j] == student_idx) {
-                    sh_already_attending[i] = true;
+                    found = true;
                     break;
                 }
             }
-            sh_already_attending[i] = false;
+            sh_already_attending[i] = found;
         }
         __syncthreads();
         // at this point all classes this student attends are marked in sh_already_attending
