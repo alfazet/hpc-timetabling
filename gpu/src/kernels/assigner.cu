@@ -292,7 +292,7 @@ void StudentAssignment::assign(const TimetableData &d_data, const Population &po
     const usize *d_student_course_offsets = thrust::raw_pointer_cast(d_data.students.course_idxs_offsets.data());
 
     usize n_students = d_data.students.id.size();
-    constexpr dim3 block_dim(BLOCK_SIZE);
+    constexpr dim3 block_dim(SMALL_BLOCK_SIZE);
     dim3 grid_dim(static_cast<u32>(population.population_size));
     usize sh_mem_size = sizeof(usize) + (n_classes + MAX_SUBPARTS + 1) * sizeof(u16) + (n_classes + 4) * sizeof(bool);
     k_assign_students<<<grid_dim, block_dim, sh_mem_size>>>(

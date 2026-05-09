@@ -16,23 +16,161 @@ __device__ inline bool cmp_delta(int2 a, int2 b) {
     return a.y < b.y;
 }
 
-// checks how the move affects time/room conflicts
-// returns (hard_delta, soft_delta), negative values are improvements
-__device__ static int2 compute_move_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const u16 *sh_times,
-                                          const u16 *sh_rooms, usize n_classes, const parser::TimeSlots *time_opt_times,
-                                          const u32 *time_opt_penalty, const u16 *room_opt_room_idx,
-                                          const u32 *room_opt_penalty, const parser::TimeSlots *room_unavail,
-                                          const usize *room_unavail_offsets, usize n_rooms, usize n_unavail,
-                                          u32 opt_time, u32 opt_room) {
+// checks whether a pairwise distribution constraint is violated for a given pair of classes
+__device__ static bool dist_pair_violated(parser::DistributionKind kind, const parser::TimeSlots &ti,
+                                          const parser::TimeSlots &tj, u16 ri, u16 rj, const u16 *room_opt_room_idx,
+                                          const u32 *travel_time, usize n_rooms) {
+    u8 di = ti.days.bits, dj = tj.days.bits;
+    u16 wi = ti.weeks.bits, wj = tj.weeks.bits;
+    if (std::holds_alternative<parser::SameStart>(kind)) {
+        return ti.start != tj.start;
+    }
+    if (std::holds_alternative<parser::SameTime>(kind)) {
+        bool contains = (tj.start <= ti.start && ti.start + ti.length <= tj.start + tj.length) ||
+                        (ti.start <= tj.start && tj.start + tj.length <= ti.start + ti.length);
+        return !contains;
+    }
+    if (std::holds_alternative<parser::DifferentTime>(kind)) {
+        return !(tj.start + tj.length <= ti.start || ti.start + ti.length <= tj.start);
+    }
+    if (std::holds_alternative<parser::SameDays>(kind)) {
+        return !((dj | di) == dj || (dj | di) == di);
+    }
+    if (std::holds_alternative<parser::DifferentDays>(kind)) {
+        return (di & dj) != 0;
+    }
+    if (std::holds_alternative<parser::SameWeeks>(kind)) {
+        return !((wj | wi) == wj || (wj | wi) == wi);
+    }
+    if (std::holds_alternative<parser::DifferentWeeks>(kind)) {
+        return (wi & wj) != 0;
+    }
+    if (std::holds_alternative<parser::Overlap>(kind) || std::holds_alternative<parser::NotOverlap>(kind)) {
+        bool overlap =
+            tj.start < ti.start + ti.length && ti.start < tj.start + tj.length && (di & dj) != 0 && (wi & wj) != 0;
+        bool should_overlap = std::holds_alternative<parser::Overlap>(kind);
+        return (should_overlap && !overlap) || (!should_overlap && overlap);
+    }
+    if (std::holds_alternative<parser::SameRoom>(kind) || std::holds_alternative<parser::DifferentRoom>(kind)) {
+        bool same_room = (ri == NO_ROOM && rj == NO_ROOM) ||
+                         (ri != NO_ROOM && rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]);
+        bool should_same = std::holds_alternative<parser::SameRoom>(kind);
+        return (should_same && !same_room) || (!should_same && same_room);
+    }
+    if (std::holds_alternative<parser::SameAttendees>(kind)) {
+        if (ri == NO_ROOM || rj == NO_ROOM) {
+            return false;
+        }
+        if ((di & dj) == 0 || (wi & wj) == 0) {
+            return false;
+        }
+        u16 room_i = room_opt_room_idx[ri];
+        u16 room_j = room_opt_room_idx[rj];
+        u32 travel_ij = travel_time[room_i * n_rooms + room_j];
+        u32 travel_ji = travel_time[room_j * n_rooms + room_i];
+        if (travel_ij == NO_TRAVEL) {
+            travel_ij = 0;
+        }
+        if (travel_ji == NO_TRAVEL) {
+            travel_ji = 0;
+        }
+        u32 travel = max(travel_ij, travel_ji);
+        bool ok = tj.start + tj.length + travel <= ti.start || ti.start + ti.length + travel <= tj.start;
+        return !ok;
+    }
+    if (std::holds_alternative<parser::Precedence>(kind)) {
+        u16 _wi = __ffs(wi) - 1, _wj = __ffs(wj) - 1;
+        u16 _di = __ffs(di) - 1, _dj = __ffs(dj) - 1;
+        bool ok = _wi < _wj || (_wi == _wj && (_di < _dj || (_di == _dj && ti.start + ti.length <= tj.start)));
+        return !ok;
+    }
+    if (std::holds_alternative<parser::WorkDay>(kind)) {
+        if ((di & dj) == 0 || (wi & wj) == 0) {
+            return false;
+        }
+        u32 span = max(ti.start + ti.length, tj.start + tj.length) - min(ti.start, tj.start);
+        return span > std::get<parser::WorkDay>(kind).s;
+    }
+    if (std::holds_alternative<parser::MinGap>(kind)) {
+        if ((di & dj) == 0 || (wi & wj) == 0) {
+            return false;
+        }
+        u16 g = std::get<parser::MinGap>(kind).g;
+        return ti.start + ti.length + g > tj.start && tj.start + tj.length + g > ti.start;
+    }
+    return false;
+}
+
+// compute distribution penalty delta when moving class `cls` from old_t/old_r to new_t/new_r
+__device__ static int2 compute_dist_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const u16 *sh_times,
+                                          const u16 *sh_rooms, const parser::TimeSlots *time_opt_times,
+                                          const u16 *room_opt_room_idx, const u32 *travel_time, usize n_rooms,
+                                          const parser::DistributionKind *dist_kind, const u16 *dist_class_idxs,
+                                          const usize *dist_class_idxs_offsets, const Penalty *dist_penalty,
+                                          const u16 *class_dist_idxs, const usize *class_dist_offsets) {
     i32 delta_hard = 0;
     i32 delta_soft = 0;
 
-    delta_soft += time_opt_penalty[new_t] - time_opt_penalty[old_t];
+    const parser::TimeSlots &old_time = time_opt_times[old_t];
+    const parser::TimeSlots &new_time = time_opt_times[new_t];
+    usize d_begin = class_dist_offsets[cls];
+    usize d_end = class_dist_offsets[cls + 1];
+    for (usize di = d_begin; di < d_end; di++) {
+        u16 d = class_dist_idxs[di];
+        parser::DistributionKind kind = dist_kind[d];
+        Penalty pen = dist_penalty[d];
+
+        // skip these because they don't make sense to check in this context
+        if (std::holds_alternative<parser::MaxDays>(kind) || std::holds_alternative<parser::MaxDayLoad>(kind) ||
+            std::holds_alternative<parser::MaxBreaks>(kind) || std::holds_alternative<parser::MaxBlock>(kind)) {
+            continue;
+        }
+
+        usize c_begin = dist_class_idxs_offsets[d];
+        usize c_end = dist_class_idxs_offsets[d + 1];
+        for (usize ci = c_begin; ci < c_end; ci++) {
+            u16 c2 = dist_class_idxs[ci];
+            if (c2 == cls) {
+                continue;
+            }
+
+            const parser::TimeSlots &c2_time = time_opt_times[sh_times[c2]];
+            u16 c2_r = sh_rooms[c2];
+            bool old_violated =
+                dist_pair_violated(kind, old_time, c2_time, old_r, c2_r, room_opt_room_idx, travel_time, n_rooms);
+            bool new_violated =
+                dist_pair_violated(kind, new_time, c2_time, new_r, c2_r, room_opt_room_idx, travel_time, n_rooms);
+
+            if (old_violated && !new_violated) {
+                delta_hard -= pen.hard;
+                delta_soft -= pen.soft;
+            } else if (!old_violated && new_violated) {
+                delta_hard += pen.hard;
+                delta_soft += pen.soft;
+            }
+        }
+    }
+
+    return make_int2(delta_hard, delta_soft);
+}
+
+// checks how the move affects time/room conflicts and distribution penalties
+// returns (hard_delta, soft_delta), negative values are improvements
+__device__ static int2
+compute_move_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const u16 *sh_times, const u16 *sh_rooms,
+                   usize n_classes, const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
+                   const u16 *room_opt_room_idx, const u32 *room_opt_penalty, const parser::TimeSlots *room_unavail,
+                   const usize *room_unavail_offsets, usize n_rooms, usize n_unavail, u32 opt_time, u32 opt_room,
+                   const u32 *travel_time, const parser::DistributionKind *dist_kind, const u16 *dist_class_idxs,
+                   const usize *dist_class_idxs_offsets, const Penalty *dist_penalty, usize n_distributions,
+                   const u16 *class_dist_idxs, const usize *class_dist_offsets, usize n_dist_class_idxs) {
+    i32 delta_hard = 0;
+    i32 delta_soft = 0;
+
+    delta_soft = (time_opt_penalty[new_t] - time_opt_penalty[old_t]) * opt_time;
     i32 old_room_pen = old_r != NO_ROOM ? room_opt_penalty[old_r] : 0;
     i32 new_room_pen = new_r != NO_ROOM ? room_opt_penalty[new_r] : 0;
-    delta_soft += new_room_pen - old_room_pen;
-    delta_soft =
-        (time_opt_penalty[new_t] - time_opt_penalty[old_t]) * opt_time + (new_room_pen - old_room_pen) * opt_room;
+    delta_soft += (new_room_pen - old_room_pen) * opt_room;
 
     u16 old_real_room = old_r != NO_ROOM ? room_opt_room_idx[old_r] : NO_ROOM;
     u16 new_real_room = new_r != NO_ROOM ? room_opt_room_idx[new_r] : NO_ROOM;
@@ -78,6 +216,11 @@ __device__ static int2 compute_move_delta(usize cls, u16 old_t, u16 old_r, u16 n
             delta_hard++;
         }
     }
+    int2 dist_d = compute_dist_delta(cls, old_t, old_r, new_t, new_r, sh_times, sh_rooms, time_opt_times,
+                                     room_opt_room_idx, travel_time, n_rooms, dist_kind, dist_class_idxs,
+                                     dist_class_idxs_offsets, dist_penalty, class_dist_idxs, class_dist_offsets);
+    delta_hard += dist_d.x;
+    delta_soft += dist_d.y;
 
     return make_int2(delta_hard, delta_soft);
 }
@@ -87,7 +230,11 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
                                const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
                                const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
                                const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets, usize n_rooms,
-                               usize n_unavail, u32 opt_time, u32 opt_room, u32 n_iterations, u32 n_trials, u32 seed) {
+                               usize n_unavail, u32 opt_time, u32 opt_room, u32 n_iterations, u32 n_trials, u32 seed,
+                               const u32 *travel_time, const parser::DistributionKind *dist_kind,
+                               const u16 *dist_class_idxs, const usize *dist_class_idxs_offsets,
+                               const Penalty *dist_penalty, usize n_distributions, const u16 *class_dist_idxs,
+                               const usize *class_dist_offsets, usize n_dist_class_idxs) {
     usize sol = blockIdx.x;
     usize tid = threadIdx.x;
     usize block_size = blockDim.x;
@@ -144,9 +291,11 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
             if (new_t == old_t && new_r == old_r) {
                 continue;
             }
-            int2 delta = compute_move_delta(my_cls, old_t, old_r, new_t, new_r, sh_times, sh_rooms, n_classes,
-                                            time_opt_times, time_opt_penalty, room_opt_room_idx, room_opt_penalty,
-                                            room_unavail, room_unavail_offsets, n_rooms, n_unavail, opt_time, opt_room);
+            int2 delta = compute_move_delta(
+                my_cls, old_t, old_r, new_t, new_r, sh_times, sh_rooms, n_classes, time_opt_times, time_opt_penalty,
+                room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets, n_rooms, n_unavail, opt_time,
+                opt_room, travel_time, dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty,
+                n_distributions, class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
             if (cmp_delta(delta, best_delta)) {
                 best_delta = delta;
                 best_time = new_t;
@@ -206,14 +355,26 @@ void LocalSearch::search(Population &population, const TimetableData &data) {
     usize n_unavail = data.room_data.unavail.size();
     const auto &opt = data.optimization;
 
+    const u32 *travel_time = thrust::raw_pointer_cast(data.room_data.travel_time.data());
+    const auto &dist = data.distributions;
+    const parser::DistributionKind *dist_kind = thrust::raw_pointer_cast(dist.kind.data());
+    const u16 *dist_class_idxs = thrust::raw_pointer_cast(dist.class_idxs.data());
+    const usize *dist_class_idxs_offsets = thrust::raw_pointer_cast(dist.class_idxs_offsets.data());
+    const Penalty *dist_penalty = thrust::raw_pointer_cast(dist.penalty.data());
+    usize n_distributions = dist.kind.size();
+    const u16 *class_dist_idxs = thrust::raw_pointer_cast(dist.class_dist_idxs.data());
+    const usize *class_dist_offsets = thrust::raw_pointer_cast(dist.class_dist_offsets.data());
+    usize n_dist_class_idxs = dist.class_idxs.size();
+
     u32 seed = population.seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = BLOCK_SIZE;
+    constexpr u32 block_dim = LARGE_BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population.population_size);
     usize sh_mem_size = (2 * n_classes + 3 * block_dim) * sizeof(u16) + block_dim * sizeof(int2);
     k_local_search<<<grid_dim, block_dim, sh_mem_size>>>(
         pop_times, pop_rooms, n_classes, class_times_start, class_times_end, class_rooms_start, class_rooms_end,
         time_opt_times, time_opt_penalty, room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets,
-        n_rooms, n_unavail, opt.time, opt.room, n_iters, n_trials, seed);
+        n_rooms, n_unavail, opt.time, opt.room, n_iters, n_trials, seed, travel_time, dist_kind, dist_class_idxs,
+        dist_class_idxs_offsets, dist_penalty, n_distributions, class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }

@@ -119,7 +119,7 @@ void Population::init(const TimetableData &d_data) {
     usize n_unavail = d_data.room_data.unavail.size();
 
     u32 seed = this->seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = BLOCK_SIZE;
+    constexpr u32 block_dim = LARGE_BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population_size);
     usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
     k_init_population<<<grid_dim, block_dim, sh_mem_size>>>(
@@ -151,7 +151,7 @@ void Population::replace_worst(const TimetableData &d_data) {
     usize n_unavail = d_data.room_data.unavail.size();
 
     u32 seed = this->seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = BLOCK_SIZE;
+    constexpr u32 block_dim = SMALL_BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(n_worst);
     usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
 

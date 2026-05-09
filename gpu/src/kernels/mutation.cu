@@ -161,7 +161,7 @@ void Mutation::apply_mutations(Population &population, const TimetableData &data
     usize n_unavail = data.room_data.unavail.size();
 
     u32 seed = population.seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = BLOCK_SIZE;
+    constexpr u32 block_dim = LARGE_BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population.population_size - n_elites);
 
     usize sh_mem_size = 2 * n_classes * sizeof(u16);

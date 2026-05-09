@@ -2,84 +2,55 @@
 
 namespace kernels {
 RoomData::RoomData(usize n_rooms, const std::vector<parser::TimeSlots> &unavail,
-                   const std::vector<usize> &unavail_offsets,
-                   const std::vector<u32> &travel_time,
-                   const std::vector<u32> &capacity,
-                   const std::vector<parser::RoomId> &id)
-    : unavail(unavail), unavail_offsets(unavail_offsets),
-      travel_time(travel_time), capacity(capacity), id(id), n_rooms(n_rooms) {
-}
+                   const std::vector<usize> &unavail_offsets, const std::vector<u32> &travel_time,
+                   const std::vector<u32> &capacity, const std::vector<parser::RoomId> &id)
+    : unavail(unavail), unavail_offsets(unavail_offsets), travel_time(travel_time), capacity(capacity), id(id),
+      n_rooms(n_rooms) {}
 
-CourseData::CourseData(const std::vector<parser::CourseId> &id,
-                       const std::vector<u16> &configs_start,
+CourseData::CourseData(const std::vector<parser::CourseId> &id, const std::vector<u16> &configs_start,
                        const std::vector<u16> &configs_end)
-    : id(id), configs_start(configs_start), configs_end(configs_end) {
-}
+    : id(id), configs_start(configs_start), configs_end(configs_end) {}
 
-ConfigData::ConfigData(const std::vector<parser::ConfigId> &id,
-                       const std::vector<u16> &subparts_start,
+ConfigData::ConfigData(const std::vector<parser::ConfigId> &id, const std::vector<u16> &subparts_start,
                        const std::vector<u16> &subparts_end)
-    : id(id), subparts_start(subparts_start), subparts_end(subparts_end) {
-}
+    : id(id), subparts_start(subparts_start), subparts_end(subparts_end) {}
 
-SubpartData::SubpartData(const std::vector<parser::SubpartId> &id,
-                         const std::vector<u16> &classes_start,
+SubpartData::SubpartData(const std::vector<parser::SubpartId> &id, const std::vector<u16> &classes_start,
                          const std::vector<u16> &classes_end)
-    : id(id), classes_start(classes_start), classes_end(classes_end) {
-}
+    : id(id), classes_start(classes_start), classes_end(classes_end) {}
 
-ClassData::ClassData(
-    const std::vector<parser::ClassId> &id, const std::vector<u32> &limit,
-    const std::vector<u16> &parent, const std::vector<u16> &times_start,
-    const std::vector<u16> &times_end, const std::vector<u16> &rooms_start,
-    const std::vector<u16> &rooms_end, const std::vector<u16> &subpart_idx)
-    : id(id), limit(limit), parent(parent), times_start(times_start),
-      times_end(times_end), rooms_start(rooms_start), rooms_end(rooms_end),
-      subpart_idx(subpart_idx) {
-}
+ClassData::ClassData(const std::vector<parser::ClassId> &id, const std::vector<u32> &limit,
+                     const std::vector<u16> &parent, const std::vector<u16> &times_start,
+                     const std::vector<u16> &times_end, const std::vector<u16> &rooms_start,
+                     const std::vector<u16> &rooms_end, const std::vector<u16> &subpart_idx)
+    : id(id), limit(limit), parent(parent), times_start(times_start), times_end(times_end), rooms_start(rooms_start),
+      rooms_end(rooms_end), subpart_idx(subpart_idx) {}
 
-TimeOption::TimeOption(const std::vector<parser::TimeSlots> &times,
-                       const std::vector<u32> &penalty)
-    : times(times), penalty(penalty) {
-}
+TimeOption::TimeOption(const std::vector<parser::TimeSlots> &times, const std::vector<u32> &penalty)
+    : times(times), penalty(penalty) {}
 
-RoomOption::RoomOption(const std::vector<u16> &room_idx,
-                       const std::vector<u32> &penalty)
-    : room_idx(room_idx), penalty(penalty) {
-}
+RoomOption::RoomOption(const std::vector<u16> &room_idx, const std::vector<u32> &penalty)
+    : room_idx(room_idx), penalty(penalty) {}
 
-StudentData::StudentData(const std::vector<parser::StudentId> &id,
-                         const std::vector<u16> &course_idxs,
+StudentData::StudentData(const std::vector<parser::StudentId> &id, const std::vector<u16> &course_idxs,
                          const std::vector<usize> &course_idxs_offsets)
-    : id(id), course_idxs(course_idxs),
-      course_idxs_offsets(course_idxs_offsets) {
-}
+    : id(id), course_idxs(course_idxs), course_idxs_offsets(course_idxs_offsets) {}
 
-DistributionData::DistributionData(
-    const std::vector<parser::DistributionKind> &kind,
-    const std::vector<u16> &class_idxs,
-    const std::vector<usize> &class_idxs_offsets,
-    const std::vector<Penalty> &penalty)
-    : kind(kind), class_idxs(class_idxs),
-      class_idxs_offsets(class_idxs_offsets), penalty(penalty) {
-}
+DistributionData::DistributionData(const std::vector<parser::DistributionKind> &kind,
+                                   const std::vector<u16> &class_idxs, const std::vector<usize> &class_idxs_offsets,
+                                   const std::vector<Penalty> &penalty, const std::vector<u16> &class_dist_idxs,
+                                   const std::vector<usize> &class_dist_offsets)
+    : kind(kind), class_idxs(class_idxs), class_idxs_offsets(class_idxs_offsets), penalty(penalty),
+      class_dist_idxs(class_dist_idxs), class_dist_offsets(class_dist_offsets) {}
 
-TimetableData::TimetableData(u32 n_days, u32 n_weeks, u32 slots_per_day,
-                             parser::Optimization optimization,
-                             RoomData room_data, CourseData course_data,
-                             ConfigData config_data, SubpartData subpart_data,
-                             ClassData class_data, TimeOption time_options,
-                             RoomOption room_options,
-                             DistributionData distributions,
-                             StudentData students)
-    : room_data(std::move(room_data)), courses(std::move(course_data)),
-      configs(std::move(config_data)), subparts(std::move(subpart_data)),
-      classes(std::move(class_data)), time_options(std::move(time_options)),
-      room_options(std::move(room_options)),
-      distributions(std::move(distributions)), students(std::move(students)),
-      optimization(optimization), n_days(n_days), n_weeks(n_weeks),
-      slots_per_day(slots_per_day) {
-}
+TimetableData::TimetableData(u32 n_days, u32 n_weeks, u32 slots_per_day, parser::Optimization optimization,
+                             RoomData room_data, CourseData course_data, ConfigData config_data,
+                             SubpartData subpart_data, ClassData class_data, TimeOption time_options,
+                             RoomOption room_options, DistributionData distributions, StudentData students)
+    : room_data(std::move(room_data)), courses(std::move(course_data)), configs(std::move(config_data)),
+      subparts(std::move(subpart_data)), classes(std::move(class_data)), time_options(std::move(time_options)),
+      room_options(std::move(room_options)), distributions(std::move(distributions)), students(std::move(students)),
+      optimization(optimization), n_days(n_days), n_weeks(n_weeks), slots_per_day(slots_per_day) {}
 
 // helper struct to clean up the TimetableData constructor
 struct CourseHierarchy {
@@ -124,9 +95,8 @@ static RoomData make_room_data(const parser::Problem &p) {
     return {n_rooms, unavail, unavail_offsets, travel_time, capacity, id};
 }
 
-static CourseHierarchy
-make_course_hierarchy(const parser::Problem &p,
-                      const std::unordered_map<usize, usize> &room_id_to_idx) {
+static CourseHierarchy make_course_hierarchy(const parser::Problem &p,
+                                             const std::unordered_map<usize, usize> &room_id_to_idx) {
     std::vector<parser::CourseId> course_id;
     std::vector<u16> configs_start, configs_end;
     std::vector<parser::ConfigId> config_id;
@@ -218,16 +188,14 @@ make_course_hierarchy(const parser::Problem &p,
         CourseData(course_id, configs_start, configs_end),
         ConfigData(config_id, subparts_start, subparts_end),
         SubpartData(subpart_id, classes_start, classes_end),
-        ClassData(class_id, limit, parent, times_start, times_end, rooms_start,
-                  rooms_end, subpart_idx),
+        ClassData(class_id, limit, parent, times_start, times_end, rooms_start, rooms_end, subpart_idx),
         TimeOption(times, time_penalty),
         RoomOption(room_idx, room_penalty),
     };
 }
 
 static StudentData make_student_data(const parser::Problem &p,
-                                     const std::unordered_map<usize, usize> &
-                                     course_id_to_idx) {
+                                     const std::unordered_map<usize, usize> &course_id_to_idx) {
     std::vector<parser::StudentId> student_id;
     std::vector<u16> course_idxs;
     std::vector<usize> course_idxs_offsets;
@@ -249,9 +217,9 @@ static StudentData make_student_data(const parser::Problem &p,
     return {student_id, course_idxs, course_idxs_offsets};
 }
 
-static DistributionData make_distribution_data(
-    const parser::Problem &p,
-    const std::unordered_map<usize, usize> &class_id_to_idx) {
+static DistributionData make_distribution_data(const parser::Problem &p,
+                                               const std::unordered_map<usize, usize> &class_id_to_idx,
+                                               usize n_classes) {
     std::vector<parser::DistributionKind> kind;
     std::vector<u16> class_idxs;
     std::vector<usize> class_idxs_offsets;
@@ -274,12 +242,37 @@ static DistributionData make_distribution_data(
             }
         }
     }
+    class_idxs_offsets.push_back(offset); // sentinel for the last distribution
 
-    return {kind, class_idxs, class_idxs_offsets, penalty};
+    usize n_dists = kind.size();
+    std::vector<usize> class_dist_count(n_classes);
+    for (usize d = 0; d < n_dists; d++) {
+        usize begin = class_idxs_offsets[d];
+        usize end = class_idxs_offsets[d + 1];
+        for (usize i = begin; i < end; i++) {
+            class_dist_count[class_idxs[i]]++;
+        }
+    }
+    std::vector<usize> class_dist_offsets(n_classes + 1);
+    class_dist_offsets[0] = 0;
+    for (usize c = 0; c < n_classes; c++) {
+        class_dist_offsets[c + 1] = class_dist_offsets[c] + class_dist_count[c];
+    }
+    std::vector<u16> class_dist_idxs(class_dist_offsets[n_classes]);
+
+    std::vector<usize> dists_in_class(n_classes);
+    for (usize d = 0; d < n_dists; d++) {
+        for (usize i = class_idxs_offsets[d]; i < class_idxs_offsets[d + 1]; i++) {
+            u16 c = class_idxs[i];
+            class_dist_idxs[class_dist_offsets[c] + dists_in_class[c]] = d;
+            dists_in_class[c]++;
+        }
+    }
+
+    return {kind, class_idxs, class_idxs_offsets, penalty, class_dist_idxs, class_dist_offsets};
 }
 
-static std::unordered_map<usize, usize> build_class_id_to_idx(
-    const parser::Problem &p) {
+static std::unordered_map<usize, usize> build_class_id_to_idx(const parser::Problem &p) {
     std::unordered_map<usize, usize> m;
     usize idx = 0;
     for (const auto &course : p.courses.items) {
@@ -295,8 +288,7 @@ static std::unordered_map<usize, usize> build_class_id_to_idx(
     return m;
 }
 
-static std::unordered_map<usize, usize> build_room_id_to_idx(
-    const parser::Problem &p) {
+static std::unordered_map<usize, usize> build_room_id_to_idx(const parser::Problem &p) {
     std::unordered_map<usize, usize> m;
     for (usize i = 0; i < p.rooms.items.size(); i++) {
         m[p.rooms.items[i].id.value] = i;
@@ -305,8 +297,7 @@ static std::unordered_map<usize, usize> build_room_id_to_idx(
     return m;
 }
 
-static std::unordered_map<usize, usize> build_course_id_to_idx(
-    const parser::Problem &p) {
+static std::unordered_map<usize, usize> build_course_id_to_idx(const parser::Problem &p) {
     std::unordered_map<usize, usize> m;
     for (usize i = 0; i < p.courses.items.size(); i++) {
         m[p.courses.items[i].id.value] = i;
@@ -322,23 +313,21 @@ TimetableData TimetableData::from_problem(const parser::Problem &p) {
     RoomData room_data = make_room_data(p);
     CourseHierarchy hierarchy = make_course_hierarchy(p, room_id_to_idx);
     StudentData students = make_student_data(p, course_id_to_idx);
-    DistributionData distributions = make_distribution_data(p, class_id_to_idx);
+    DistributionData distributions = make_distribution_data(p, class_id_to_idx, class_id_to_idx.size());
 
-    return {
-        p.nr_days,
-        p.nr_weeks,
-        p.slots_per_day,
-        p.optimization,
-        std::move(room_data),
-        std::move(hierarchy.course_data),
-        std::move(hierarchy.config_data),
-        std::move(hierarchy.subpart_data),
-        std::move(hierarchy.class_data),
-        std::move(hierarchy.time_options),
-        std::move(hierarchy.room_options),
-        std::move(distributions),
-        std::move(students)
-    };
+    return {p.nr_days,
+            p.nr_weeks,
+            p.slots_per_day,
+            p.optimization,
+            std::move(room_data),
+            std::move(hierarchy.course_data),
+            std::move(hierarchy.config_data),
+            std::move(hierarchy.subpart_data),
+            std::move(hierarchy.class_data),
+            std::move(hierarchy.time_options),
+            std::move(hierarchy.room_options),
+            std::move(distributions),
+            std::move(students)};
 }
 
 std::vector<parser::ClassId> TimetableData::get_class_ids() const {
@@ -376,5 +365,4 @@ std::vector<parser::TimeSlots> TimetableData::get_time_slots() const {
     return timeslots;
 }
 
-
-}
+} // namespace kernels
