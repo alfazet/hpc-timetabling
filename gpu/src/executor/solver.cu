@@ -54,8 +54,8 @@ void Solver::print_metadata() const {
     printf("Crossover rate: %.4f\n", cross_rate);
     printf("Mutation rate: %.4f\n", mut_rate);
     printf("Mutation trials per iter: %u\n", mut_trials);
-    printf("Elites: %.1f%%\n", elites_frac * 100);
-    printf("Anti-elites: %.1f%%\n", worst_frac * 100);
+    printf("Elites: %.4f%%\n", elites_frac * 100);
+    printf("Anti-elites: %.4f%%\n", worst_frac * 100);
     printf("Local search iterations: %u\n", ls_iters);
     printf("Local search trials per iter: %u\n", ls_trials);
     printf("Seed: %u\n", seed);
@@ -64,7 +64,15 @@ void Solver::print_metadata() const {
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
 
-    Adjuster adjuster(0.05, 0.1, 0.9, 0.1, 0.9);
+    // TODO: the quality of found solutions seems to be very sensitive to these values
+    // for example: delta 0.05 finds hard penalty 4, delta 0.075 finds hard penalty 10
+    f32 delta = 0.05;
+    f32 min_mut = 0.1, max_mut = 0.9;
+    f32 min_cross = 0.1, max_cross = 0.9;
+    f32 min_elites_frac = 0.05, max_elites_frac = 0.05;
+    f32 min_worst_frac = 0.1, max_worst_frac = 0.1;
+    Adjuster adjuster(delta, min_mut, max_mut, min_cross, max_cross, min_elites_frac, max_elites_frac, min_worst_frac,
+                      max_worst_frac);
     Stats stats;
 
     kernels::Evaluator evaluator;
@@ -88,8 +96,8 @@ FoundSolution Solver::solve() const {
         if (gen % ((generations + 100 - 1) / 100) == 0) {
             sol = population.get_best_solution(assignment);
             stats.update(gen, sol.penalty);
-            adjuster.adjust(stats, mutation, crossover);
-            stats.print(mutation.prob, crossover.prob);
+            adjuster.adjust(stats, mutation, crossover, population);
+            stats.print(mutation.prob, crossover.prob, population.elites_frac, population.worst_frac);
         }
 
         selection.select(population);

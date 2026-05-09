@@ -14,7 +14,7 @@ struct Stats {
 
     void update(usize cur_generation, kernels::Penalty cur_penalty);
 
-    void print(f32 mut_rate, f32 cross_rate) const;
+    void print(f32 mut_rate, f32 cross_rate, f32 elites_frac, f32 worst_frac) const;
 };
 
 struct Adjuster {
@@ -23,10 +23,16 @@ struct Adjuster {
     f32 max_mut;
     f32 min_cross;
     f32 max_cross;
+    f32 min_elites_frac;
+    f32 max_elites_frac;
+    f32 min_worst_frac;
+    f32 max_worst_frac;
 
-    Adjuster(f32 delta, f32 min_mut, f32 max_mut, f32 min_cross, f32 max_cross);
+    Adjuster(f32 delta, f32 min_mut, f32 max_mut, f32 min_cross, f32 max_cross, f32 min_elites_frac,
+             f32 max_elites_frac, f32 min_worst_frac, f32 max_worst_frac);
 
-    void adjust(const Stats &stats, kernels::Mutation &mut, kernels::Crossover &cross) const;
+    void adjust(const Stats &stats, kernels::Mutation &mut, kernels::Crossover &cross,
+                kernels::Population &population) const;
 };
 
 #endif // GPU_TIMETABLING_ADJUSTER_CUH
