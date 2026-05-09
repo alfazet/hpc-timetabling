@@ -68,7 +68,7 @@ void Crossover::next_population(const Selection &selection, Population &populati
     const u16 *d_selected = thrust::raw_pointer_cast(selection.selected.data());
     const u16 *d_subpart_idx = thrust::raw_pointer_cast(data.classes.subpart_idx.data());
     u32 seed = population.seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = 1024;
+    constexpr u32 block_dim = BLOCK_SIZE;
     u32 grid_dim = (n_new + block_dim - 1) / block_dim;
     k_subpart_crossover<<<grid_dim, block_dim>>>(d_new_times + n_elites * n_classes, d_new_rooms + n_elites * n_classes,
                                                  d_old_times, d_old_rooms, d_selected, n_selected, n_classes, n_new,

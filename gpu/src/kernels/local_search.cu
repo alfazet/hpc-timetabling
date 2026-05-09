@@ -207,7 +207,7 @@ void LocalSearch::search(Population &population, const TimetableData &data) {
     const auto &opt = data.optimization;
 
     u32 seed = population.seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = 1024;
+    constexpr u32 block_dim = BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population.population_size);
     usize sh_mem_size = (2 * n_classes + 3 * block_dim) * sizeof(u16) + block_dim * sizeof(int2);
     k_local_search<<<grid_dim, block_dim, sh_mem_size>>>(

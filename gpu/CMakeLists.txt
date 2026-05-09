@@ -15,6 +15,7 @@ set(CXX_COMPILE_OPTIONS_DEBUG "-O0;-g;-Wall;-Wextra")
 set(CXX_COMPILE_OPTIONS_RELEASE "-O3;-march=native;-Wall;-Wextra")
 set(CUDA_COMPILE_OPTIONS_DEBUG "-O0;-g;-v;-fno-omit-frame-pointer;--expt-relaxed-constexpr")
 set(CUDA_COMPILE_OPTIONS_RELEASE "-O3;--use_fast_math;--expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xptxas -v")
 
 file(GLOB KERNELS_SRC src/kernels/*.cu)
 add_library(kernels OBJECT ${KERNELS_SRC})

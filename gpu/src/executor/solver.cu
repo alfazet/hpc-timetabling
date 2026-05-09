@@ -31,10 +31,10 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 
         std::vector<serializer::Student> students;
         for (u16 student_idx : this->student_assignment[i]) {
-            students.emplace_back(student_ids[student_idx]);
+            students.push_back({student_ids[student_idx]});
         }
 
-        classes_out.emplace_back(class_ids[i], time.days, time.weeks, time.start, room, students);
+        classes_out.push_back({class_ids[i], time.days, time.weeks, time.start, room, students});
     }
 
     return {classes_out};
