@@ -62,7 +62,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
 
     __shared__ u32 sh_hard;
     __shared__ u32 sh_soft;
-    if (tid == 0) {
+    if (threadIdx.x == 0 && threadIdx.y == 0) {
         sh_hard = 0;
         sh_soft = 0;
     }
