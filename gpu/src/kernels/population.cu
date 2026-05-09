@@ -98,10 +98,10 @@ __global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, const
     }
 }
 
-Population::Population(usize n_classes, usize population_size, f32 elites_frac, u64 seed)
+Population::Population(usize n_classes, usize population_size, f32 elites_frac, f32 worst_frac, u32 seed)
     : times(n_classes * population_size), rooms(n_classes * population_size), penalty(population_size),
       order(population_size), seed(seed), n_classes(n_classes), population_size(population_size),
-      n_elites(std::ceil(population_size * elites_frac)) {}
+      elites_frac(elites_frac), worst_frac(worst_frac) {}
 
 void Population::init(const TimetableData &d_data) {
     const u16 *d_times_start = thrust::raw_pointer_cast(d_data.classes.times_start.data());
@@ -119,7 +119,7 @@ void Population::init(const TimetableData &d_data) {
     usize n_unavail = d_data.room_data.unavail.size();
 
     u32 seed = this->seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = 1024;
+    constexpr u32 block_dim = BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population_size);
     usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
     k_init_population<<<grid_dim, block_dim, sh_mem_size>>>(
@@ -130,14 +130,11 @@ void Population::init(const TimetableData &d_data) {
     cudaErrCheck(cudaDeviceSynchronize());
 }
 
-void Population::replace_worst(const TimetableData &d_data, usize n_replace) {
-    if (n_replace == 0) {
-        return;
-    }
-
+void Population::replace_worst(const TimetableData &d_data) {
+    usize n_worst = std::ceil(population_size * worst_frac);
     // assuming `Population::sort` was called earlier this generation, so that the
     // worst solutions are at the end
-    const u16 *d_worst = thrust::raw_pointer_cast(order.data() + population_size - n_replace);
+    const u16 *d_worst = thrust::raw_pointer_cast(order.data() + population_size - n_worst);
 
     u16 *d_times = thrust::raw_pointer_cast(times.data());
     u16 *d_rooms = thrust::raw_pointer_cast(rooms.data());
@@ -153,14 +150,14 @@ void Population::replace_worst(const TimetableData &d_data, usize n_replace) {
     usize n_rooms = d_data.room_data.n_rooms;
     usize n_unavail = d_data.room_data.unavail.size();
 
-    u32 seed_val = this->seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = 1024;
-    u32 grid_dim = static_cast<u32>(n_replace);
+    u32 seed = this->seed ^ static_cast<u32>(rand());
+    constexpr u32 block_dim = BLOCK_SIZE;
+    u32 grid_dim = static_cast<u32>(n_worst);
     usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
 
     k_init_population<<<grid_dim, block_dim, sh_mem_size>>>(
         d_times, d_rooms, n_classes, d_worst, d_times_start, d_times_end, d_rooms_start, d_rooms_end, time_opt_times,
-        room_opt_room_idx, room_unavail, room_unavail_offsets, n_rooms, n_unavail, seed_val);
+        room_opt_room_idx, room_unavail, room_unavail_offsets, n_rooms, n_unavail, seed);
     cudaErrCheck(cudaDeviceSynchronize());
 }
 

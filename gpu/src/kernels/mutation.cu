@@ -145,7 +145,7 @@ __global__ void k_mutations(u16 *pop_times, u16 *pop_rooms, usize n_classes, usi
 void Mutation::apply_mutations(Population &population, const TimetableData &data) {
     // skip the elites
     usize n_classes = population.n_classes;
-    usize n_elites = population.n_elites;
+    usize n_elites = std::ceil(population.population_size * population.elites_frac);
     u16 *pop_times = thrust::raw_pointer_cast(population.times.data());
     u16 *pop_rooms = thrust::raw_pointer_cast(population.rooms.data());
     const u16 *class_times_start = thrust::raw_pointer_cast(data.classes.times_start.data());
@@ -161,7 +161,7 @@ void Mutation::apply_mutations(Population &population, const TimetableData &data
     usize n_unavail = data.room_data.unavail.size();
 
     u32 seed = population.seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = 1024;
+    constexpr u32 block_dim = BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population.population_size - n_elites);
 
     usize sh_mem_size = 2 * n_classes * sizeof(u16);

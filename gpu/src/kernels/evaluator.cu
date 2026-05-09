@@ -62,7 +62,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
 
     __shared__ u32 sh_hard;
     __shared__ u32 sh_soft;
-    if (tid == 0) {
+    if (threadIdx.x == 0 && threadIdx.y == 0) {
         sh_hard = 0;
         sh_soft = 0;
     }
@@ -541,7 +541,7 @@ void Evaluator::evaluate(const TimetableData &d_data, Population &population, co
     const Penalty *d_dist_penalty = thrust::raw_pointer_cast(dist.penalty.data());
     usize n_distributions = dist.kind.size();
 
-    constexpr dim3 block_dim(32, 32);
+    constexpr dim3 block_dim(BLOCK_SIZE_SQRT, BLOCK_SIZE_SQRT);
     dim3 grid_dim(static_cast<u32>(population.population_size));
     k_evaluate<<<grid_dim, block_dim>>>(
         d_penalties, d_pop_times, d_pop_rooms, d_student_idxs, d_class_counts, time_opt_times, time_opt_penalty,

@@ -31,20 +31,20 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 
         std::vector<serializer::Student> students;
         for (u16 student_idx : this->student_assignment[i]) {
-            students.emplace_back(student_ids[student_idx]);
+            students.push_back({student_ids[student_idx]});
         }
 
-        classes_out.emplace_back(class_ids[i], time.days, time.weeks, time.start, room, students);
+        classes_out.push_back({class_ids[i], time.days, time.weeks, time.start, room, students});
     }
 
     return {classes_out};
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, u32 mut_trials, f32 elites_frac, u32 ls_iters, u32 ls_trials, f32 repl_rate, u32 seed)
+               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 ls_trials, u32 seed)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
-      cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac), ls_iters(ls_iters),
-      ls_trials(ls_trials), repl_rate(repl_rate), seed(seed) {}
+      cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac),
+      worst_frac(worst_frac), ls_iters(ls_iters), ls_trials(ls_trials), seed(seed) {}
 
 void Solver::print_metadata() const {
     printf("Solver started...\n");
@@ -54,21 +54,29 @@ void Solver::print_metadata() const {
     printf("Crossover rate: %.4f\n", cross_rate);
     printf("Mutation rate: %.4f\n", mut_rate);
     printf("Mutation trials per iter: %u\n", mut_trials);
-    printf("Elites: %.1f%%\n", elites_frac * 100);
+    printf("Elites: %.4f%%\n", elites_frac * 100);
+    printf("Anti-elites: %.4f%%\n", worst_frac * 100);
     printf("Local search iterations: %u\n", ls_iters);
     printf("Local search trials per iter: %u\n", ls_trials);
-    printf("Replacement rate: %.4f\n", repl_rate);
     printf("Seed: %u\n", seed);
 }
 
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
 
-    Adjuster adjuster(0.05, 0.1, 0.9, 0.1, 0.9);
+    // TODO: the quality of found solutions seems to be very sensitive to these values
+    // for example: delta 0.05 finds hard penalty 4, delta 0.075 finds hard penalty 10
+    f32 delta = 0.05;
+    f32 min_mut = 0.1, max_mut = 0.9;
+    f32 min_cross = 0.1, max_cross = 0.9;
+    f32 min_elites_frac = 0.05, max_elites_frac = 0.05;
+    f32 min_worst_frac = 0.1, max_worst_frac = 0.1;
+    Adjuster adjuster(delta, min_mut, max_mut, min_cross, max_cross, min_elites_frac, max_elites_frac, min_worst_frac,
+                      max_worst_frac);
     Stats stats;
 
     kernels::Evaluator evaluator;
-    kernels::Population population(n_classes, this->population_size, this->elites_frac, this->seed);
+    kernels::Population population(n_classes, this->population_size, this->elites_frac, this->worst_frac, this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
     kernels::Crossover crossover(this->cross_rate);
     kernels::Mutation mutation(this->mut_rate, this->mut_trials);
@@ -83,17 +91,13 @@ FoundSolution Solver::solve() const {
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
-        // TODO: dynamically change replacement_rate in the adjuster
-        // for example when stagnating for a lot of generations
-        // we would like to replace almost every non-elite solution
-        usize n_replace = std::ceil(population_size * repl_rate);
-        population.replace_worst(d_data, n_replace);
+        population.replace_worst(d_data);
 
         if (gen % ((generations + 100 - 1) / 100) == 0) {
             sol = population.get_best_solution(assignment);
             stats.update(gen, sol.penalty);
-            adjuster.adjust(stats, mutation, crossover);
-            stats.print(mutation.prob, crossover.prob);
+            adjuster.adjust(stats, mutation, crossover, population);
+            stats.print(mutation.prob, crossover.prob, population.elites_frac, population.worst_frac);
         }
 
         selection.select(population);

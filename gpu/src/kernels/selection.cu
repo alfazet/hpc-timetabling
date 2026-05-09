@@ -40,8 +40,8 @@ void Selection::select(const Population &population) {
     u32 seed = population.seed ^ static_cast<u32>(rand());
 
     // one warp selects one winner (so we need n_selected warps)
-    constexpr usize WARPS_PER_BLOCK = 32;
-    constexpr dim3 block_dim(1024);
+    constexpr usize WARPS_PER_BLOCK = BLOCK_SIZE / WARP_SIZE;
+    constexpr dim3 block_dim(BLOCK_SIZE);
     dim3 grid_dim((n_selected + WARPS_PER_BLOCK - 1) / WARPS_PER_BLOCK);
     k_tournament_select<<<grid_dim, block_dim>>>(d_selected, d_penalty, d_order, n_selected, population.population_size,
                                                  seed);
