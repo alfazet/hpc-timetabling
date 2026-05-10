@@ -52,7 +52,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                            const u16 *courses_configs_end, const u16 *configs_subparts_start,
                            const u16 *configs_subparts_end, const u16 *subparts_classes_start,
                            const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student,
-                           usize n_classes, usize n_students, const parser::DistributionKind *dist_kind,
+                           usize n_classes, usize n_students, const DistributionKind *dist_kind,
                            const u16 *dist_class_idxs, const usize *dist_class_idxs_offsets,
                            const Penalty *dist_penalty, usize n_distributions, u32 n_days, u32 n_weeks) {
     usize sol = blockIdx.x;
@@ -247,14 +247,14 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
         u32 local_soft = 0;
 
         for (usize d = tid; d < n_distributions; d += block_size) {
-            parser::DistributionKind kind = dist_kind[d];
+            DistributionKind kind = dist_kind[d];
             Penalty pen = dist_penalty[d];
 
             usize begin = dist_class_idxs_offsets[d];
             usize end = dist_class_idxs_offsets[d + 1];
 
-            if (std::holds_alternative<parser::MaxDays>(kind)) {
-                u8 d = std::get<parser::MaxDays>(kind).d;
+            if (cuda::std::holds_alternative<parser::MaxDays>(kind)) {
+                u8 d = cuda::std::get<parser::MaxDays>(kind).d;
 
                 u8 days_mask = 0;
 
@@ -273,8 +273,8 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
 
                 continue;
             }
-            if (std::holds_alternative<parser::MaxDayLoad>(kind)) {
-                u16 s = std::get<parser::MaxDayLoad>(kind).s;
+            if (cuda::std::holds_alternative<parser::MaxDayLoad>(kind)) {
+                u16 s = cuda::std::get<parser::MaxDayLoad>(kind).s;
 
                 constexpr int MAX_WEEKS = 32;
                 constexpr int MAX_DAYS = 7;
@@ -332,12 +332,12 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                     u8 dj = tj.days.bits;
                     u16 wj = tj.weeks.bits;
 
-                    if (std::holds_alternative<parser::SameStart>(kind)) {
+                    if (cuda::std::holds_alternative<parser::SameStart>(kind)) {
                         if (ti.start != tj.start) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::SameTime>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::SameTime>(kind)) {
                         bool contains = (tj.start <= ti.start && ti.start + ti.length <= tj.start + tj.length) ||
                                         (ti.start <= tj.start && tj.start + tj.length <= ti.start + ti.length);
 
@@ -345,47 +345,47 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::DifferentTime>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::DifferentTime>(kind)) {
                         if (!((tj.start + tj.length <= ti.start) || (ti.start + ti.length <= tj.start))) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
 
-                    } else if (std::holds_alternative<parser::SameDays>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::SameDays>(kind)) {
                         if (!(((dj | di) == dj) || ((dj | di) == di))) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
 
-                    } else if (std::holds_alternative<parser::DifferentDays>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::DifferentDays>(kind)) {
                         if ((di & dj) != 0) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
 
-                    } else if (std::holds_alternative<parser::SameWeeks>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::SameWeeks>(kind)) {
                         if (!(((wj | wi) == wj) || ((wj | wi) == wi))) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
 
-                    } else if (std::holds_alternative<parser::DifferentWeeks>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::DifferentWeeks>(kind)) {
                         if ((wi & wj) != 0) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::Overlap>(kind) ||
-                               std::holds_alternative<parser::NotOverlap>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::Overlap>(kind) ||
+                               cuda::std::holds_alternative<parser::NotOverlap>(kind)) {
                         bool overlap = (tj.start < ti.start + ti.length) && (ti.start < tj.start + tj.length) &&
                                        ((di & dj) != 0) && ((wi & wj) != 0);
-                        bool should_overlap = std::holds_alternative<parser::Overlap>(kind);
+                        bool should_overlap = cuda::std::holds_alternative<parser::Overlap>(kind);
                         bool violation = (should_overlap && !overlap) || (!should_overlap && overlap);
                         if (violation) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::SameRoom>(kind) ||
-                               std::holds_alternative<parser::DifferentRoom>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::SameRoom>(kind) ||
+                               cuda::std::holds_alternative<parser::DifferentRoom>(kind)) {
                         u16 ri = pop_rooms[sol_offset + ci];
                         u16 rj = pop_rooms[sol_offset + cj];
 
@@ -393,13 +393,13 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                             (ri == NO_ROOM && rj == NO_ROOM) ||
                             (ri != NO_ROOM && rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]);
 
-                        bool should_same = std::holds_alternative<parser::SameRoom>(kind);
+                        bool should_same = cuda::std::holds_alternative<parser::SameRoom>(kind);
                         bool violation = (should_same && !same_room) || (!should_same && same_room);
                         if (violation) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::SameAttendees>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::SameAttendees>(kind)) {
                         u16 ri = pop_rooms[sol_offset + ci];
                         u16 rj = pop_rooms[sol_offset + cj];
 
@@ -432,7 +432,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::Precedence>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::Precedence>(kind)) {
                         u16 _wi = __ffs(wi) - 1;
                         u16 _wj = __ffs(wj) - 1;
 
@@ -453,7 +453,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::WorkDay>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::WorkDay>(kind)) {
                         if ((di & dj) == 0 || (wi & wj) == 0) {
                             continue;
                         }
@@ -463,17 +463,17 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
 
                         u32 span = max(end_i, end_j) - min(ti.start, tj.start);
 
-                        u16 s = std::get<parser::WorkDay>(kind).s;
+                        u16 s = cuda::std::get<parser::WorkDay>(kind).s;
                         if (span > s) {
                             local_hard += pen.hard;
                             local_soft += pen.soft;
                         }
-                    } else if (std::holds_alternative<parser::MinGap>(kind)) {
+                    } else if (cuda::std::holds_alternative<parser::MinGap>(kind)) {
                         if ((di & dj) == 0 || (wi & wj) == 0) {
                             continue;
                         }
 
-                        u16 g = std::get<parser::MinGap>(kind).g;
+                        u16 g = cuda::std::get<parser::MinGap>(kind).g;
                         u16 end_i = ti.start + ti.length + g;
                         u16 end_j = tj.start + tj.length + g;
 
@@ -535,7 +535,7 @@ void Evaluator::evaluate(const TimetableData &d_data, Population &population, co
     const auto &opt = d_data.optimization;
 
     const auto &dist = d_data.distributions;
-    const parser::DistributionKind *d_dist_kind = thrust::raw_pointer_cast(dist.kind.data());
+    const DistributionKind *d_dist_kind = thrust::raw_pointer_cast(dist.kind.data());
     const u16 *d_dist_class_idxs = thrust::raw_pointer_cast(dist.class_idxs.data());
     const usize *d_dist_offsets = thrust::raw_pointer_cast(dist.class_idxs_offsets.data());
     const Penalty *d_dist_penalty = thrust::raw_pointer_cast(dist.penalty.data());

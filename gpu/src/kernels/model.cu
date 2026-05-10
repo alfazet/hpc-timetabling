@@ -38,7 +38,7 @@ StudentData::StudentData(const std::vector<parser::StudentId> &id, const std::ve
                          const std::vector<usize> &course_idxs_offsets)
     : id(id), course_idxs(course_idxs), course_idxs_offsets(course_idxs_offsets) {}
 
-DistributionData::DistributionData(const std::vector<parser::DistributionKind> &kind,
+DistributionData::DistributionData(const std::vector<DistributionKind> &kind,
                                    const std::vector<u16> &class_idxs, const std::vector<usize> &class_idxs_offsets,
                                    const std::vector<Penalty> &penalty, const std::vector<u16> &class_dist_idxs,
                                    const std::vector<usize> &class_dist_offsets)
@@ -222,14 +222,14 @@ static StudentData make_student_data(const parser::Problem &p,
 static DistributionData make_distribution_data(const parser::Problem &p,
                                                const std::unordered_map<usize, usize> &class_id_to_idx,
                                                usize n_classes) {
-    std::vector<parser::DistributionKind> kind;
+    std::vector<DistributionKind> kind;
     std::vector<u16> class_idxs;
     std::vector<usize> class_idxs_offsets;
     std::vector<Penalty> penalty;
     usize offset = 0;
 
     for (const auto &d : p.distributions.items) {
-        kind.push_back(d.kind);
+        std::visit([&](auto&& arg){ kind.push_back(arg); }, d.kind);
         if (d.penalty.has_value()) {
             penalty.emplace_back(0, d.penalty.value());
         } else {
