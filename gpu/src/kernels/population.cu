@@ -166,8 +166,11 @@ void Population::sort() {
     thrust::sort_by_key(penalty.begin(), penalty.end(), order.begin());
 }
 
+// assuming `Population::sort` was called earlier this generation
+Penalty Population::get_best_penalty() const { return this->penalty[0]; }
+
+// assuming `Population::sort` was called earlier this generation
 FoundSolution Population::get_best_solution(const StudentAssignment &assignment) const {
-    // assuming `Population::sort` was called earlier this generation
     usize idx = this->order[0];
     Penalty penalty = this->penalty[0];
 

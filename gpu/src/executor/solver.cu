@@ -85,7 +85,6 @@ FoundSolution Solver::solve() const {
     population.init(d_data);
 
     this->print_metadata();
-    FoundSolution sol = population.get_best_solution(assignment);
     for (u32 gen = 1; gen <= generations; gen++) {
         local_search.search(population, d_data);
         assignment.assign(d_data, population);
@@ -94,8 +93,7 @@ FoundSolution Solver::solve() const {
         population.replace_worst(d_data);
 
         if (gen % ((generations + 100 - 1) / 100) == 0) {
-            sol = population.get_best_solution(assignment);
-            stats.update(gen, sol.penalty);
+            stats.update(gen, population.get_best_penalty());
             adjuster.adjust(stats, mutation, crossover, population);
             stats.print(mutation.prob, crossover.prob, population.elites_frac, population.worst_frac);
         }
@@ -105,5 +103,5 @@ FoundSolution Solver::solve() const {
         mutation.apply_mutations(population, d_data);
     }
 
-    return sol;
+    return population.get_best_solution(assignment);
 }
