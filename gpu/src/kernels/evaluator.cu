@@ -454,7 +454,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                             local_soft += pen.soft;
                         }
                     } else if (std::holds_alternative<parser::WorkDay>(kind)) {
-                        if ((di & dj) || (wi & wj) == 0) {
+                        if ((di & dj) == 0 || (wi & wj) == 0) {
                             continue;
                         }
 
@@ -469,7 +469,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                             local_soft += pen.soft;
                         }
                     } else if (std::holds_alternative<parser::MinGap>(kind)) {
-                        if ((di & dj) || (wi & wj) == 0) {
+                        if ((di & dj) == 0 || (wi & wj) == 0) {
                             continue;
                         }
 
