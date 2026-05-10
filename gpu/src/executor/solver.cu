@@ -1,6 +1,7 @@
 #include "executor/solver.cuh"
 
 #include "executor/adjuster.cuh"
+#include "executor/timer.cuh"
 #include "kernels/assigner.cuh"
 #include "kernels/crossover.cuh"
 #include "kernels/evaluator.cuh"
@@ -85,22 +86,31 @@ FoundSolution Solver::solve() const {
     population.init(d_data);
 
     this->print_metadata();
+    u32 update_interval = (generations + 100 - 1) / 100;
+    Timer timer;
     for (u32 gen = 1; gen <= generations; gen++) {
+        timer.start();
         local_search.search(population, d_data);
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
         population.replace_worst(d_data);
+        timer.stop();
 
-        if (gen % ((generations + 100 - 1) / 100) == 0) {
+        if (gen % update_interval == 0) {
             stats.update(gen, population.get_best_penalty());
             adjuster.adjust(stats, mutation, crossover, population);
             stats.print(mutation.prob, crossover.prob, population.elites_frac, population.worst_frac);
         }
 
+        timer.start();
         selection.select(population);
         crossover.next_population(selection, population, d_data);
         mutation.apply_mutations(population, d_data);
+        timer.stop();
+        if (gen % update_interval == 0) {
+            timer.print(update_interval);
+        }
     }
 
     return population.get_best_solution(assignment);
