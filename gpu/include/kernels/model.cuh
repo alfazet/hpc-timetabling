@@ -1,6 +1,8 @@
 #ifndef GPU_TIMETABLING_MODEL_CUH
 #define GPU_TIMETABLING_MODEL_CUH
 
+#include <cuda/std/variant>
+
 #include "common.cuh"
 #include "parser/parser.hpp"
 #include "penalty.cuh"
@@ -107,9 +109,16 @@ struct StudentData {
                 const std::vector<usize> &course_idxs_offsets);
 };
 
+using DistributionKind =
+    cuda::std::variant<parser::SameStart, parser::SameTime, parser::DifferentTime, parser::SameDays,
+                       parser::DifferentDays, parser::SameWeeks, parser::DifferentWeeks, parser::Overlap,
+                       parser::NotOverlap, parser::SameRoom, parser::DifferentRoom, parser::SameAttendees,
+                       parser::Precedence, parser::WorkDay, parser::MinGap, parser::MaxDays, parser::MaxDayLoad,
+                       parser::MaxBreaks, parser::MaxBlock>;
+
 struct DistributionData {
     // apparently CUDA supports std::variant so this should be fine
-    thrust::device_vector<parser::DistributionKind> kind;
+    thrust::device_vector<DistributionKind> kind;
     // incides into TimetableData::classes
     thrust::device_vector<u16> class_idxs;
     // the idxs of classes taken into account by distribution `i`
@@ -121,7 +130,7 @@ struct DistributionData {
     thrust::device_vector<u16> class_dist_idxs;
     thrust::device_vector<usize> class_dist_offsets;
 
-    DistributionData(const std::vector<parser::DistributionKind> &kind, const std::vector<u16> &class_idxs,
+    DistributionData(const std::vector<DistributionKind> &kind, const std::vector<u16> &class_idxs,
                      const std::vector<usize> &class_idxs_offsets, const std::vector<Penalty> &penalty,
                      const std::vector<u16> &class_dist_idxs, const std::vector<usize> &class_dist_offsets);
 };
