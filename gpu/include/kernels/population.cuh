@@ -42,6 +42,8 @@ struct Population {
     // replace the worst solutions with random assignments
     void replace_worst(const TimetableData &d_data);
 
+    Penalty get_best_penalty() const;
+
     // copy the solution with the least penalty to the host
     FoundSolution get_best_solution(const StudentAssignment &assignment) const;
 };

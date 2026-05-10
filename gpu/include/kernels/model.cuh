@@ -2,9 +2,9 @@
 #define GPU_TIMETABLING_MODEL_CUH
 
 #include "common.cuh"
+#include "parser/parser.hpp"
 #include "penalty.cuh"
 #include "typedefs.hpp"
-#include "parser/parser.hpp"
 
 constexpr u32 NO_TRAVEL = std::numeric_limits<u32>::max();
 constexpr u32 NO_LIMIT = std::numeric_limits<u32>::max();
@@ -27,12 +27,9 @@ struct RoomData {
     thrust::device_vector<parser::RoomId> id;
     usize n_rooms;
 
-    RoomData(usize n_rooms, const std::vector<parser::TimeSlots> &unavail,
-             const std::vector<usize> &unavail_offsets,
-             const std::vector<u32> &travel_time,
-             const std::vector<u32> &capacity,
-             const std::vector<parser::RoomId> &id
-        );
+    RoomData(usize n_rooms, const std::vector<parser::TimeSlots> &unavail, const std::vector<usize> &unavail_offsets,
+             const std::vector<u32> &travel_time, const std::vector<u32> &capacity,
+             const std::vector<parser::RoomId> &id);
 };
 
 struct CourseData {
@@ -40,8 +37,7 @@ struct CourseData {
     thrust::device_vector<u16> configs_start;
     thrust::device_vector<u16> configs_end;
 
-    CourseData(const std::vector<parser::CourseId> &id,
-               const std::vector<u16> &configs_start,
+    CourseData(const std::vector<parser::CourseId> &id, const std::vector<u16> &configs_start,
                const std::vector<u16> &configs_end);
 };
 
@@ -50,8 +46,7 @@ struct ConfigData {
     thrust::device_vector<u16> subparts_start;
     thrust::device_vector<u16> subparts_end;
 
-    ConfigData(const std::vector<parser::ConfigId> &id,
-               const std::vector<u16> &subparts_start,
+    ConfigData(const std::vector<parser::ConfigId> &id, const std::vector<u16> &subparts_start,
                const std::vector<u16> &subparts_end);
 };
 
@@ -60,8 +55,7 @@ struct SubpartData {
     thrust::device_vector<u16> classes_start;
     thrust::device_vector<u16> classes_end;
 
-    SubpartData(const std::vector<parser::SubpartId> &id,
-                const std::vector<u16> &classes_start,
+    SubpartData(const std::vector<parser::SubpartId> &id, const std::vector<u16> &classes_start,
                 const std::vector<u16> &classes_end);
 };
 
@@ -81,12 +75,9 @@ struct ClassData {
     // indices into TimetableData::subparts
     thrust::device_vector<u16> subpart_idx;
 
-    ClassData(const std::vector<parser::ClassId> &id,
-              const std::vector<u32> &limit, const std::vector<u16> &parent,
-              const std::vector<u16> &times_start,
-              const std::vector<u16> &times_end,
-              const std::vector<u16> &rooms_start,
-              const std::vector<u16> &rooms_end,
+    ClassData(const std::vector<parser::ClassId> &id, const std::vector<u32> &limit, const std::vector<u16> &parent,
+              const std::vector<u16> &times_start, const std::vector<u16> &times_end,
+              const std::vector<u16> &rooms_start, const std::vector<u16> &rooms_end,
               const std::vector<u16> &subpart_idx);
 };
 
@@ -94,16 +85,14 @@ struct TimeOption {
     thrust::device_vector<parser::TimeSlots> times;
     thrust::device_vector<u32> penalty;
 
-    TimeOption(const std::vector<parser::TimeSlots> &times,
-               const std::vector<u32> &penalty);
+    TimeOption(const std::vector<parser::TimeSlots> &times, const std::vector<u32> &penalty);
 };
 
 struct RoomOption {
     thrust::device_vector<u16> room_idx;
     thrust::device_vector<u32> penalty;
 
-    RoomOption(const std::vector<u16> &room_idx,
-               const std::vector<u32> &penalty);
+    RoomOption(const std::vector<u16> &room_idx, const std::vector<u32> &penalty);
 };
 
 struct StudentData {
@@ -114,8 +103,7 @@ struct StudentData {
     // and end at idx course_idxs_offsets[i + 1] - 1
     thrust::device_vector<usize> course_idxs_offsets;
 
-    StudentData(const std::vector<parser::StudentId> &id,
-                const std::vector<u16> &course_idxs,
+    StudentData(const std::vector<parser::StudentId> &id, const std::vector<u16> &course_idxs,
                 const std::vector<usize> &course_idxs_offsets);
 };
 
@@ -128,11 +116,14 @@ struct DistributionData {
     // begin at idx class_idxs_offsets[i] and end at idx class_idx_offsets[i + 1] - 1
     thrust::device_vector<usize> class_idxs_offsets;
     thrust::device_vector<Penalty> penalty;
+    // distributions referencing class `i` are at indices
+    // class_dist_idxs[class_dist_offsets[i] .. class_dist_offsets[i + 1]]
+    thrust::device_vector<u16> class_dist_idxs;
+    thrust::device_vector<usize> class_dist_offsets;
 
-    DistributionData(const std::vector<parser::DistributionKind> &kind,
-                     const std::vector<u16> &class_idxs,
-                     const std::vector<usize> &class_idxs_offsets,
-                     const std::vector<Penalty> &penalty);
+    DistributionData(const std::vector<parser::DistributionKind> &kind, const std::vector<u16> &class_idxs,
+                     const std::vector<usize> &class_idxs_offsets, const std::vector<Penalty> &penalty,
+                     const std::vector<u16> &class_dist_idxs, const std::vector<usize> &class_dist_offsets);
 };
 
 // This struct should be allocated once on the GPU's heap.
@@ -154,18 +145,10 @@ struct TimetableData {
     u32 n_weeks;
     u32 slots_per_day;
 
-    TimetableData(u32 n_days, u32 n_weeks, u32 slots_per_day,
-                  parser::Optimization optimization,
-                  RoomData room_data,
-                  CourseData course_data,
-                  ConfigData config_data,
-                  SubpartData subpart_data,
-                  ClassData class_data,
-                  TimeOption time_options,
-                  RoomOption room_options,
-                  DistributionData distributions,
-                  StudentData students
-        );
+    TimetableData(u32 n_days, u32 n_weeks, u32 slots_per_day, parser::Optimization optimization, RoomData room_data,
+                  CourseData course_data, ConfigData config_data, SubpartData subpart_data, ClassData class_data,
+                  TimeOption time_options, RoomOption room_options, DistributionData distributions,
+                  StudentData students);
 
     static TimetableData from_problem(const parser::Problem &p);
 
@@ -175,6 +158,6 @@ struct TimetableData {
     std::vector<parser::StudentId> get_student_ids() const;
     std::vector<parser::TimeSlots> get_time_slots() const;
 };
-}
+} // namespace kernels
 
 #endif // GPU_TIMETABLING_MODEL_CUH

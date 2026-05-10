@@ -541,7 +541,7 @@ void Evaluator::evaluate(const TimetableData &d_data, Population &population, co
     const Penalty *d_dist_penalty = thrust::raw_pointer_cast(dist.penalty.data());
     usize n_distributions = dist.kind.size();
 
-    constexpr dim3 block_dim(BLOCK_SIZE_SQRT, BLOCK_SIZE_SQRT);
+    constexpr dim3 block_dim(SMALL_BLOCK_SIZE_SQRT, SMALL_BLOCK_SIZE_SQRT);
     dim3 grid_dim(static_cast<u32>(population.population_size));
     k_evaluate<<<grid_dim, block_dim>>>(
         d_penalties, d_pop_times, d_pop_rooms, d_student_idxs, d_class_counts, time_opt_times, time_opt_penalty,

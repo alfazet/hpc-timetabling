@@ -24,8 +24,7 @@ void Stats::print(f32 mut_rate, f32 cross_rate, f32 elites_frac, f32 worst_frac)
         printf("progressing for %lu generations\n", progress);
     }
     printf("mutation rate: %.4f, crossover rate: %.4f\n", mut_rate, cross_rate);
-    printf("elites: %.4f%%, anti-elites: %.4f%%", elites_frac * 100, worst_frac * 100);
-    printf("\n");
+    printf("elites: %.4f%%, anti-elites: %.4f%%\n", elites_frac * 100, worst_frac * 100);
 }
 
 Adjuster::Adjuster(f32 delta, f32 min_mut, f32 max_mut, f32 min_cross, f32 max_cross, f32 min_elites_frac,

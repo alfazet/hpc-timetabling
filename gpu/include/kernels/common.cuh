@@ -9,8 +9,10 @@
 
 #include "typedefs.hpp"
 
-constexpr usize BLOCK_SIZE_SQRT = 32;
-constexpr usize BLOCK_SIZE = BLOCK_SIZE_SQRT * BLOCK_SIZE_SQRT;
+constexpr usize SMALL_BLOCK_SIZE_SQRT = 16;
+constexpr usize SMALL_BLOCK_SIZE = SMALL_BLOCK_SIZE_SQRT * SMALL_BLOCK_SIZE_SQRT;
+constexpr usize LARGE_BLOCK_SIZE_SQRT = 32;
+constexpr usize LARGE_BLOCK_SIZE = LARGE_BLOCK_SIZE_SQRT * LARGE_BLOCK_SIZE_SQRT;
 
 #define ERR_AND_DIE(reason)                                                                                            \
     do {                                                                                                               \
