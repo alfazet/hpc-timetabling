@@ -117,7 +117,7 @@ struct DistributionData {
     thrust::device_vector<usize> class_idxs_offsets;
     thrust::device_vector<Penalty> penalty;
     // distributions referencing class `i` are at indices
-    // class_dist_idxs[class_dist_offsets[i] .. class_dist_offsets[i + 1]
+    // class_dist_idxs[class_dist_offsets[i] .. class_dist_offsets[i + 1]]
     thrust::device_vector<u16> class_dist_idxs;
     thrust::device_vector<usize> class_dist_offsets;
 
