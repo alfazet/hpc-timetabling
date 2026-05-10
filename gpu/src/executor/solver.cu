@@ -110,6 +110,7 @@ FoundSolution Solver::solve() const {
         timer.stop();
         if (gen % update_interval == 0) {
             timer.print(update_interval);
+            timer = {};
         }
     }
 

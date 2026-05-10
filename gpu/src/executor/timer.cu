@@ -2,7 +2,6 @@
 #include "kernels/common.cuh"
 
 void Timer::start() {
-    this->elapsed = 0;
     cudaErrCheck(cudaEventCreate(&start_event));
     cudaErrCheck(cudaEventCreate(&stop_event));
     cudaErrCheck(cudaEventRecord(start_event));
@@ -13,7 +12,7 @@ void Timer::stop() {
     cudaErrCheck(cudaEventSynchronize(stop_event));
     float elapsed;
     cudaErrCheck(cudaEventElapsedTime(&elapsed, start_event, stop_event));
-    this->elapsed = elapsed;
+    this->elapsed += elapsed;
     cudaErrCheck(cudaEventDestroy(start_event));
     cudaErrCheck(cudaEventDestroy(stop_event));
 }
