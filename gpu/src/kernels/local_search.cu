@@ -7,7 +7,7 @@ constexpr int2 NEUTRAL{0, 0};
 
 namespace kernels {
 
-LocalSearch::LocalSearch(u32 n_iters, u32 n_trials) : n_iters(n_iters), n_trials(n_trials) {}
+LocalSearch::LocalSearch(u32 n_iters) : n_iters(n_iters) {}
 
 __device__ inline bool cmp_delta(int2 a, int2 b) {
     if (a.y == b.y) {
@@ -230,8 +230,8 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
                                const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
                                const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
                                const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets, usize n_rooms,
-                               usize n_unavail, u32 opt_time, u32 opt_room, u32 n_iterations, u32 n_trials, u32 seed,
-                               const u32 *travel_time, const DistributionKind *dist_kind,
+                               usize n_unavail, u32 opt_time, u32 opt_room, u32 n_iterations, u32 seed,
+                               const u32 *travel_time, const parser::DistributionKind *dist_kind,
                                const u16 *dist_class_idxs, const usize *dist_class_idxs_offsets,
                                const Penalty *dist_penalty, usize n_distributions, const u16 *class_dist_idxs,
                                const usize *class_dist_offsets, usize n_dist_class_idxs) {
@@ -263,72 +263,114 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
     curandState rng;
     curand_init(seed, sol * block_size + tid, 0, &rng);
     for (u32 iter = 0; iter < n_iterations; iter++) {
-        u16 my_cls = curand(&rng) % n_classes;
-        u16 old_t = sh_times[my_cls];
-        u16 old_r = sh_rooms[my_cls];
+        // TODO: instead of randomly choosing a class to try to fix,
+        // choose the one that creates the most violations (similar to mutations)
 
-        int2 best_delta = make_int2(0, 0);
-        u16 best_time = old_t;
-        u16 best_room = old_r;
+        // search for a better timeslot
+        {
+            u16 my_cls = curand(&rng) % n_classes;
+            u16 old_t = sh_times[my_cls];
+            u16 old_r = sh_rooms[my_cls];
+            int2 best_delta = make_int2(0, 0);
+            u16 best_time = old_t;
+            u16 t_start = class_times_start[my_cls];
+            u16 t_end = class_times_end[my_cls];
+            u16 n_time_opts = t_end - t_start;
 
-        u16 t_start = class_times_start[my_cls];
-        u16 t_end = class_times_end[my_cls];
-        u16 n_time_opts = t_end - t_start;
-
-        u16 r_start = class_rooms_start[my_cls];
-        u16 r_end = class_rooms_end[my_cls];
-        u16 n_room_opts = r_end - r_start;
-        bool needs_room = r_start != r_end;
-
-        for (u32 trial = 0; trial < n_trials; trial++) {
-            u16 new_t = t_start + (n_time_opts > 0 ? curand(&rng) % n_time_opts : 0);
-            u16 new_r;
-            if (!needs_room) {
-                new_r = NO_ROOM;
-            } else {
-                new_r = r_start + curand(&rng) % n_room_opts;
+            for (u16 t_idx = 0; t_idx < n_time_opts; t_idx++) {
+                u16 new_t = t_start + t_idx;
+                if (new_t == old_t) {
+                    continue;
+                }
+                int2 delta = compute_move_delta(
+                    my_cls, old_t, old_r, new_t, old_r, sh_times, sh_rooms, n_classes, time_opt_times, time_opt_penalty,
+                    room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets, n_rooms, n_unavail,
+                    opt_time, opt_room, travel_time, dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty,
+                    n_distributions, class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
+                if (cmp_delta(delta, best_delta)) {
+                    best_delta = delta;
+                    best_time = new_t;
+                }
             }
-            if (new_t == old_t && new_r == old_r) {
-                continue;
-            }
-            int2 delta = compute_move_delta(
-                my_cls, old_t, old_r, new_t, new_r, sh_times, sh_rooms, n_classes, time_opt_times, time_opt_penalty,
-                room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets, n_rooms, n_unavail, opt_time,
-                opt_room, travel_time, dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty,
-                n_distributions, class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
-            if (cmp_delta(delta, best_delta)) {
-                best_delta = delta;
-                best_time = new_t;
-                best_room = new_r;
-            }
-        }
 
-        sh_delta[tid] = best_delta;
-        sh_class[tid] = my_cls;
-        sh_time[tid] = best_time;
-        sh_room[tid] = best_room;
-        __syncthreads();
+            sh_delta[tid] = best_delta;
+            sh_class[tid] = my_cls;
+            sh_time[tid] = best_time;
+            sh_room[tid] = old_r;
+            __syncthreads();
 
-        // find the thread with the biggest improvement
-        for (u32 s = block_size / 2; s > 0; s /= 2) {
-            if (tid < s && cmp_delta(sh_delta[tid + s], sh_delta[tid])) {
-                sh_delta[tid] = sh_delta[tid + s];
-                sh_class[tid] = sh_class[tid + s];
-                sh_time[tid] = sh_time[tid + s];
-                sh_room[tid] = sh_room[tid + s];
+            for (u32 s = block_size / 2; s > 0; s /= 2) {
+                if (tid < s && cmp_delta(sh_delta[tid + s], sh_delta[tid])) {
+                    sh_delta[tid] = sh_delta[tid + s];
+                    sh_class[tid] = sh_class[tid + s];
+                    sh_time[tid] = sh_time[tid + s];
+                    sh_room[tid] = sh_room[tid + s];
+                }
+                __syncthreads();
+            }
+
+            if (tid == 0 && cmp_delta(sh_delta[0], NEUTRAL)) {
+                u16 c = sh_class[0];
+                sh_times[c] = sh_time[0];
+                pop_times[sol_offset + c] = sh_time[0];
             }
             __syncthreads();
         }
 
-        // apply the improvement (if any was found)
-        if (tid == 0 && cmp_delta(sh_delta[0], NEUTRAL)) {
-            u16 c = sh_class[0];
-            sh_times[c] = sh_time[0];
-            sh_rooms[c] = sh_room[0];
-            pop_times[sol_offset + c] = sh_time[0];
-            pop_rooms[sol_offset + c] = sh_room[0];
+        // // search for a better room
+        {
+            u16 my_cls = curand(&rng) % n_classes;
+            u16 old_t = sh_times[my_cls];
+            u16 old_r = sh_rooms[my_cls];
+            u16 r_start = class_rooms_start[my_cls];
+            u16 r_end = class_rooms_end[my_cls];
+            u16 n_room_opts = r_end - r_start;
+            bool needs_room = r_start != r_end;
+            int2 best_delta = make_int2(0, 0);
+            u16 best_room = old_r;
+
+            if (needs_room) {
+                for (u16 r_idx = 0; r_idx < n_room_opts; r_idx++) {
+                    u16 new_r = r_start + r_idx;
+                    if (new_r == old_r) {
+                        continue;
+                    }
+                    int2 delta = compute_move_delta(
+                        my_cls, old_t, old_r, old_t, new_r, sh_times, sh_rooms, n_classes, time_opt_times,
+                        time_opt_penalty, room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets,
+                        n_rooms, n_unavail, opt_time, opt_room, travel_time, dist_kind, dist_class_idxs,
+                        dist_class_idxs_offsets, dist_penalty, n_distributions, class_dist_idxs, class_dist_offsets,
+                        n_dist_class_idxs);
+                    if (cmp_delta(delta, best_delta)) {
+                        best_delta = delta;
+                        best_room = new_r;
+                    }
+                }
+            }
+
+            sh_delta[tid] = best_delta;
+            sh_class[tid] = my_cls;
+            sh_time[tid] = old_t;
+            sh_room[tid] = best_room;
+            __syncthreads();
+
+            for (u32 s = block_size / 2; s > 0; s /= 2) {
+                if (tid < s && cmp_delta(sh_delta[tid + s], sh_delta[tid])) {
+                    sh_delta[tid] = sh_delta[tid + s];
+                    sh_class[tid] = sh_class[tid + s];
+                    sh_time[tid] = sh_time[tid + s];
+                    sh_room[tid] = sh_room[tid + s];
+                }
+                __syncthreads();
+            }
+
+            if (tid == 0 && cmp_delta(sh_delta[0], NEUTRAL)) {
+                u16 c = sh_class[0];
+                sh_rooms[c] = sh_room[0];
+                pop_rooms[sol_offset + c] = sh_room[0];
+            }
+            __syncthreads();
         }
-        __syncthreads();
     }
 }
 
@@ -373,7 +415,7 @@ void LocalSearch::search(Population &population, const TimetableData &data) {
     k_local_search<<<grid_dim, block_dim, sh_mem_size>>>(
         pop_times, pop_rooms, n_classes, class_times_start, class_times_end, class_rooms_start, class_rooms_end,
         time_opt_times, time_opt_penalty, room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets,
-        n_rooms, n_unavail, opt.time, opt.room, n_iters, n_trials, seed, travel_time, dist_kind, dist_class_idxs,
+        n_rooms, n_unavail, opt.time, opt.room, n_iters, seed, travel_time, dist_kind, dist_class_idxs,
         dist_class_idxs_offsets, dist_penalty, n_distributions, class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
 
     cudaErrCheck(cudaDeviceSynchronize());

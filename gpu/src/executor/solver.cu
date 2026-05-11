@@ -42,10 +42,10 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 ls_trials, u32 seed)
+               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 seed)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
       cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac),
-      worst_frac(worst_frac), ls_iters(ls_iters), ls_trials(ls_trials), seed(seed) {}
+      worst_frac(worst_frac), ls_iters(ls_iters), seed(seed) {}
 
 void Solver::print_metadata() const {
     printf("Solver started...\n");
@@ -58,15 +58,12 @@ void Solver::print_metadata() const {
     printf("Elites: %.4f%%\n", elites_frac * 100);
     printf("Anti-elites: %.4f%%\n", worst_frac * 100);
     printf("Local search iterations: %u\n", ls_iters);
-    printf("Local search trials per iter: %u\n", ls_trials);
     printf("Seed: %u\n", seed);
 }
 
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
 
-    // TODO: the quality of found solutions seems to be very sensitive to these values
-    // for example: delta 0.05 finds hard penalty 4, delta 0.075 finds hard penalty 10
     f32 delta = 0.05;
     f32 min_mut = 0.1, max_mut = 0.9;
     f32 min_cross = 0.1, max_cross = 0.9;
@@ -82,7 +79,7 @@ FoundSolution Solver::solve() const {
     kernels::Crossover crossover(this->cross_rate);
     kernels::Mutation mutation(this->mut_rate, this->mut_trials);
     kernels::Selection selection(this->population_size, this->sel_frac);
-    kernels::LocalSearch local_search(this->ls_iters, this->ls_trials);
+    kernels::LocalSearch local_search(this->ls_iters);
     population.init(d_data);
 
     this->print_metadata();
