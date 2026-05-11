@@ -6,17 +6,16 @@
 
 #include "typedefs.hpp"
 
-constexpr u32 DEFAULT_GENERATIONS = 512;
-constexpr u32 DEFAULT_POPULATION_SIZE = 2048;
+constexpr u32 DEFAULT_GENERATIONS = 128;
+constexpr u32 DEFAULT_POPULATION_SIZE = 512;
 constexpr u32 DEFAULT_SEED = 21372137;
-constexpr f32 DEFAULT_SEL_FRAC = 0.25;
+constexpr f32 DEFAULT_SEL_FRAC = 0.1;
 constexpr f32 DEFAULT_CROSSOVER_RATE = 0.75;
 constexpr f32 DEFAULT_MUTATION_RATE = 0.25;
-constexpr u32 DEFAULT_MUTATION_TRIALS = 8;
+constexpr u32 DEFAULT_MUTATION_TRIALS = 16;
 constexpr f32 DEFAULT_ELITES_FRAC = 0.05;
 constexpr f32 DEFAULT_WORST_FRAC = 0.1;
-constexpr u32 DEFAULT_LS_ITERS = 8;
-constexpr u32 DEFAULT_LS_TRIALS = 8;
+constexpr u32 DEFAULT_LS_ITERS = 16;
 constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
 
 // list all optional arguments here
@@ -30,7 +29,6 @@ constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
     X("--elit-frac", elites_frac, f32, parse_f32, DEFAULT_ELITES_FRAC, "fraction of population to keep as elite")      \
     X("--worst-frac", worst_frac, f32, parse_f32, DEFAULT_WORST_FRAC, "fraction of the worst solutions to replace")    \
     X("--ls-iters", ls_iters, u32, parse_u32, DEFAULT_LS_ITERS, "local search iterations per generation")              \
-    X("--ls-trials", ls_trials, u32, parse_u32, DEFAULT_LS_TRIALS, "local search trials per iteration")                \
     X("-s", seed, u32, parse_u32, DEFAULT_SEED, "random seed")                                                         \
     X("-o", output_path, std::string, parse_string, DEFAULT_OUTPUT_PATH, "solution output path")
 

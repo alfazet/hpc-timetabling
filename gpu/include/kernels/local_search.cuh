@@ -8,9 +8,8 @@ namespace kernels {
 
 struct LocalSearch {
     u32 n_iters;
-    u32 n_trials;
 
-    LocalSearch(u32 n_iters, u32 n_trials);
+    explicit LocalSearch(u32 n_iters);
 
     // apply local search to all solutions in the population
     // modifies times/rooms in-place (one block per one solution)
