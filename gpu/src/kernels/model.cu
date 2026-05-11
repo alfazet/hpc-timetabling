@@ -1,3 +1,5 @@
+#include <unordered_map>
+
 #include "kernels/model.cuh"
 
 namespace kernels {
