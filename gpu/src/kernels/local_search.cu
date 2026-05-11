@@ -17,47 +17,47 @@ __device__ inline bool cmp_delta(int2 a, int2 b) {
 }
 
 // checks whether a pairwise distribution constraint is violated for a given pair of classes
-__device__ static bool dist_pair_violated(parser::DistributionKind kind, const parser::TimeSlots &ti,
+__device__ static bool dist_pair_violated(DistributionKind kind, const parser::TimeSlots &ti,
                                           const parser::TimeSlots &tj, u16 ri, u16 rj, const u16 *room_opt_room_idx,
                                           const u32 *travel_time, usize n_rooms) {
     u8 di = ti.days.bits, dj = tj.days.bits;
     u16 wi = ti.weeks.bits, wj = tj.weeks.bits;
-    if (std::holds_alternative<parser::SameStart>(kind)) {
+    if (cuda::std::holds_alternative<parser::SameStart>(kind)) {
         return ti.start != tj.start;
     }
-    if (std::holds_alternative<parser::SameTime>(kind)) {
+    if (cuda::std::holds_alternative<parser::SameTime>(kind)) {
         bool contains = (tj.start <= ti.start && ti.start + ti.length <= tj.start + tj.length) ||
                         (ti.start <= tj.start && tj.start + tj.length <= ti.start + ti.length);
         return !contains;
     }
-    if (std::holds_alternative<parser::DifferentTime>(kind)) {
+    if (cuda::std::holds_alternative<parser::DifferentTime>(kind)) {
         return !(tj.start + tj.length <= ti.start || ti.start + ti.length <= tj.start);
     }
-    if (std::holds_alternative<parser::SameDays>(kind)) {
+    if (cuda::std::holds_alternative<parser::SameDays>(kind)) {
         return !((dj | di) == dj || (dj | di) == di);
     }
-    if (std::holds_alternative<parser::DifferentDays>(kind)) {
+    if (cuda::std::holds_alternative<parser::DifferentDays>(kind)) {
         return (di & dj) != 0;
     }
-    if (std::holds_alternative<parser::SameWeeks>(kind)) {
+    if (cuda::std::holds_alternative<parser::SameWeeks>(kind)) {
         return !((wj | wi) == wj || (wj | wi) == wi);
     }
-    if (std::holds_alternative<parser::DifferentWeeks>(kind)) {
+    if (cuda::std::holds_alternative<parser::DifferentWeeks>(kind)) {
         return (wi & wj) != 0;
     }
-    if (std::holds_alternative<parser::Overlap>(kind) || std::holds_alternative<parser::NotOverlap>(kind)) {
+    if (cuda::std::holds_alternative<parser::Overlap>(kind) || cuda::std::holds_alternative<parser::NotOverlap>(kind)) {
         bool overlap =
             tj.start < ti.start + ti.length && ti.start < tj.start + tj.length && (di & dj) != 0 && (wi & wj) != 0;
-        bool should_overlap = std::holds_alternative<parser::Overlap>(kind);
+        bool should_overlap = cuda::std::holds_alternative<parser::Overlap>(kind);
         return (should_overlap && !overlap) || (!should_overlap && overlap);
     }
-    if (std::holds_alternative<parser::SameRoom>(kind) || std::holds_alternative<parser::DifferentRoom>(kind)) {
+    if (cuda::std::holds_alternative<parser::SameRoom>(kind) || cuda::std::holds_alternative<parser::DifferentRoom>(kind)) {
         bool same_room = (ri == NO_ROOM && rj == NO_ROOM) ||
                          (ri != NO_ROOM && rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]);
-        bool should_same = std::holds_alternative<parser::SameRoom>(kind);
+        bool should_same = cuda::std::holds_alternative<parser::SameRoom>(kind);
         return (should_same && !same_room) || (!should_same && same_room);
     }
-    if (std::holds_alternative<parser::SameAttendees>(kind)) {
+    if (cuda::std::holds_alternative<parser::SameAttendees>(kind)) {
         if (ri == NO_ROOM || rj == NO_ROOM) {
             return false;
         }
@@ -78,24 +78,24 @@ __device__ static bool dist_pair_violated(parser::DistributionKind kind, const p
         bool ok = tj.start + tj.length + travel <= ti.start || ti.start + ti.length + travel <= tj.start;
         return !ok;
     }
-    if (std::holds_alternative<parser::Precedence>(kind)) {
+    if (cuda::std::holds_alternative<parser::Precedence>(kind)) {
         u16 _wi = __ffs(wi) - 1, _wj = __ffs(wj) - 1;
         u16 _di = __ffs(di) - 1, _dj = __ffs(dj) - 1;
         bool ok = _wi < _wj || (_wi == _wj && (_di < _dj || (_di == _dj && ti.start + ti.length <= tj.start)));
         return !ok;
     }
-    if (std::holds_alternative<parser::WorkDay>(kind)) {
+    if (cuda::std::holds_alternative<parser::WorkDay>(kind)) {
         if ((di & dj) == 0 || (wi & wj) == 0) {
             return false;
         }
         u32 span = max(ti.start + ti.length, tj.start + tj.length) - min(ti.start, tj.start);
-        return span > std::get<parser::WorkDay>(kind).s;
+        return span > cuda::std::get<parser::WorkDay>(kind).s;
     }
-    if (std::holds_alternative<parser::MinGap>(kind)) {
+    if (cuda::std::holds_alternative<parser::MinGap>(kind)) {
         if ((di & dj) == 0 || (wi & wj) == 0) {
             return false;
         }
-        u16 g = std::get<parser::MinGap>(kind).g;
+        u16 g = cuda::std::get<parser::MinGap>(kind).g;
         return ti.start + ti.length + g > tj.start && tj.start + tj.length + g > ti.start;
     }
     return false;
@@ -105,7 +105,7 @@ __device__ static bool dist_pair_violated(parser::DistributionKind kind, const p
 __device__ static int2 compute_dist_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const u16 *sh_times,
                                           const u16 *sh_rooms, const parser::TimeSlots *time_opt_times,
                                           const u16 *room_opt_room_idx, const u32 *travel_time, usize n_rooms,
-                                          const parser::DistributionKind *dist_kind, const u16 *dist_class_idxs,
+                                          const DistributionKind *dist_kind, const u16 *dist_class_idxs,
                                           const usize *dist_class_idxs_offsets, const Penalty *dist_penalty,
                                           const u16 *class_dist_idxs, const usize *class_dist_offsets) {
     i32 delta_hard = 0;
@@ -117,12 +117,12 @@ __device__ static int2 compute_dist_delta(usize cls, u16 old_t, u16 old_r, u16 n
     usize d_end = class_dist_offsets[cls + 1];
     for (usize di = d_begin; di < d_end; di++) {
         u16 d = class_dist_idxs[di];
-        parser::DistributionKind kind = dist_kind[d];
+        DistributionKind kind = dist_kind[d];
         Penalty pen = dist_penalty[d];
 
         // skip these because they don't make sense to check in this context
-        if (std::holds_alternative<parser::MaxDays>(kind) || std::holds_alternative<parser::MaxDayLoad>(kind) ||
-            std::holds_alternative<parser::MaxBreaks>(kind) || std::holds_alternative<parser::MaxBlock>(kind)) {
+        if (cuda::std::holds_alternative<parser::MaxDays>(kind) || cuda::std::holds_alternative<parser::MaxDayLoad>(kind) ||
+            cuda::std::holds_alternative<parser::MaxBreaks>(kind) || cuda::std::holds_alternative<parser::MaxBlock>(kind)) {
             continue;
         }
 
@@ -161,7 +161,7 @@ compute_move_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const 
                    usize n_classes, const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
                    const u16 *room_opt_room_idx, const u32 *room_opt_penalty, const parser::TimeSlots *room_unavail,
                    const usize *room_unavail_offsets, usize n_rooms, usize n_unavail, u32 opt_time, u32 opt_room,
-                   const u32 *travel_time, const parser::DistributionKind *dist_kind, const u16 *dist_class_idxs,
+                   const u32 *travel_time, const DistributionKind *dist_kind, const u16 *dist_class_idxs,
                    const usize *dist_class_idxs_offsets, const Penalty *dist_penalty, usize n_distributions,
                    const u16 *class_dist_idxs, const usize *class_dist_offsets, usize n_dist_class_idxs) {
     i32 delta_hard = 0;
@@ -399,7 +399,7 @@ void LocalSearch::search(Population &population, const TimetableData &data) {
 
     const u32 *travel_time = thrust::raw_pointer_cast(data.room_data.travel_time.data());
     const auto &dist = data.distributions;
-    const parser::DistributionKind *dist_kind = thrust::raw_pointer_cast(dist.kind.data());
+    const DistributionKind *dist_kind = thrust::raw_pointer_cast(dist.kind.data());
     const u16 *dist_class_idxs = thrust::raw_pointer_cast(dist.class_idxs.data());
     const usize *dist_class_idxs_offsets = thrust::raw_pointer_cast(dist.class_idxs_offsets.data());
     const Penalty *dist_penalty = thrust::raw_pointer_cast(dist.penalty.data());
