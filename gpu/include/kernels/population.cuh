@@ -16,6 +16,18 @@ struct StudentAssignment;
 // `i`-th solution.
 // Indices refer to the TimetableData::time_options/room_options vectors.
 struct Population {
+    // TODO:
+    // add preferred config index for courses taken by students
+    // memory layout:
+    // - preference for sol 0 student 0 course 0 (among that students courses)
+    // - preference for sol 0 student 0 course 1 (among that students courses)
+    // ...
+    // - reference for sol 0 student 1 course 0 (among that students courses)
+    // ...
+    // - reference for sol 1 student 0 course 0 (among that students courses)
+    // ...
+    // taken memory: O(2 * population_size * n_students * max_courses_taken_by_a_student)
+
     // time slot assignments
     thrust::device_vector<u16> times;
     // room assignments
