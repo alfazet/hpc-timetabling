@@ -63,6 +63,19 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(pugixml)
 target_link_libraries(parser PRIVATE pugixml)
 
+# fltk
+set(FLTK_BUILD_TEST OFF CACHE BOOL "Wyłącz testy" FORCE)
+set(FLTK_BUILD_EXAMPLES OFF CACHE BOOL "Wyłącz przykłady" FORCE)
+set(FLTK_BUILD_FLUID OFF CACHE BOOL "Wyłącz FLUID" FORCE)
+
+FetchContent_Declare(
+        fltk
+        GIT_REPOSITORY https://github.com/fltk/fltk.git
+        GIT_TAG        release-1.4.5
+)
+FetchContent_MakeAvailable(fltk)
+target_link_libraries(main PRIVATE fltk)
+
 # tests
 FetchContent_Declare(
         googletest
