@@ -68,6 +68,7 @@ int gui_main(int argc, char **argv) {
                         we->start_button->activate();
                         we->stop_button->deactivate();
                         we->stopper = false;
+                        we->information_label->label("Execution finished.");
                         Fl::awake();
                         Fl::unlock();
                     },
@@ -78,8 +79,8 @@ int gui_main(int argc, char **argv) {
                 we->help_button->activate();
                 we->start_button->activate();
                 we->stop_button->deactivate();
-                we->information_label->copy_label(std::string("Error: ").append(e.what()).c_str());
                 we->stopper = false;
+                we->information_label->copy_label(std::string("Error: ").append(e.what()).c_str());
                 Fl::awake();
                 Fl::unlock();
             }
@@ -92,7 +93,7 @@ int gui_main(int argc, char **argv) {
         we->stopper = true; // fuck the races
         we->stop_button->deactivate();
         we->information_label->label("Stop requested. Please wait for the iteration to finish...");
-    });
+    }, &we);
 
     we.window->end();
     we.window->show(argc, argv);

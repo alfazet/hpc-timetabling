@@ -110,7 +110,7 @@ FoundSolution Solver::solve() const {
             timer = {};
         }
 
-        if (this->stopper) {
+        if (this->stopper && *this->stopper) {
             break;
         }
     }
