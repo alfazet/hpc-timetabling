@@ -42,10 +42,10 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 seed)
+               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 seed, bool *stopper)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
       cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac),
-      worst_frac(worst_frac), ls_iters(ls_iters), seed(seed) {}
+      worst_frac(worst_frac), ls_iters(ls_iters), seed(seed), stopper(stopper) {}
 
 void Solver::print_metadata() const {
     printf("Solver started...\n");
@@ -108,6 +108,10 @@ FoundSolution Solver::solve() const {
         if (gen % update_interval == 0) {
             timer.print(update_interval);
             timer = {};
+        }
+
+        if (this->stopper) {
+            break;
         }
     }
 
