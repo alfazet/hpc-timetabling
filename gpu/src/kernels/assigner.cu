@@ -3,7 +3,7 @@
 
 namespace kernels {
 
-__global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u16 *pop_times,
+__global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u16 *config_prefs, const u16 *pop_times,
                                   const u16 *courses_configs_start, const u16 *courses_configs_end,
                                   const u16 *configs_subparts_start, const u16 *configs_subparts_end,
                                   const u16 *subparts_classes_start, const u16 *subparts_classes_end,
@@ -11,12 +11,12 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                   const parser::TimeSlots *time_opt_times, const u16 *student_course_idxs,
                                   const usize *student_course_offsets, u16 n_classes, u16 n_students) {
     usize tid = threadIdx.x;
+    usize sol = blockIdx.x;
+    usize sol_offset_classes = sol * n_classes;
+    usize sol_offset_students = sol * n_students * MAX_COURSES_PER_STUDENT;
 
     extern __shared__ u8 sh_mem[];
-    auto sh_sol_offset = reinterpret_cast<usize *>(sh_mem);
-    // offset for the solution handled by this block
-    // sh_sol_offset: sizeof(usize) bytes
-    auto *sh_class_count = reinterpret_cast<u16 *>(sh_sol_offset + 1);
+    auto *sh_class_count = reinterpret_cast<u16 *>(sh_mem);
     // number of students enrolled in the given class
     // sh_class_count: n_classes * sizeof(u16) bytes
     u16 *sh_trial = sh_class_count + n_classes;
@@ -50,13 +50,6 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
     }
     __syncthreads();
 
-    usize sol = blockIdx.x;
-    usize sol_offset = sol * n_classes;
-    if (tid == 0) {
-        *sh_sol_offset = sol_offset;
-    }
-    __syncthreads();
-
     // class index chosen per subpart in a given config
     u16 local_assignment[MAX_SUBPARTS];
     for (usize student_idx = 0; student_idx < n_students; student_idx++) {
@@ -79,6 +72,8 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
         usize courses_end = student_course_offsets[student_idx + 1];
         for (usize i = courses_start; i < courses_end; i++) {
             u16 course_idx = student_course_idxs[i];
+            u16 config_pref =
+                config_prefs[sol_offset_students + student_idx * MAX_COURSES_PER_STUDENT + courses_start - i];
             u16 configs_start = courses_configs_start[course_idx];
             u16 configs_end = courses_configs_end[course_idx];
 
@@ -89,7 +84,10 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
 
             // choose exactly one config for this course
             // and exactly one class in each subpart of this config
-            for (u16 config_idx = configs_start; config_idx < configs_end; config_idx++) {
+            // iterate starting from the preferred config
+            u16 n_configs = configs_end - configs_start;
+            for (u16 ci_offset = 0; ci_offset < n_configs; ci_offset++) {
+                u16 config_idx = configs_start + (config_pref - configs_start + ci_offset) % n_configs;
                 if (*sh_course_assigned) {
                     break;
                 }
@@ -131,7 +129,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                     trial[j] = local_assignment[j];
                                 }
                                 u16 cur = class_idx;
-                                // assing this class and its ancestors to the trial
+                                // assign this class and its ancestors to the trial
                                 while (true) {
                                     u16 subpart_offset = class_subpart_idx[cur] - configs_subparts_start[config_idx];
                                     trial[subpart_offset] = cur;
@@ -161,12 +159,12 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                             continue;
                                         }
                                         const parser::TimeSlots &trial_time =
-                                            time_opt_times[pop_times[sol_offset + trial[j]]];
+                                            time_opt_times[pop_times[sol_offset_classes + trial[j]]];
                                         for (u16 k = 0; k < j && ok; k++) {
                                             if (trial[k] == NO_CLASS_ASSIGNED || sh_already_attending[trial[k]]) {
                                                 continue;
                                             }
-                                            u16 t = pop_times[sol_offset + trial[k]];
+                                            u16 t = pop_times[sol_offset_classes + trial[k]];
                                             const parser::TimeSlots &time = time_opt_times[t];
                                             if (utils::timeslots_overlap(trial_time, time)) {
                                                 ok = false;
@@ -176,7 +174,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                 }
 
                                 if (ok) {
-                                    // all classes work within this trial assignment
+                                    // all classes work within this trial assignment,
                                     // but we need to check them against all classes
                                     // attended by this student
                                     for (u16 j = 0; j < n_subparts; j++) {
@@ -198,13 +196,13 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
                                 if (!sh_already_attending[k]) {
                                     continue;
                                 }
-                                const parser::TimeSlots &at_time = time_opt_times[pop_times[sol_offset + k]];
+                                const parser::TimeSlots &at_time = time_opt_times[pop_times[sol_offset_classes + k]];
                                 for (u16 j = 0; j < n_subparts; j++) {
                                     if (sh_trial[j] == NO_CLASS_ASSIGNED || sh_already_attending[sh_trial[j]]) {
                                         continue;
                                     }
                                     const parser::TimeSlots &trial_time =
-                                        time_opt_times[pop_times[sol_offset + sh_trial[j]]];
+                                        time_opt_times[pop_times[sol_offset_classes + sh_trial[j]]];
                                     if (utils::timeslots_overlap(trial_time, at_time)) {
                                         *sh_conflict = true;
                                     }
@@ -263,7 +261,7 @@ __global__ void k_assign_students(u16 *students_idxs, u32 *class_counts, const u
         __syncthreads();
     }
     for (u16 i = tid; i < n_classes; i += blockDim.x) {
-        class_counts[sol_offset + i] = sh_class_count[i];
+        class_counts[sol_offset_classes + i] = sh_class_count[i];
     }
 }
 
@@ -271,12 +269,13 @@ StudentAssignment::StudentAssignment(usize n_classes, usize population_size)
     : students_idxs(n_classes * population_size * MAX_CLASS_LIMIT), class_counts(n_classes * population_size),
       n_classes(n_classes), population_size(population_size) {}
 
-void StudentAssignment::assign(const TimetableData &d_data, const Population &population) {
+void StudentAssignment::assign(const TimetableData &d_data, Population &population) {
     thrust::fill(students_idxs.begin(), students_idxs.end(), 0);
     thrust::fill(class_counts.begin(), class_counts.end(), 0);
 
     u16 *d_students_idxs = thrust::raw_pointer_cast(this->students_idxs.data());
     u32 *d_class_counts = thrust::raw_pointer_cast(this->class_counts.data());
+    const u16 *d_config_prefs = thrust::raw_pointer_cast(population.config_prefs.data());
     const u16 *d_pop_times = thrust::raw_pointer_cast(population.times.data());
     const u16 *d_courses_configs_start = thrust::raw_pointer_cast(d_data.courses.configs_start.data());
     const u16 *d_courses_configs_end = thrust::raw_pointer_cast(d_data.courses.configs_end.data());
@@ -294,9 +293,9 @@ void StudentAssignment::assign(const TimetableData &d_data, const Population &po
     usize n_students = d_data.students.id.size();
     constexpr dim3 block_dim(SMALL_BLOCK_SIZE);
     dim3 grid_dim(static_cast<u32>(population.population_size));
-    usize sh_mem_size = sizeof(usize) + (n_classes + MAX_SUBPARTS + 1) * sizeof(u16) + (n_classes + 4) * sizeof(bool);
+    usize sh_mem_size = (n_classes + MAX_SUBPARTS + 1) * sizeof(u16) + (n_classes + 4) * sizeof(bool);
     k_assign_students<<<grid_dim, block_dim, sh_mem_size>>>(
-        d_students_idxs, d_class_counts, d_pop_times, d_courses_configs_start, d_courses_configs_end,
+        d_students_idxs, d_class_counts, d_config_prefs, d_pop_times, d_courses_configs_start, d_courses_configs_end,
         d_configs_subparts_start, d_configs_subparts_end, d_subparts_classes_start, d_subparts_classes_end,
         d_class_limit, d_class_parent, d_class_subpart_idx, d_time_opt_times, d_student_course_idxs,
         d_student_course_offsets, n_classes, n_students);

@@ -51,7 +51,8 @@ __device__ static bool dist_pair_violated(DistributionKind kind, const parser::T
         bool should_overlap = cuda::std::holds_alternative<parser::Overlap>(kind);
         return (should_overlap && !overlap) || (!should_overlap && overlap);
     }
-    if (cuda::std::holds_alternative<parser::SameRoom>(kind) || cuda::std::holds_alternative<parser::DifferentRoom>(kind)) {
+    if (cuda::std::holds_alternative<parser::SameRoom>(kind) ||
+        cuda::std::holds_alternative<parser::DifferentRoom>(kind)) {
         bool same_room = (ri == NO_ROOM && rj == NO_ROOM) ||
                          (ri != NO_ROOM && rj != NO_ROOM && room_opt_room_idx[ri] == room_opt_room_idx[rj]);
         bool should_same = cuda::std::holds_alternative<parser::SameRoom>(kind);
@@ -121,8 +122,10 @@ __device__ static int2 compute_dist_delta(usize cls, u16 old_t, u16 old_r, u16 n
         Penalty pen = dist_penalty[d];
 
         // skip these because they don't make sense to check in this context
-        if (cuda::std::holds_alternative<parser::MaxDays>(kind) || cuda::std::holds_alternative<parser::MaxDayLoad>(kind) ||
-            cuda::std::holds_alternative<parser::MaxBreaks>(kind) || cuda::std::holds_alternative<parser::MaxBlock>(kind)) {
+        if (cuda::std::holds_alternative<parser::MaxDays>(kind) ||
+            cuda::std::holds_alternative<parser::MaxDayLoad>(kind) ||
+            cuda::std::holds_alternative<parser::MaxBreaks>(kind) ||
+            cuda::std::holds_alternative<parser::MaxBlock>(kind)) {
             continue;
         }
 
@@ -231,10 +234,9 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
                                const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
                                const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets, usize n_rooms,
                                usize n_unavail, u32 opt_time, u32 opt_room, u32 n_iterations, u32 seed,
-                               const u32 *travel_time, const DistributionKind *dist_kind,
-                               const u16 *dist_class_idxs, const usize *dist_class_idxs_offsets,
-                               const Penalty *dist_penalty, usize n_distributions, const u16 *class_dist_idxs,
-                               const usize *class_dist_offsets, usize n_dist_class_idxs) {
+                               const u32 *travel_time, const DistributionKind *dist_kind, const u16 *dist_class_idxs,
+                               const usize *dist_class_idxs_offsets, const Penalty *dist_penalty, usize n_distributions,
+                               const u16 *class_dist_idxs, const usize *class_dist_offsets, usize n_dist_class_idxs) {
     usize sol = blockIdx.x;
     usize tid = threadIdx.x;
     usize block_size = blockDim.x;
