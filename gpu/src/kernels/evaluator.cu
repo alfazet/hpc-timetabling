@@ -52,7 +52,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                            const u16 *courses_configs_end, const u16 *configs_subparts_start,
                            const u16 *configs_subparts_end, const u16 *subparts_classes_start,
                            const u16 *subparts_classes_end, u32 opt_time, u32 opt_room, u32 opt_student,
-                           usize n_classes, usize n_students, const DistributionKind *dist_kind,
+                           u32 opt_distribution, usize n_classes, usize n_students, const DistributionKind *dist_kind,
                            const u16 *dist_class_idxs, const usize *dist_class_idxs_offsets,
                            const Penalty *dist_penalty, usize n_distributions, u32 n_days, u32 n_weeks) {
     usize sol = blockIdx.x;
@@ -304,7 +304,6 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                 }
 
                 u32 factor = 0;
-
                 for (u8 w = 0; w < n_weeks; w++) {
                     for (u8 d = 0; d < n_days; d++) {
                         if (load[w][d] > s) {
@@ -312,7 +311,6 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
                         }
                     }
                 }
-
                 if (factor > 0) {
                     local_hard += pen.hard;
                     local_soft += (pen.soft * factor) / n_weeks;
@@ -487,7 +485,7 @@ __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *
         }
 
         atomicAdd(&sh_hard, local_hard);
-        atomicAdd(&sh_soft, local_soft);
+        atomicAdd(&sh_soft, local_soft * opt_distribution);
     }
     __syncthreads();
 
@@ -547,8 +545,8 @@ void Evaluator::evaluate(const TimetableData &d_data, Population &population, co
         d_penalties, d_pop_times, d_pop_rooms, d_student_idxs, d_class_counts, time_opt_times, time_opt_penalty,
         room_opt_room_idx, room_opt_penalty, d_limit, d_parent, d_room_capacity, d_room_unavail, d_room_unavail_offsets,
         d_travel, n_rooms, n_unavail, d_sc_idxs, d_sc_offsets, d_cc_start, d_cc_end, d_cs_start, d_cs_end, d_sc_start,
-        d_sc_end, opt.time, opt.room, opt.student, n_classes, n_students, d_dist_kind, d_dist_class_idxs,
-        d_dist_offsets, d_dist_penalty, n_distributions, d_data.n_days, d_data.n_weeks);
+        d_sc_end, opt.time, opt.room, opt.student, opt.distribution, n_classes, n_students, d_dist_kind,
+        d_dist_class_idxs, d_dist_offsets, d_dist_penalty, n_distributions, d_data.n_days, d_data.n_weeks);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }
