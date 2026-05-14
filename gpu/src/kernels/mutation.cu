@@ -43,12 +43,11 @@ __device__ static u32 count_violations(usize cls, u16 time_idx, u16 room_idx, co
     return violations;
 }
 
-__global__ void k_mutations(u16 *pop_times, u16 *pop_rooms, usize n_classes, usize n_elites,
-                            const u16 *class_times_start, const u16 *class_times_end, const u16 *class_rooms_start,
-                            const u16 *class_rooms_end, const parser::TimeSlots *time_opt_times,
-                            const u16 *room_opt_room_idx, const parser::TimeSlots *room_unavail,
-                            const usize *room_unavail_offsets, usize n_rooms, usize n_unavail, f32 prob, u32 n_trials,
-                            u32 seed) {
+__global__ void k_mutate(u16 *pop_times, u16 *pop_rooms, usize n_classes, usize n_elites, const u16 *class_times_start,
+                         const u16 *class_times_end, const u16 *class_rooms_start, const u16 *class_rooms_end,
+                         const parser::TimeSlots *time_opt_times, const u16 *room_opt_room_idx,
+                         const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets, usize n_rooms,
+                         usize n_unavail, f32 prob, u32 n_trials, u32 seed) {
     usize tid = threadIdx.x;
     usize sol_offset = (n_elites + blockIdx.x) * n_classes;
 
@@ -142,9 +141,36 @@ __global__ void k_mutations(u16 *pop_times, u16 *pop_rooms, usize n_classes, usi
     }
 }
 
+// TODO: maybe there's a better way of mutating than purely random
+__global__ void k_mutate_config_prefs(u16 *config_prefs, usize n_students, usize n_elites, usize n_course_idxs,
+                                      const u16 *student_course_idxs, const usize *student_course_offsets,
+                                      const u16 *courses_configs_start, const u16 *courses_configs_end, f32 prob,
+                                      u32 seed) {
+    usize tid = threadIdx.x;
+    usize sol_offset = (n_elites + blockIdx.x) * n_students * MAX_COURSES_PER_STUDENT;
+
+    curandState rng;
+    curand_init(seed, blockIdx.x * blockDim.x + tid, 0, &rng);
+    for (usize student_idx = tid; student_idx < n_students; student_idx += blockDim.x) {
+        usize courses_start = student_course_offsets[student_idx];
+        usize courses_end = student_idx < n_students - 1 ? student_course_offsets[student_idx + 1] : n_course_idxs;
+        for (usize c = courses_start; c < courses_end; c++) {
+            if (curand_uniform(&rng) <= prob) {
+                u16 course_idx = student_course_idxs[c];
+                u16 cfg_start = courses_configs_start[course_idx];
+                u16 cfg_end = courses_configs_end[course_idx];
+                u16 n_configs = cfg_end - cfg_start;
+                u16 new_pref = cfg_start + curand(&rng) % n_configs;
+                config_prefs[sol_offset + student_idx * MAX_COURSES_PER_STUDENT + c - courses_start] = new_pref;
+            }
+        }
+    }
+}
+
 void Mutation::apply_mutations(Population &population, const TimetableData &data) {
     // skip the elites
     usize n_classes = population.n_classes;
+    usize n_students = population.n_students;
     usize n_elites = std::ceil(population.population_size * population.elites_frac);
     u16 *pop_times = thrust::raw_pointer_cast(population.times.data());
     u16 *pop_rooms = thrust::raw_pointer_cast(population.rooms.data());
@@ -160,15 +186,25 @@ void Mutation::apply_mutations(Population &population, const TimetableData &data
     usize n_rooms = data.room_data.n_rooms;
     usize n_unavail = data.room_data.unavail.size();
 
+    u16 *config_prefs = thrust::raw_pointer_cast(population.config_prefs.data());
+    const u16 *student_course_idxs = thrust::raw_pointer_cast(data.students.course_idxs.data());
+    const usize *student_course_offsets = thrust::raw_pointer_cast(data.students.course_idxs_offsets.data());
+    const u16 *courses_configs_start = thrust::raw_pointer_cast(data.courses.configs_start.data());
+    const u16 *courses_configs_end = thrust::raw_pointer_cast(data.courses.configs_end.data());
+    usize n_course_idxs = data.students.course_idxs.size();
+
     u32 seed = population.seed ^ static_cast<u32>(rand());
     constexpr u32 block_dim = LARGE_BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population.population_size - n_elites);
 
     usize sh_mem_size = 2 * n_classes * sizeof(u16);
-    k_mutations<<<grid_dim, block_dim, sh_mem_size>>>(pop_times, pop_rooms, n_classes, n_elites, class_times_start,
-                                                      class_times_end, class_rooms_start, class_rooms_end,
-                                                      time_opt_times, room_opt_room_idx, room_unavail,
-                                                      room_unavail_offsets, n_rooms, n_unavail, prob, n_trials, seed);
+    k_mutate<<<grid_dim, block_dim, sh_mem_size>>>(pop_times, pop_rooms, n_classes, n_elites, class_times_start,
+                                                   class_times_end, class_rooms_start, class_rooms_end, time_opt_times,
+                                                   room_opt_room_idx, room_unavail, room_unavail_offsets, n_rooms,
+                                                   n_unavail, prob, n_trials, seed);
+    k_mutate_config_prefs<<<grid_dim, block_dim>>>(config_prefs, n_students, n_elites, n_course_idxs,
+                                                   student_course_idxs, student_course_offsets, courses_configs_start,
+                                                   courses_configs_end, prob, seed);
     cudaErrCheck(cudaDeviceSynchronize());
 }
 
