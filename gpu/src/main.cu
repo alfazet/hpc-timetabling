@@ -1,14 +1,8 @@
-#include <FL/Fl.H>
-#include <FL/Fl_Box.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Text_Editor.H>
-#include <FL/Fl_Text_Buffer.H>
-#include <FL/Fl_Text_Display.H>
-#include <FL/Fl_Window.H>
 #include <thread>
 
 #include "executor/cmd_args.hpp"
 #include "executor/solver.cuh"
+#include "gui.cuh"
 #include "kernels/model.cuh"
 #include "parser/parser.hpp"
 #include "serializer/serializer.hpp"
@@ -30,44 +24,12 @@ int main(int argc, char **argv) {
     return gui_main(argc, argv);
 }
 
-struct WindowElements {
-    Fl_Window *window;
-    Fl_Text_Buffer *logs_buffer;
-    Fl_Text_Display *logs_display;
-    Fl_Box *commands_label;
-    Fl_Text_Buffer *commands_buffer;
-    Fl_Text_Editor *commands_input;
-    Fl_Button *help_button;
-    Fl_Button *start_button;
-    Fl_Button *stop_button;
-    Fl_Box *information_label;
-};
-
 int gui_main(int argc, char **argv) {
     WindowElements we = {};
 
     Fl::lock();
 
-    we.window = new Fl_Window(1000, 600, "HPC Timetabling CUDA");
-
-    we.logs_buffer = new Fl_Text_Buffer();
-    we.logs_display = new Fl_Text_Display(10, 10, 480, 580);
-    we.logs_display->buffer(we.logs_buffer);
-
-    we.commands_label = new Fl_Box(510, 10, 480, 20, "Commands:");
-    we.commands_buffer = new Fl_Text_Buffer();
-    we.commands_input = new Fl_Text_Editor(510, 30, 480, 80);
-    we.commands_input->buffer(we.commands_buffer);
-    we.commands_input->wrap_mode(Fl_Text_Editor::WRAP_AT_BOUNDS, 0);
-
-    we.help_button = new Fl_Button(640, 120, 110, 40, "Help...");
-
-    we.start_button = new Fl_Button(760, 120, 110, 40, "Start!");
-
-    we.stop_button = new Fl_Button(880, 120, 110, 40, "Stop!");
-    we.stop_button->deactivate();
-
-    we.information_label = new Fl_Box(510, 170, 480, 420, "Tutaj pojawia sie informacje");
+    initialize_window(we);
 
     we.window->end();
     we.window->show(argc, argv);

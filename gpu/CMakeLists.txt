@@ -31,7 +31,10 @@ file(GLOB SERIALIZER_SRC src/serializer/*.cpp)
 add_library(serializer OBJECT ${SERIALIZER_SRC})
 target_link_libraries(serializer PRIVATE parser)
 
-add_executable(main src/main.cu)
+add_executable(main
+        src/main.cu
+        src/gui.cu
+)
 target_include_directories(main PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
