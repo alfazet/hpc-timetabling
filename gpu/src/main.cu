@@ -7,32 +7,6 @@
 #include "parser/parser.hpp"
 #include "serializer/serializer.hpp"
 
-int gui_main(int argc, char **argv) {
-    WindowElements we = {};
-    bool stopper = false;
-
-    Fl::lock();
-
-    initialize_window(&we);
-
-    we.start_button->callback([](Fl_Widget *widget, void *data) {
-        auto *we = static_cast<WindowElements *>(data);
-
-        we->help_button->deactivate();
-        we->start_button->deactivate();
-        we->stop_button->activate();
-
-        // std::thread worker_thread(timetabling_main);
-
-        // worker_thread.detach();
-    }, &we);
-
-    we.window->end();
-    we.window->show(argc, argv);
-
-    return Fl::run();
-}
-
 template <typename lambda>
 void timetabling_main(int argc, char **argv, lambda post_solver_callback, bool *stopper = nullptr) {
     ArgParser arg_parser(argc - 1, argv + 1);
@@ -53,6 +27,49 @@ void timetabling_main(int argc, char **argv, lambda post_solver_callback, bool *
     serializer::utils::write_file(arg_list.output_path, xml);
     printf("Solution file written to %s\n", arg_list.output_path.c_str());
     post_solver_callback();
+}
+
+int gui_main(int argc, char **argv) {
+    WindowElements we = {};
+
+    Fl::lock();
+
+    initialize_window(&we);
+
+    we.start_button->callback([](Fl_Widget *widget, void *data) {
+        auto *we = static_cast<WindowElements *>(data);
+
+        we->help_button->deactivate();
+        we->start_button->deactivate();
+        we->stop_button->activate();
+        we->stopper = false;
+
+        std::thread worker([&] {
+            timetabling_main(
+                0, // TODO
+                nullptr,
+                [&] {
+                    we->help_button->activate();
+                    we->start_button->activate();
+                    we->stop_button->deactivate();
+                },
+                &we->stopper
+            );
+        });
+        worker.detach();
+    }, &we);
+
+    we.stop_button->callback([](Fl_Widget *widget, void *data) {
+        auto *we = static_cast<WindowElements *>(data);
+
+        we->stopper = true; // fuck the races
+        we->stop_button->deactivate();
+    });
+
+    we.window->end();
+    we.window->show(argc, argv);
+
+    return Fl::run();
 }
 
 int main(int argc, char **argv) {

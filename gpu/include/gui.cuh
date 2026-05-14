@@ -20,6 +20,7 @@ struct WindowElements {
     Fl_Button *start_button;
     Fl_Button *stop_button;
     Fl_Box *information_label;
+    bool stopper = false;
 };
 
 void initialize_window(WindowElements *we);
