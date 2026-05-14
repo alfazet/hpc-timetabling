@@ -20,7 +20,7 @@ struct StudentAssignment;
 struct Population {
     // indices of the preferred configs for each of the courses that each student wants to take
     // the index of the preferred config for the `k`-th course of the `j`-th student in the `i`-th solution
-    // is placed at config_prefs[i * n_students + j * MAX_COURSES_PER_STUDENT + k]
+    // is placed at config_prefs[i * n_students * MAX_COURSES_PER_STUDENT + j * MAX_COURSES_PER_STUDENT + k]
     thrust::device_vector<u16> config_prefs;
     // time slot assignments
     thrust::device_vector<u16> times;
