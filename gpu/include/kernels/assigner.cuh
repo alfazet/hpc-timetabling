@@ -27,9 +27,9 @@ struct StudentAssignment {
 
     // find student assignments for solutions
     // (one block per one solution)
-    void assign(const TimetableData &d_data, const Population &population);
+    void assign(const TimetableData &d_data, Population &population);
 };
 
-}
+} // namespace kernels
 
 #endif // GPU_TIMETABLING_ASSIGNER_CUH
