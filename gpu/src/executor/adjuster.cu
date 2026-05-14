@@ -1,5 +1,7 @@
 #include "executor/adjuster.cuh"
 
+#include <iomanip>
+
 void Stats::update(usize cur_generation, kernels::Penalty cur_penalty) {
     usize delta_gen = cur_generation - generation;
     if (min_penalty == kernels::MAX_PENALTY || cur_penalty < min_penalty) {
@@ -13,18 +15,19 @@ void Stats::update(usize cur_generation, kernels::Penalty cur_penalty) {
     generation = cur_generation;
 }
 
-void Stats::print(f32 mut_rate, f32 cross_rate, f32 elites_frac, f32 worst_frac) const {
-    printf("\n");
-    printf("min penalty after %lu generations: ", generation);
-    min_penalty.print();
-    printf("\n");
+void Stats::print(f32 mut_rate, f32 cross_rate, f32 elites_frac, f32 worst_frac, std::ostream &out) const {
+    out << std::endl;
+    out << "min penalty after " << generation << " generations: ";
+    min_penalty.print(out);
+    out << std::endl;
     if (stagnation > 0) {
-        printf("stagnating for %lu generations\n", stagnation);
+        out << "stagnating for " << stagnation << " generations\n";
     } else {
-        printf("progressing for %lu generations\n", progress);
+        out << "progressing for " << progress << " generations\n";
     }
-    printf("mutation rate: %.4f, crossover rate: %.4f\n", mut_rate, cross_rate);
-    printf("elites: %.4f%%, anti-elites: %.4f%%\n", elites_frac * 100, worst_frac * 100);
+    out << std::fixed << std::setprecision(4)
+        << "mutation rate: " << mut_rate << ", crossover rate: " << cross_rate << "\n"
+        << "elites: " << (elites_frac * 100.0) << "%, anti-elites: " << (worst_frac * 100.0) << "%\n";
 }
 
 Adjuster::Adjuster(f32 delta, f32 min_mut, f32 max_mut, f32 min_cross, f32 max_cross, f32 min_elites_frac,

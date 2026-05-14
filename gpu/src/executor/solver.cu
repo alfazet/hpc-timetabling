@@ -100,7 +100,7 @@ FoundSolution Solver::solve(std::ostream &out) const {
         if (gen % update_interval == 0) {
             stats.update(gen, population.get_best_penalty());
             adjuster.adjust(stats, mutation, crossover, population);
-            stats.print(mutation.prob, crossover.prob, population.elites_frac, population.worst_frac);
+            stats.print(mutation.prob, crossover.prob, population.elites_frac, population.worst_frac, out);
         }
 
         timer.start();
@@ -109,7 +109,7 @@ FoundSolution Solver::solve(std::ostream &out) const {
         mutation.apply_mutations(population, d_data);
         timer.stop();
         if (gen % update_interval == 0) {
-            timer.print(update_interval);
+            timer.print(update_interval, out);
             timer = {};
         }
 

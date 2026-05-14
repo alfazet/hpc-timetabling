@@ -1,14 +1,12 @@
-#include <cstdio>
-
 #include "kernels/penalty.cuh"
 
 namespace kernels {
 
-void Penalty::print() const {
+void Penalty::print(std::ostream &out) const {
     if (this->hard != 0) {
-        printf("hard: %u, ", this->hard);
+        out << "hard: " << this->hard << ", ";
     }
-    printf("soft: %u", this->soft);
+    out << "soft: " << this->soft;
 }
 
 } // namespace kernels
