@@ -55,7 +55,7 @@ ARG_TABLE(X)
 
 void ArgParser::display_help(std::ostream &out) {
     out << "Arguments:\n<dataset_path> [flags]\nwhere:\n";
-#define X(flag, field, type, parser, default_val, help) out << "  %s : %s\n" << flag << help;
+#define X(flag, field, type, parser, default_val, help) out << flag << ": " << help << " (default: " << default_val << ")\n";
     ARG_TABLE(X)
 #undef X
 }
