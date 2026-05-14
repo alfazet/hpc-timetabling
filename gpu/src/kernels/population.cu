@@ -7,16 +7,18 @@
 
 namespace kernels {
 
-__global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, const u16 *sol_indices,
+__global__ void k_init_population(u16 *config_prefs, u16 *times, u16 *rooms, usize n_classes, usize n_students,
                                   const u16 *times_start, const u16 *times_end, const u16 *rooms_start,
                                   const u16 *rooms_end, const parser::TimeSlots *time_opt_times,
                                   const u16 *room_opt_room_idx, const parser::TimeSlots *room_unavail,
-                                  const usize *room_unavail_offsets, usize n_rooms, usize n_unavail, u32 seed) {
-    // sol_indices are non-null when this kernel is used to re-init the worst solutions
-    usize sol = sol_indices ? static_cast<usize>(sol_indices[blockIdx.x]) : blockIdx.x;
+                                  const usize *room_unavail_offsets, const u16 *course_idxs,
+                                  const usize *course_idxs_offsets, const u16 *configs_start, const u16 *configs_end,
+                                  usize n_rooms, usize n_unavail, usize n_course_idxs, u32 seed) {
+    usize sol = blockIdx.x;
     usize tid = threadIdx.x;
     usize block_size = blockDim.x;
-    usize sol_offset = sol * n_classes;
+    usize sol_offset_classes = sol * n_classes;
+    usize sol_offset_students = sol * n_students * MAX_COURSES_PER_STUDENT;
 
     extern __shared__ u8 sh_mem[];
     auto sh_violations = reinterpret_cast<u32 *>(sh_mem);
@@ -93,21 +95,38 @@ __global__ void k_init_population(u16 *times, u16 *rooms, usize n_classes, const
     }
 
     for (usize i = tid; i < n_classes; i += block_size) {
-        times[sol_offset + i] = sh_times[i];
-        rooms[sol_offset + i] = sh_rooms[i];
+        times[sol_offset_classes + i] = sh_times[i];
+        rooms[sol_offset_classes + i] = sh_rooms[i];
+    }
+
+    if (tid >= n_students) {
+        return;
+    }
+    for (usize st = tid; st < n_students; st += block_size) {
+        usize courses_start = course_idxs_offsets[st];
+        usize courses_end = st < n_students - 1 ? course_idxs_offsets[st + 1] : n_course_idxs;
+        for (usize c = courses_start; c < courses_end; c++) {
+            u16 course_idx = course_idxs[c];
+            u16 s = configs_start[course_idx], e = configs_end[course_idx];
+            u16 config_idx = s + curand(&rng) % (e - s);
+            config_prefs[sol_offset_students + st * MAX_COURSES_PER_STUDENT + c - courses_start] = config_idx;
+        }
     }
 }
 
-Population::Population(usize n_classes, usize population_size, f32 elites_frac, f32 worst_frac, u32 seed)
-    : times(n_classes * population_size), rooms(n_classes * population_size), penalty(population_size),
-      order(population_size), seed(seed), n_classes(n_classes), population_size(population_size),
-      elites_frac(elites_frac), worst_frac(worst_frac) {}
+Population::Population(usize n_students, usize n_classes, usize population_size, f32 elites_frac, f32 worst_frac,
+                       u32 seed)
+    : config_prefs(MAX_COURSES_PER_STUDENT * n_students * population_size), times(n_classes * population_size),
+      rooms(n_classes * population_size), penalty(population_size), order(population_size), seed(seed),
+      n_students(n_students), n_classes(n_classes), population_size(population_size), elites_frac(elites_frac),
+      worst_frac(worst_frac) {}
 
 void Population::init(const TimetableData &d_data) {
     const u16 *d_times_start = thrust::raw_pointer_cast(d_data.classes.times_start.data());
     const u16 *d_times_end = thrust::raw_pointer_cast(d_data.classes.times_end.data());
     const u16 *d_rooms_start = thrust::raw_pointer_cast(d_data.classes.rooms_start.data());
     const u16 *d_rooms_end = thrust::raw_pointer_cast(d_data.classes.rooms_end.data());
+    u16 *d_config_prefs = thrust::raw_pointer_cast(this->config_prefs.data());
     u16 *d_times = thrust::raw_pointer_cast(this->times.data());
     u16 *d_rooms = thrust::raw_pointer_cast(this->rooms.data());
 
@@ -115,49 +134,24 @@ void Population::init(const TimetableData &d_data) {
     const u16 *room_opt_room_idx = thrust::raw_pointer_cast(d_data.room_options.room_idx.data());
     const parser::TimeSlots *room_unavail = thrust::raw_pointer_cast(d_data.room_data.unavail.data());
     const usize *room_unavail_offsets = thrust::raw_pointer_cast(d_data.room_data.unavail_offsets.data());
+    const u16 *course_idxs = thrust::raw_pointer_cast(d_data.students.course_idxs.data());
+    const usize *course_idxs_offsets = thrust::raw_pointer_cast(d_data.students.course_idxs_offsets.data());
+    const u16 *configs_start = thrust::raw_pointer_cast(d_data.courses.configs_start.data());
+    const u16 *configs_end = thrust::raw_pointer_cast(d_data.courses.configs_end.data());
     usize n_rooms = d_data.room_data.n_rooms;
     usize n_unavail = d_data.room_data.unavail.size();
+    usize n_course_idxs = d_data.students.course_idxs.size();
 
     u32 seed = this->seed ^ static_cast<u32>(rand());
     constexpr u32 block_dim = LARGE_BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population_size);
     usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
     k_init_population<<<grid_dim, block_dim, sh_mem_size>>>(
-        d_times, d_rooms, n_classes, nullptr, d_times_start, d_times_end, d_rooms_start, d_rooms_end, time_opt_times,
-        room_opt_room_idx, room_unavail, room_unavail_offsets, n_rooms, n_unavail, seed);
+        d_config_prefs, d_times, d_rooms, n_classes, n_students, d_times_start, d_times_end, d_rooms_start, d_rooms_end,
+        time_opt_times, room_opt_room_idx, room_unavail, room_unavail_offsets, course_idxs, course_idxs_offsets,
+        configs_start, configs_end, n_rooms, n_unavail, n_course_idxs, seed);
     thrust::sequence(order.begin(), order.end());
 
-    cudaErrCheck(cudaDeviceSynchronize());
-}
-
-void Population::replace_worst(const TimetableData &d_data) {
-    usize n_worst = std::ceil(population_size * worst_frac);
-    // assuming `Population::sort` was called earlier this generation, so that the
-    // worst solutions are at the end
-    const u16 *d_worst = thrust::raw_pointer_cast(order.data() + population_size - n_worst);
-
-    u16 *d_times = thrust::raw_pointer_cast(times.data());
-    u16 *d_rooms = thrust::raw_pointer_cast(rooms.data());
-    const u16 *d_times_start = thrust::raw_pointer_cast(d_data.classes.times_start.data());
-    const u16 *d_times_end = thrust::raw_pointer_cast(d_data.classes.times_end.data());
-    const u16 *d_rooms_start = thrust::raw_pointer_cast(d_data.classes.rooms_start.data());
-    const u16 *d_rooms_end = thrust::raw_pointer_cast(d_data.classes.rooms_end.data());
-
-    const parser::TimeSlots *time_opt_times = thrust::raw_pointer_cast(d_data.time_options.times.data());
-    const u16 *room_opt_room_idx = thrust::raw_pointer_cast(d_data.room_options.room_idx.data());
-    const parser::TimeSlots *room_unavail = thrust::raw_pointer_cast(d_data.room_data.unavail.data());
-    const usize *room_unavail_offsets = thrust::raw_pointer_cast(d_data.room_data.unavail_offsets.data());
-    usize n_rooms = d_data.room_data.n_rooms;
-    usize n_unavail = d_data.room_data.unavail.size();
-
-    u32 seed = this->seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = SMALL_BLOCK_SIZE;
-    u32 grid_dim = static_cast<u32>(n_worst);
-    usize sh_mem_size = (2 * n_classes + 2 * block_dim) * sizeof(u16) + block_dim * sizeof(u32);
-
-    k_init_population<<<grid_dim, block_dim, sh_mem_size>>>(
-        d_times, d_rooms, n_classes, d_worst, d_times_start, d_times_end, d_rooms_start, d_rooms_end, time_opt_times,
-        room_opt_room_idx, room_unavail, room_unavail_offsets, n_rooms, n_unavail, seed);
     cudaErrCheck(cudaDeviceSynchronize());
 }
 

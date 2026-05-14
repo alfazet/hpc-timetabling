@@ -63,6 +63,7 @@ void Solver::print_metadata() const {
 
 FoundSolution Solver::solve() const {
     usize n_classes = d_data.classes.id.size();
+    usize n_students = d_data.students.id.size();
 
     f32 delta = 0.05;
     f32 min_mut = 0.1, max_mut = 0.9;
@@ -74,7 +75,8 @@ FoundSolution Solver::solve() const {
     Stats stats;
 
     kernels::Evaluator evaluator;
-    kernels::Population population(n_classes, this->population_size, this->elites_frac, this->worst_frac, this->seed);
+    kernels::Population population(n_students, n_classes, this->population_size, this->elites_frac, this->worst_frac,
+                                   this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
     kernels::Crossover crossover(this->cross_rate);
     kernels::Mutation mutation(this->mut_rate, this->mut_trials);
@@ -91,7 +93,9 @@ FoundSolution Solver::solve() const {
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
-        population.replace_worst(d_data);
+        // TODO: replace the worst solutions with elites
+        // instead of randomizing
+        // population.replace_worst(d_data);
         timer.stop();
 
         if (gen % update_interval == 0) {

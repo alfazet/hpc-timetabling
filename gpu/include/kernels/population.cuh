@@ -5,6 +5,8 @@
 #include "executor/solver.cuh"
 #include "model.cuh"
 
+constexpr usize MAX_COURSES_PER_STUDENT = 8;
+
 namespace kernels {
 
 struct StudentAssignment;
@@ -16,18 +18,10 @@ struct StudentAssignment;
 // `i`-th solution.
 // Indices refer to the TimetableData::time_options/room_options vectors.
 struct Population {
-    // TODO:
-    // add preferred config index for courses taken by students
-    // memory layout:
-    // - preference for sol 0 student 0 course 0 (among that students courses)
-    // - preference for sol 0 student 0 course 1 (among that students courses)
-    // ...
-    // - reference for sol 0 student 1 course 0 (among that students courses)
-    // ...
-    // - reference for sol 1 student 0 course 0 (among that students courses)
-    // ...
-    // taken memory: O(2 * population_size * n_students * max_courses_taken_by_a_student)
-
+    // indices of the preferred configs for each of the courses that each student wants to take
+    // the index of the preferred config for the `k`-th course of the `j`-th student in the `i`-th solution
+    // is placed at config_prefs[i * n_students + j * MAX_COURSES_PER_STUDENT + k]
+    thrust::device_vector<u16> config_prefs;
     // time slot assignments
     thrust::device_vector<u16> times;
     // room assignments
@@ -37,12 +31,13 @@ struct Population {
     // indices of solution sorted by increasing penalty
     thrust::device_vector<u16> order;
     u32 seed;
+    usize n_students;
     usize n_classes;
     usize population_size;
     f32 elites_frac;
     f32 worst_frac;
 
-    Population(usize n_classes, usize population_size, f32 elites_frac, f32 worst_frac, u32 seed);
+    Population(usize n_students, usize n_classes, usize population_size, f32 elites_frac, f32 worst_frac, u32 seed);
 
     // initialize the population with random solutions
     // (one thread per one solution)
@@ -50,9 +45,6 @@ struct Population {
 
     // sort by penalty
     void sort();
-
-    // replace the worst solutions with random assignments
-    void replace_worst(const TimetableData &d_data);
 
     Penalty get_best_penalty() const;
 
