@@ -8,6 +8,8 @@
 #include <FL/Fl_Text_Buffer.H>
 #include <FL/Fl_Text_Display.H>
 #include <FL/Fl_Text_Editor.H>
+#include <string>
+#include <vector>
 
 struct WindowElements {
     Fl_Window *window;
@@ -25,5 +27,6 @@ struct WindowElements {
 
 void initialize_window(WindowElements *we);
 void help_callback(Fl_Widget *widget, void *data);
+std::vector<std::string> parse_cmdline(const std::string &cmd);
 
 #endif // GPU_TIMETABLING_GUI_CUH

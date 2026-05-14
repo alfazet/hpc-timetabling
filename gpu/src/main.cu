@@ -44,19 +44,46 @@ int gui_main(int argc, char **argv) {
         we->stop_button->activate();
         we->stopper = false;
 
-        std::thread worker([&] {
-            timetabling_main(
-                0, // TODO
-                nullptr,
-                [&] {
-                    we->help_button->activate();
-                    we->start_button->activate();
-                    we->stop_button->deactivate();
-                },
-                &we->stopper
-            );
-        });
-        worker.detach();
+        std::thread([we] {
+            auto cmds_ptr = we->commands_buffer->text();
+            auto cmds = parse_cmdline(std::string("program ").append(cmds_ptr));
+            free(cmds_ptr);
+
+            std::vector<char*> argv_ptrs;
+            for (auto& arg : cmds) {
+                argv_ptrs.push_back(arg.data());
+            }
+            argv_ptrs.push_back(nullptr);
+
+            int argc = argv_ptrs.size() - 1;
+
+            try {
+                timetabling_main(
+                    argc,
+                    argv_ptrs.data(),
+                    [&] {
+                        Fl::lock();
+                        we->help_button->activate();
+                        we->start_button->activate();
+                        we->stop_button->deactivate();
+                        we->stopper = false;
+                        Fl::awake();
+                        Fl::unlock();
+                    },
+                    &we->stopper
+                );
+            } catch (std::exception &e) {
+                printf("%s\n", e.what());
+                Fl::lock();
+                we->help_button->activate();
+                we->start_button->activate();
+                we->stop_button->deactivate();
+                we->information_label->copy_label(e.what());
+                we->stopper = false;
+                Fl::awake();
+                Fl::unlock();
+            }
+        }).detach();
     }, &we);
 
     we.stop_button->callback([](Fl_Widget *widget, void *data) {

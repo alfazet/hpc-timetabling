@@ -37,3 +37,28 @@ void help_callback(Fl_Widget *widget, void *data) {
         #undef X
     );
 }
+
+std::vector<std::string> parse_cmdline(const std::string &cmd) {
+    std::vector<std::string> args;
+    std::string current_arg;
+    bool in_quotes = false;
+
+    for (char c : cmd) {
+        if (c == '\"') {
+            in_quotes = !in_quotes;
+        } else if (c == ' ' && !in_quotes) {
+            if (!current_arg.empty()) {
+                args.push_back(current_arg);
+                current_arg.clear();
+            }
+        } else {
+            current_arg += c;
+        }
+    }
+
+    if (!current_arg.empty()) {
+        args.push_back(current_arg);
+    }
+
+    return args;
+}
