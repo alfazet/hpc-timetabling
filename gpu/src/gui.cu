@@ -70,12 +70,11 @@ void initialize_window(WindowElements *we) {
 void help_callback(Fl_Widget *widget, void *data) {
     auto *we = static_cast<WindowElements *>(data);
 
-    we->information_label->label(
-        "List of all commands:\n"
-        #define X(flag, field, type, parser, default_val, help) flag ": " help "\n"
-        ARG_TABLE(X)
-        #undef X
-    );
+    we->information_label->label("List of all commands:\n"
+#define X(flag, field, type, parser, default_val, help) flag ": " help "\n"
+                                 ARG_TABLE(X)
+#undef X
+                                     "\nThe first argument is always the path to the dataset file.");
 }
 
 std::vector<std::string> parse_cmdline(const std::string &cmd) {
