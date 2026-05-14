@@ -8,7 +8,7 @@
 #include "serializer/serializer.hpp"
 
 template <typename lambda>
-void timetabling_main(int argc, char **argv, lambda post_solver_callback, bool *stopper = nullptr) {
+void timetabling_main(int argc, char **argv, std::ostream &out, lambda post_solver_callback, bool *stopper = nullptr) {
     ArgParser arg_parser(argc - 1, argv + 1);
     auto arg_list = arg_parser.parse_all();
     auto content = parser::utils::read_file(arg_list.dataset_path);
@@ -62,6 +62,7 @@ int gui_main(int argc, char **argv) {
                 timetabling_main(
                     argc,
                     argv_ptrs.data(),
+                    we->logs_buffer_stream,
                     [&] {
                         Fl::lock();
                         we->help_button->activate();
@@ -105,7 +106,7 @@ int main(int argc, char **argv) {
     // open cli version if any argument was provided
     if (argc > 1) {
         try {
-            timetabling_main(argc, argv, [] {});
+            timetabling_main(argc, argv, std::cout, [] {});
         } catch (std::exception &e) {
             printf("error: %s\n", e.what());
             return 1;

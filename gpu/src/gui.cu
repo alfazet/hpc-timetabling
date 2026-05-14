@@ -2,12 +2,52 @@
 
 #include "executor/cmd_args.hpp"
 
+std::streamsize FlBufferStreamBuf::xsputn(const char *s, std::streamsize count) {
+    std::string text(s, count);
+
+    Fl::lock();
+    fl_buf->append(text.c_str());
+    for (auto display : fl_displays) {
+        display->insert_position(fl_buf->length());
+        display->show_insert_position();
+    }
+    Fl::awake();
+    Fl::unlock();
+
+    return count;
+}
+
+std::streambuf::int_type FlBufferStreamBuf::overflow(int_type c) {
+    if (c != traits_type::eof()) {
+        char ch = traits_type::to_char_type(c);
+        char str[2] = {ch, '\0'};
+
+        Fl::lock();
+        fl_buf->append(str);
+        for (auto display : fl_displays) {
+            display->insert_position(fl_buf->length());
+            display->show_insert_position();
+        }
+        Fl::awake();
+        Fl::unlock();
+    }
+    return c;
+}
+
+FlBufferStreamBuf::FlBufferStreamBuf(Fl_Text_Buffer *buf, std::vector<Fl_Text_Display *> &fl_displays)
+    : fl_buf(buf), fl_displays(fl_displays) {}
+
+FlBufferStream::FlBufferStream(Fl_Text_Buffer *fl_buf, std::vector<Fl_Text_Display *> &fl_displays)
+    : std::ostream(&buf), buf(fl_buf, fl_displays) {}
+
 void initialize_window(WindowElements *we) {
     we->window = new Fl_Window(1000, 600, "HPC Timetabling CUDA");
 
     we->logs_buffer = new Fl_Text_Buffer();
     we->logs_display = new Fl_Text_Display(10, 10, 480, 580);
     we->logs_display->buffer(we->logs_buffer);
+    std::vector displays = {we->logs_display};
+    we->logs_buffer_stream = FlBufferStream(we->logs_buffer, displays);
 
     we->commands_label = new Fl_Box(510, 10, 480, 20, "Commands:");
     we->commands_buffer = new Fl_Text_Buffer();
