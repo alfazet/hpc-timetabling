@@ -47,7 +47,7 @@ void initialize_window(WindowElements *we) {
     we->logs_display = new Fl_Text_Display(10, 10, 480, 580);
     we->logs_display->buffer(we->logs_buffer);
     std::vector displays = {we->logs_display};
-    we->logs_buffer_stream = FlBufferStream(we->logs_buffer, displays);
+    we->logs_buffer_stream = new FlBufferStream(we->logs_buffer, displays);
 
     we->commands_label = new Fl_Box(510, 10, 480, 20, "Commands:");
     we->commands_buffer = new Fl_Text_Buffer();

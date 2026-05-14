@@ -1,5 +1,7 @@
 #include "executor/solver.cuh"
 
+#include <iomanip>
+
 #include "executor/adjuster.cuh"
 #include "executor/timer.cuh"
 #include "kernels/assigner.cuh"
@@ -47,21 +49,22 @@ Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_si
       cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac),
       worst_frac(worst_frac), ls_iters(ls_iters), seed(seed), stopper(stopper) {}
 
-void Solver::print_metadata() const {
-    printf("Solver started...\n");
-    printf("Generations: %u\n", generations);
-    printf("Population size: %u\n", population_size);
-    printf("Selection: %.1f%%\n", sel_frac * 100);
-    printf("Crossover rate: %.4f\n", cross_rate);
-    printf("Mutation rate: %.4f\n", mut_rate);
-    printf("Mutation trials per iter: %u\n", mut_trials);
-    printf("Elites: %.4f%%\n", elites_frac * 100);
-    printf("Anti-elites: %.4f%%\n", worst_frac * 100);
-    printf("Local search iterations: %u\n", ls_iters);
-    printf("Seed: %u\n", seed);
+void Solver::print_metadata(std::ostream &out) const {
+    out << "Solver started...\n"
+        << "Generations: " << generations << "\n"
+        << "Population size: " << population_size << "\n"
+        << "Selection: " << std::fixed << std::setprecision(1) << (sel_frac * 100.0) << "%\n"
+        << std::setprecision(4)
+        << "Crossover rate: " << cross_rate << "\n"
+        << "Mutation rate: " << mut_rate << "\n"
+        << "Mutation trials per iter: " << mut_trials << "\n"
+        << "Elites: " << (elites_frac * 100.0) << "%\n"
+        << "Anti-elites: " << (worst_frac * 100.0) << "%\n"
+        << "Local search iterations: " << ls_iters << "\n"
+        << "Seed: " << seed << "\n";
 }
 
-FoundSolution Solver::solve() const {
+FoundSolution Solver::solve(std::ostream &out) const {
     usize n_classes = d_data.classes.id.size();
 
     f32 delta = 0.05;
@@ -82,7 +85,7 @@ FoundSolution Solver::solve() const {
     kernels::LocalSearch local_search(this->ls_iters);
     population.init(d_data);
 
-    this->print_metadata();
+    this->print_metadata(out);
     u32 update_interval = (generations + 100 - 1) / 100;
     Timer timer;
     for (u32 gen = 1; gen <= generations; gen++) {

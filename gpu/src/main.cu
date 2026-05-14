@@ -9,7 +9,7 @@
 
 template <typename lambda>
 void timetabling_main(int argc, char **argv, std::ostream &out, lambda post_solver_callback, bool *stopper = nullptr) {
-    ArgParser arg_parser(argc - 1, argv + 1);
+    ArgParser arg_parser(argc - 1, argv + 1, out);
     auto arg_list = arg_parser.parse_all();
     auto content = parser::utils::read_file(arg_list.dataset_path);
     auto problem = parser::Problem::parse(content);
@@ -20,12 +20,12 @@ void timetabling_main(int argc, char **argv, std::ostream &out, lambda post_solv
     Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate,
                   arg_list.mut_rate, arg_list.mut_trials, arg_list.elites_frac, arg_list.worst_frac, arg_list.ls_iters,
                   arg_list.seed, stopper);
-    auto best_solution = solver.solve();
+    auto best_solution = solver.solve(out);
     auto output = best_solution.serialize(d_data);
     auto xml = output.serialize(metadata);
 
     serializer::utils::write_file(arg_list.output_path, xml);
-    printf("Solution file written to %s\n", arg_list.output_path.c_str());
+    out << "Solution file written to " << arg_list.output_path << std::endl;
     post_solver_callback();
 }
 
@@ -39,6 +39,7 @@ int gui_main(int argc, char **argv) {
     we.start_button->callback([](Fl_Widget *widget, void *data) {
         auto *we = static_cast<WindowElements *>(data);
 
+        we->logs_buffer->text(nullptr); // cleaning
         we->help_button->deactivate();
         we->start_button->deactivate();
         we->stop_button->activate();
@@ -62,7 +63,7 @@ int gui_main(int argc, char **argv) {
                 timetabling_main(
                     argc,
                     argv_ptrs.data(),
-                    we->logs_buffer_stream,
+                    *we->logs_buffer_stream,
                     [&] {
                         Fl::lock();
                         we->help_button->activate();

@@ -32,7 +32,7 @@ public:
 struct WindowElements {
     Fl_Window *window;
     Fl_Text_Buffer *logs_buffer;
-    FlBufferStream logs_buffer_stream;
+    FlBufferStream *logs_buffer_stream;
     Fl_Text_Display *logs_display;
     Fl_Box *commands_label;
     Fl_Text_Buffer *commands_buffer;

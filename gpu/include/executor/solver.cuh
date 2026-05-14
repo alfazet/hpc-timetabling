@@ -34,9 +34,9 @@ struct Solver {
     Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
            f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 seed, bool *stopper);
 
-    void print_metadata() const;
+    void print_metadata(std::ostream &out) const;
 
-    FoundSolution solve() const;
+    FoundSolution solve(std::ostream &out) const;
 };
 
 #endif // GPU_TIMETABLING_SOLVER_CUH

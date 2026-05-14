@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <ostream>
 
 #include "typedefs.hpp"
 
@@ -44,12 +45,13 @@ class ArgParser {
     usize n_args;
     char **values;
     usize arg_i = 0;
+    std::ostream &out;
 
-    ArgParser(usize n_args_, char **values_);
+    ArgParser(usize n_args_, char **values_, std::ostream &out_);
 
     ArgsList parse_all();
 
-    static void display_help();
+    static void display_help(std::ostream &out);
 
   private:
     static std::unordered_map<std::string, void (ArgParser::*)(ArgsList &) const> flag_parsers;

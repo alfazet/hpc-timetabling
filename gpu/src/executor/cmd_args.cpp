@@ -45,7 +45,7 @@ std::unordered_map<std::string, ParserFn> ArgParser::flag_parsers = {
 #define X(flag, field, type, parser, default_val, help)                                                                \
     void ArgParser::parse_##field(ArgsList &list) const {                                                              \
         if (this->arg_i >= this->n_args) {                                                                             \
-            display_help();                                                                                            \
+            display_help(this->out);                                                                                   \
             throw std::runtime_error("missing value for " #field);                                                     \
         }                                                                                                              \
         list.field = parser(this->values[this->arg_i], #field);                                                        \
@@ -53,21 +53,21 @@ std::unordered_map<std::string, ParserFn> ArgParser::flag_parsers = {
 ARG_TABLE(X)
 #undef X
 
-void ArgParser::display_help() {
-    printf("Arguments:\n<dataset_path> [flags]\nwhere:\n");
-#define X(flag, field, type, parser, default_val, help) printf("  %s : %s\n", flag, help);
+void ArgParser::display_help(std::ostream &out) {
+    out << "Arguments:\n<dataset_path> [flags]\nwhere:\n";
+#define X(flag, field, type, parser, default_val, help) out << "  %s : %s\n" << flag << help;
     ARG_TABLE(X)
 #undef X
 }
 
-ArgParser::ArgParser(usize n_args_, char **values_) : n_args(n_args_), values(values_) {}
+ArgParser::ArgParser(usize n_args_, char **values_, std::ostream &out_) : n_args(n_args_), values(values_), out(out_) {}
 
 /// assumes that CLI args are <flag_1> <value_1> <flag_2> <value_2> ...
 /// the first argument should always be the dataset path
 ArgsList ArgParser::parse_all() {
     ArgsList list{};
     if (n_args < 1) {
-        display_help();
+        display_help(this->out);
         throw std::runtime_error("dataset file path is required");
     }
     list.dataset_path = this->values[0];
@@ -77,7 +77,7 @@ ArgsList ArgParser::parse_all() {
         const char *flag = this->values[this->arg_i];
         auto iter = flag_parsers.find(flag);
         if (iter == flag_parsers.end()) {
-            display_help();
+            display_help(this->out);
             throw std::runtime_error("invalid flag " + std::string(flag));
         }
         const auto &parser = iter->second;
