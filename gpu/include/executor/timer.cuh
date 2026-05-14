@@ -1,6 +1,8 @@
 #ifndef GPU_TIMETABLING_TIMER_CUH
 #define GPU_TIMETABLING_TIMER_CUH
 
+#include <ostream>
+
 #include "typedefs.hpp"
 
 class Timer {
@@ -11,7 +13,7 @@ class Timer {
 
     void stop();
 
-    void print(u32 generations);
+    void print(u32 generations, std::ostream &out);
 
   private:
     cudaEvent_t start_event{};

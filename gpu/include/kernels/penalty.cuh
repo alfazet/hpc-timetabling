@@ -1,6 +1,8 @@
 #ifndef GPU_TIMETABLING_PENALTY_CUH
 #define GPU_TIMETABLING_PENALTY_CUH
 
+#include <ostream>
+
 #include "typedefs.hpp"
 
 namespace kernels {
@@ -24,7 +26,7 @@ struct Penalty {
 
     __host__ __device__ bool operator!=(const Penalty &p) const { return !(*this == p); }
 
-    void print() const;
+    void print(std::ostream &out) const;
 };
 
 static Penalty MAX_PENALTY(UINT32_MAX, UINT32_MAX);
