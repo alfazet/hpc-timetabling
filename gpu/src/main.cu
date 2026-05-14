@@ -29,7 +29,11 @@ int gui_main(int argc, char **argv) {
 
     Fl::lock();
 
-    initialize_window(we);
+    initialize_window(&we);
+
+    we.start_button->callback([](Fl_Widget *widget, void *data) {
+        // TODO
+    }, &we);
 
     we.window->end();
     we.window->show(argc, argv);

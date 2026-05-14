@@ -22,6 +22,7 @@ struct WindowElements {
     Fl_Box *information_label;
 };
 
-void initialize_window(WindowElements &we);
+void initialize_window(WindowElements *we);
+void help_callback(Fl_Widget *widget, void *data);
 
 #endif // GPU_TIMETABLING_GUI_CUH
