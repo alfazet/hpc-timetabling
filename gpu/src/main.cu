@@ -43,6 +43,7 @@ int gui_main(int argc, char **argv) {
         we->start_button->deactivate();
         we->stop_button->activate();
         we->stopper = false;
+        we->information_label->label("Start requested. Observe the log box on the left.");
 
         std::thread([we] {
             auto cmds_ptr = we->commands_buffer->text();
@@ -73,12 +74,11 @@ int gui_main(int argc, char **argv) {
                     &we->stopper
                 );
             } catch (std::exception &e) {
-                printf("%s\n", e.what());
                 Fl::lock();
                 we->help_button->activate();
                 we->start_button->activate();
                 we->stop_button->deactivate();
-                we->information_label->copy_label(e.what());
+                we->information_label->copy_label(std::string("Error: ").append(e.what()).c_str());
                 we->stopper = false;
                 Fl::awake();
                 Fl::unlock();
@@ -91,6 +91,7 @@ int gui_main(int argc, char **argv) {
 
         we->stopper = true; // fuck the races
         we->stop_button->deactivate();
+        we->information_label->label("Stop requested. Please wait for the iteration to finish...");
     });
 
     we.window->end();
