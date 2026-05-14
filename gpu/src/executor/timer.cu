@@ -1,6 +1,8 @@
 #include "executor/timer.cuh"
 #include "kernels/common.cuh"
 
+#include <iomanip>
+
 void Timer::start() {
     cudaErrCheck(cudaEventCreate(&start_event));
     cudaErrCheck(cudaEventCreate(&stop_event));
@@ -17,6 +19,7 @@ void Timer::stop() {
     cudaErrCheck(cudaEventDestroy(stop_event));
 }
 
-void Timer::print(u32 generations) {
-    printf("Average time per generation (over the last %u): %.4f ms\n\n", generations, elapsed / generations);
+void Timer::print(u32 generations, std::ostream &out) {
+    out << "Average time per generation (over the last " << generations
+        << "): " << std::fixed << std::setprecision(4) << (elapsed / generations) << " ms\n\n";
 }

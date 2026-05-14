@@ -231,7 +231,7 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
                                const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
                                const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets, usize n_rooms,
                                usize n_unavail, u32 opt_time, u32 opt_room, u32 n_iterations, u32 seed,
-                               const u32 *travel_time, const parser::DistributionKind *dist_kind,
+                               const u32 *travel_time, const DistributionKind *dist_kind,
                                const u16 *dist_class_idxs, const usize *dist_class_idxs_offsets,
                                const Penalty *dist_penalty, usize n_distributions, const u16 *class_dist_idxs,
                                const usize *class_dist_offsets, usize n_dist_class_idxs) {
