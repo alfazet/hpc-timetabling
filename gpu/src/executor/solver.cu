@@ -44,10 +44,11 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 seed, bool *stopper)
+               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 tournament_size,
+               u32 seed, bool *stopper)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
       cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac),
-      worst_frac(worst_frac), ls_iters(ls_iters), seed(seed), stopper(stopper) {}
+      worst_frac(worst_frac), ls_iters(ls_iters), tournament_size(tournament_size), seed(seed), stopper(stopper) {}
 
 void Solver::print_metadata(std::ostream &out) const {
     out << "Solver started...\n"
@@ -60,6 +61,7 @@ void Solver::print_metadata(std::ostream &out) const {
         << "Elites: " << (elites_frac * 100.0) << "%\n"
         << "Anti-elites: " << (worst_frac * 100.0) << "%\n"
         << "Local search iterations: " << ls_iters << "\n"
+        << "Tournament size: " << tournament_size << "\n"
         << "Seed: " << seed << "\n";
 }
 
@@ -82,7 +84,7 @@ FoundSolution Solver::solve(std::ostream &out) const {
     kernels::StudentAssignment assignment(n_classes, this->population_size);
     kernels::Crossover crossover(this->cross_rate);
     kernels::Mutation mutation(this->mut_rate, this->mut_trials);
-    kernels::Selection selection(this->population_size, this->sel_frac);
+    kernels::Selection selection(this->population_size, this->sel_frac, this->tournament_size);
     kernels::LocalSearch local_search(this->ls_iters);
     population.init(d_data);
 

@@ -17,6 +17,7 @@ constexpr u32 DEFAULT_MUTATION_TRIALS = 32;
 constexpr f32 DEFAULT_ELITES_FRAC = 0.05;
 constexpr f32 DEFAULT_WORST_FRAC = 0.125;
 constexpr u32 DEFAULT_LS_ITERS = 32;
+constexpr u32 DEFAULT_TOURNAMENT_SIZE = 4;
 constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
 
 // list all optional arguments here
@@ -30,6 +31,8 @@ constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
     X("--elit-frac", elites_frac, f32, parse_f32, DEFAULT_ELITES_FRAC, "fraction of population to keep as elite")      \
     X("--worst-frac", worst_frac, f32, parse_f32, DEFAULT_WORST_FRAC, "fraction of the worst solutions to replace")    \
     X("--ls-iters", ls_iters, u32, parse_u32, DEFAULT_LS_ITERS, "local search iterations per generation")              \
+    X("--tour-size", tournament_size, u32, parse_u32, DEFAULT_TOURNAMENT_SIZE,                                         \
+      "tournament selection size (must be 2, 4, 8, 16 or 32)")                                                         \
     X("-s", seed, u32, parse_u32, DEFAULT_SEED, "random seed")                                                         \
     X("-o", output_path, std::string, parse_string, DEFAULT_OUTPUT_PATH, "solution output path")
 
