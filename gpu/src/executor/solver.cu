@@ -54,8 +54,7 @@ void Solver::print_metadata(std::ostream &out) const {
         << "Generations: " << generations << "\n"
         << "Population size: " << population_size << "\n"
         << "Selection: " << std::fixed << std::setprecision(1) << (sel_frac * 100.0) << "%\n"
-        << std::setprecision(4)
-        << "Crossover rate: " << cross_rate << "\n"
+        << std::setprecision(4) << "Crossover rate: " << cross_rate << "\n"
         << "Mutation rate: " << mut_rate << "\n"
         << "Mutation trials per iter: " << mut_trials << "\n"
         << "Elites: " << (elites_frac * 100.0) << "%\n"
@@ -96,9 +95,7 @@ FoundSolution Solver::solve(std::ostream &out) const {
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
-        // TODO: replace the worst solutions with elites
-        // instead of randomizing
-        // population.replace_worst(d_data);
+        population.replace_worst(d_data, mutation.prob);
         timer.stop();
 
         if (gen % update_interval == 0) {

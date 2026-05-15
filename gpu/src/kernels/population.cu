@@ -160,6 +160,92 @@ void Population::sort() {
     thrust::sort_by_key(penalty.begin(), penalty.end(), order.begin());
 }
 
+__global__ void k_replace_worst(u16 *config_prefs, u16 *times, u16 *rooms, const u16 *worst_indices,
+                                const u16 *best_indices, usize n_best, usize n_classes, usize n_students,
+                                const u16 *times_start, const u16 *times_end, const u16 *rooms_start,
+                                const u16 *rooms_end, const u16 *course_idxs, const usize *course_idxs_offsets,
+                                const u16 *configs_start, const u16 *configs_end, usize n_course_idxs, f32 mut_prob,
+                                u32 seed) {
+    usize tid = threadIdx.x;
+
+    curandState rng;
+    curand_init(seed, blockIdx.x * blockDim.x + tid, 0, &rng);
+    // each of the worst solutions gets replaced with a random elite solution
+    // with a chance for a mutation
+    u16 worst_sol = worst_indices[blockIdx.x];
+    usize worst_sol_offset_classes = worst_sol * n_classes;
+    usize worst_sol_offset_students = worst_sol * n_students * MAX_COURSES_PER_STUDENT;
+    u16 best_sol = best_indices[curand(&rng) % n_best];
+    usize best_sol_offset_classes = best_sol * n_classes;
+    usize best_sol_offset_students = best_sol * n_students * MAX_COURSES_PER_STUDENT;
+
+    for (usize cls = tid; cls < n_classes; cls += blockDim.x) {
+        u16 t = times[best_sol_offset_classes + cls];
+        u16 r = rooms[best_sol_offset_classes + cls];
+        if (curand_uniform(&rng) < mut_prob) {
+            u16 t_start = times_start[cls];
+            u16 t_end = times_end[cls];
+            u16 n_times = t_end - t_start;
+            t = t_start + (n_times > 0 ? curand(&rng) % n_times : 0);
+
+            u16 r_start = rooms_start[cls];
+            u16 r_end = rooms_end[cls];
+            if (r_start == r_end) {
+                r = NO_ROOM;
+            } else {
+                r = r_start + curand(&rng) % (r_end - r_start);
+            }
+        }
+        times[worst_sol_offset_classes + cls] = t;
+        rooms[worst_sol_offset_classes + cls] = r;
+    }
+
+    for (usize st = tid; st < n_students; st += blockDim.x) {
+        usize courses_start = course_idxs_offsets[st];
+        usize courses_end = st < n_students - 1 ? course_idxs_offsets[st + 1] : n_course_idxs;
+        for (usize c = courses_start; c < courses_end; c++) {
+            usize k = c - courses_start;
+            u16 pref = config_prefs[best_sol_offset_students + st * MAX_COURSES_PER_STUDENT + k];
+            if (curand_uniform(&rng) < mut_prob) {
+                u16 course_idx = course_idxs[c];
+                u16 s = configs_start[course_idx], e = configs_end[course_idx];
+                if (e > s) {
+                    pref = s + curand(&rng) % (e - s);
+                }
+            }
+            config_prefs[worst_sol_offset_students + st * MAX_COURSES_PER_STUDENT + k] = pref;
+        }
+    }
+}
+
+void Population::replace_worst(const TimetableData &d_data, f32 mut_prob) {
+    usize n_worst = std::ceil(population_size * worst_frac);
+    usize n_best = std::ceil(population_size * elites_frac);
+
+    u16 *d_config_prefs = thrust::raw_pointer_cast(config_prefs.data());
+    u16 *d_times = thrust::raw_pointer_cast(times.data());
+    u16 *d_rooms = thrust::raw_pointer_cast(rooms.data());
+    const u16 *d_worst = thrust::raw_pointer_cast(order.data()) + population_size - n_worst;
+    const u16 *d_best = thrust::raw_pointer_cast(order.data());
+    const u16 *d_times_start = thrust::raw_pointer_cast(d_data.classes.times_start.data());
+    const u16 *d_times_end = thrust::raw_pointer_cast(d_data.classes.times_end.data());
+    const u16 *d_rooms_start = thrust::raw_pointer_cast(d_data.classes.rooms_start.data());
+    const u16 *d_rooms_end = thrust::raw_pointer_cast(d_data.classes.rooms_end.data());
+    const u16 *d_course_idxs = thrust::raw_pointer_cast(d_data.students.course_idxs.data());
+    const usize *d_course_idxs_offsets = thrust::raw_pointer_cast(d_data.students.course_idxs_offsets.data());
+    const u16 *d_configs_start = thrust::raw_pointer_cast(d_data.courses.configs_start.data());
+    const u16 *d_configs_end = thrust::raw_pointer_cast(d_data.courses.configs_end.data());
+
+    u32 seed = this->seed ^ static_cast<u32>(rand());
+    constexpr u32 block_dim = SMALL_BLOCK_SIZE;
+    u32 grid_dim = static_cast<u32>(n_worst);
+    k_replace_worst<<<grid_dim, block_dim>>>(d_config_prefs, d_times, d_rooms, d_worst, d_best, n_best, n_classes,
+                                             n_students, d_times_start, d_times_end, d_rooms_start, d_rooms_end,
+                                             d_course_idxs, d_course_idxs_offsets, d_configs_start, d_configs_end,
+                                             d_data.students.course_idxs.size(), mut_prob, seed);
+    cudaErrCheck(cudaDeviceSynchronize());
+}
+
 // assuming `Population::sort` was called earlier this generation
 Penalty Population::get_best_penalty() const { return this->penalty[0]; }
 
