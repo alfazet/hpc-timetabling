@@ -37,10 +37,10 @@ __device__ bool is_student_in_class(const u16 *students_idxs, const u32 *class_c
     return false;
 }
 
-__device__ void apply_dist_penalty(u32 &hard, u32 &soft, const Penalty &p, u32 factor = 1) {
-    hard += p.hard * factor;
-    soft += p.soft * factor;
-}
+// __device__ void apply_dist_penalty(u32 &hard, u32 &soft, const Penalty &p, u32 factor = 1) {
+//     hard += p.hard * factor;
+//     soft += p.soft * factor;
+// }
 
 __global__ void k_evaluate(Penalty *penalties, const u16 *pop_times, const u16 *pop_rooms, const u16 *students_idxs,
                            const u32 *class_counts, const parser::TimeSlots *time_opt_times,
