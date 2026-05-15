@@ -1,22 +1,22 @@
 #ifndef GPU_TIMETABLING_CMD_ARGS_H
 #define GPU_TIMETABLING_CMD_ARGS_H
 
+#include <ostream>
 #include <string>
 #include <unordered_map>
-#include <ostream>
 
 #include "typedefs.hpp"
 
 constexpr u32 DEFAULT_GENERATIONS = 128;
-constexpr u32 DEFAULT_POPULATION_SIZE = 512;
+constexpr u32 DEFAULT_POPULATION_SIZE = 1024;
 constexpr u32 DEFAULT_SEED = 21372137;
 constexpr f32 DEFAULT_SEL_FRAC = 0.1;
-constexpr f32 DEFAULT_CROSSOVER_RATE = 0.75;
-constexpr f32 DEFAULT_MUTATION_RATE = 0.25;
-constexpr u32 DEFAULT_MUTATION_TRIALS = 16;
+constexpr f32 DEFAULT_CROSSOVER_RATE = 0.25;
+constexpr f32 DEFAULT_MUTATION_RATE = 0.75;
+constexpr u32 DEFAULT_MUTATION_TRIALS = 32;
 constexpr f32 DEFAULT_ELITES_FRAC = 0.05;
-constexpr f32 DEFAULT_WORST_FRAC = 0.1;
-constexpr u32 DEFAULT_LS_ITERS = 16;
+constexpr f32 DEFAULT_WORST_FRAC = 0.125;
+constexpr u32 DEFAULT_LS_ITERS = 32;
 constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
 
 // list all optional arguments here

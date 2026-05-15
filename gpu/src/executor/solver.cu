@@ -71,7 +71,7 @@ FoundSolution Solver::solve(std::ostream &out) const {
     f32 min_mut = 0.1, max_mut = 0.9;
     f32 min_cross = 0.1, max_cross = 0.9;
     f32 min_elites_frac = 0.05, max_elites_frac = 0.05;
-    f32 min_worst_frac = 0.1, max_worst_frac = 0.1;
+    f32 min_worst_frac = 0.05, max_worst_frac = 0.25;
     Adjuster adjuster(delta, min_mut, max_mut, min_cross, max_cross, min_elites_frac, max_elites_frac, min_worst_frac,
                       max_worst_frac);
     Stats stats;
@@ -95,7 +95,13 @@ FoundSolution Solver::solve(std::ostream &out) const {
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
-        population.replace_worst(d_data, mutation.prob);
+
+        // TODO: the penalties could likely be cached and reused
+        population.replace_worst(d_data, mutation.prob / 2);
+        local_search.search(population, d_data);
+        assignment.assign(d_data, population);
+        evaluator.evaluate(d_data, population, assignment);
+        population.sort();
         timer.stop();
 
         if (gen % update_interval == 0) {

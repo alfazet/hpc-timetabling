@@ -6,8 +6,8 @@ namespace kernels {
 
 Selection::Selection(usize population_size, f32 frac) : selected(std::ceil(population_size * frac)), frac(frac) {}
 
-__global__ void k_tournament_select(u16 *selected, const Penalty *penalty, const u16 *order, usize n_selected,
-                                    usize population_size, u32 seed) {
+__global__ void k_tournament_select(u16 *selected, const u16 *order, usize n_selected, usize population_size,
+                                    u32 seed) {
     usize warp_id = blockIdx.x * blockDim.x / WARP_SIZE + threadIdx.x / WARP_SIZE;
     if (warp_id >= n_selected) {
         return;
@@ -36,15 +36,13 @@ void Selection::select(const Population &population) {
     u32 n_selected = this->selected.size();
     u16 *d_selected = thrust::raw_pointer_cast(this->selected.data());
     const u16 *d_order = thrust::raw_pointer_cast(population.order.data());
-    const Penalty *d_penalty = thrust::raw_pointer_cast(population.penalty.data());
     u32 seed = population.seed ^ static_cast<u32>(rand());
 
     // one warp selects one winner (so we need n_selected warps)
     constexpr usize WARPS_PER_BLOCK = SMALL_BLOCK_SIZE / WARP_SIZE;
     constexpr dim3 block_dim(SMALL_BLOCK_SIZE);
     dim3 grid_dim((n_selected + WARPS_PER_BLOCK - 1) / WARPS_PER_BLOCK);
-    k_tournament_select<<<grid_dim, block_dim>>>(d_selected, d_penalty, d_order, n_selected, population.population_size,
-                                                 seed);
+    k_tournament_select<<<grid_dim, block_dim>>>(d_selected, d_order, n_selected, population.population_size, seed);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }
