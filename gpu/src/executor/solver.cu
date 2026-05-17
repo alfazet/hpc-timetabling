@@ -44,23 +44,24 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
 }
 
 Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 seed, bool *stopper)
+               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 tournament_size,
+               u32 seed, bool *stopper)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
       cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac),
-      worst_frac(worst_frac), ls_iters(ls_iters), seed(seed), stopper(stopper) {}
+      worst_frac(worst_frac), ls_iters(ls_iters), tournament_size(tournament_size), seed(seed), stopper(stopper) {}
 
 void Solver::print_metadata(std::ostream &out) const {
     out << "Solver started...\n"
         << "Generations: " << generations << "\n"
         << "Population size: " << population_size << "\n"
         << "Selection: " << std::fixed << std::setprecision(1) << (sel_frac * 100.0) << "%\n"
-        << std::setprecision(4)
-        << "Crossover rate: " << cross_rate << "\n"
+        << std::setprecision(4) << "Crossover rate: " << cross_rate << "\n"
         << "Mutation rate: " << mut_rate << "\n"
         << "Mutation trials per iter: " << mut_trials << "\n"
         << "Elites: " << (elites_frac * 100.0) << "%\n"
         << "Anti-elites: " << (worst_frac * 100.0) << "%\n"
         << "Local search iterations: " << ls_iters << "\n"
+        << "Tournament size: " << tournament_size << "\n"
         << "Seed: " << seed << "\n";
 }
 
@@ -72,7 +73,7 @@ FoundSolution Solver::solve(std::ostream &out) const {
     f32 min_mut = 0.1, max_mut = 0.9;
     f32 min_cross = 0.1, max_cross = 0.9;
     f32 min_elites_frac = 0.05, max_elites_frac = 0.05;
-    f32 min_worst_frac = 0.1, max_worst_frac = 0.1;
+    f32 min_worst_frac = 0.05, max_worst_frac = 0.25;
     Adjuster adjuster(delta, min_mut, max_mut, min_cross, max_cross, min_elites_frac, max_elites_frac, min_worst_frac,
                       max_worst_frac);
     Stats stats;
@@ -83,7 +84,7 @@ FoundSolution Solver::solve(std::ostream &out) const {
     kernels::StudentAssignment assignment(n_classes, this->population_size);
     kernels::Crossover crossover(this->cross_rate);
     kernels::Mutation mutation(this->mut_rate, this->mut_trials);
-    kernels::Selection selection(this->population_size, this->sel_frac);
+    kernels::Selection selection(this->population_size, this->sel_frac, this->tournament_size);
     kernels::LocalSearch local_search(this->ls_iters);
     population.init(d_data);
 
@@ -96,9 +97,13 @@ FoundSolution Solver::solve(std::ostream &out) const {
         assignment.assign(d_data, population);
         evaluator.evaluate(d_data, population, assignment);
         population.sort();
-        // TODO: replace the worst solutions with elites
-        // instead of randomizing
-        // population.replace_worst(d_data);
+
+        // TODO: the penalties could likely be cached and reused
+        population.replace_worst(d_data, mutation.prob / 2);
+        local_search.search(population, d_data);
+        assignment.assign(d_data, population);
+        evaluator.evaluate(d_data, population, assignment);
+        population.sort();
         timer.stop();
 
         if (gen % update_interval == 0) {

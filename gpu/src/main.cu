@@ -19,7 +19,7 @@ void timetabling_main(int argc, char **argv, std::ostream &out, lambda post_solv
     srand(arg_list.seed);
     Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate,
                   arg_list.mut_rate, arg_list.mut_trials, arg_list.elites_frac, arg_list.worst_frac, arg_list.ls_iters,
-                  arg_list.seed, stopper);
+                  arg_list.tournament_size, arg_list.seed, stopper);
     auto best_solution = solver.solve(out);
     auto output = best_solution.serialize(d_data);
     auto xml = output.serialize(metadata);
@@ -36,66 +36,67 @@ int gui_main(int argc, char **argv) {
 
     initialize_window(&we);
 
-    we.start_button->callback([](Fl_Widget *widget, void *data) {
-        auto *we = static_cast<WindowElements *>(data);
+    we.start_button->callback(
+        [](Fl_Widget *widget, void *data) {
+            auto *we = static_cast<WindowElements *>(data);
 
-        we->logs_buffer->text(nullptr); // cleaning
-        we->help_button->deactivate();
-        we->start_button->deactivate();
-        we->stop_button->activate();
-        we->stopper = false;
-        we->information_label->label("Start requested. Observe the log box on the left.");
+            we->logs_buffer->text(nullptr); // cleaning
+            we->help_button->deactivate();
+            we->start_button->deactivate();
+            we->stop_button->activate();
+            we->stopper = false;
+            we->information_label->label("Start requested. Observe the log box on the left.");
 
-        std::thread([we] {
-            auto cmds_ptr = we->commands_buffer->text();
-            auto cmds = parse_cmdline(std::string("program ").append(cmds_ptr));
-            free(cmds_ptr);
+            std::thread([we] {
+                auto cmds_ptr = we->commands_buffer->text();
+                auto cmds = parse_cmdline(std::string("program ").append(cmds_ptr));
+                free(cmds_ptr);
 
-            std::vector<char*> argv_ptrs;
-            for (auto& arg : cmds) {
-                argv_ptrs.push_back(arg.data());
-            }
-            argv_ptrs.push_back(nullptr);
+                std::vector<char *> argv_ptrs;
+                for (auto &arg : cmds) {
+                    argv_ptrs.push_back(arg.data());
+                }
+                argv_ptrs.push_back(nullptr);
 
-            int argc = argv_ptrs.size() - 1;
+                int argc = argv_ptrs.size() - 1;
 
-            try {
-                timetabling_main(
-                    argc,
-                    argv_ptrs.data(),
-                    *we->logs_buffer_stream,
-                    [&] {
-                        Fl::lock();
-                        we->help_button->activate();
-                        we->start_button->activate();
-                        we->stop_button->deactivate();
-                        we->stopper = false;
-                        we->information_label->label("Execution finished.");
-                        Fl::awake();
-                        Fl::unlock();
-                    },
-                    &we->stopper
-                );
-            } catch (std::exception &e) {
-                Fl::lock();
-                we->help_button->activate();
-                we->start_button->activate();
-                we->stop_button->deactivate();
-                we->stopper = false;
-                we->information_label->copy_label(std::string("Error: ").append(e.what()).c_str());
-                Fl::awake();
-                Fl::unlock();
-            }
-        }).detach();
-    }, &we);
+                try {
+                    timetabling_main(
+                        argc, argv_ptrs.data(), *we->logs_buffer_stream,
+                        [&] {
+                            Fl::lock();
+                            we->help_button->activate();
+                            we->start_button->activate();
+                            we->stop_button->deactivate();
+                            we->stopper = false;
+                            we->information_label->label("Execution finished.");
+                            Fl::awake();
+                            Fl::unlock();
+                        },
+                        &we->stopper);
+                } catch (std::exception &e) {
+                    Fl::lock();
+                    we->help_button->activate();
+                    we->start_button->activate();
+                    we->stop_button->deactivate();
+                    we->stopper = false;
+                    we->information_label->copy_label(std::string("Error: ").append(e.what()).c_str());
+                    Fl::awake();
+                    Fl::unlock();
+                }
+            }).detach();
+        },
+        &we);
 
-    we.stop_button->callback([](Fl_Widget *widget, void *data) {
-        auto *we = static_cast<WindowElements *>(data);
+    we.stop_button->callback(
+        [](Fl_Widget *widget, void *data) {
+            auto *we = static_cast<WindowElements *>(data);
 
-        we->stopper = true; // fuck the races
-        we->stop_button->deactivate();
-        we->information_label->label("Stop requested. Please wait for the iteration to finish...");
-    }, &we);
+            we->stopper = true; // fuck the races
+            we->stop_button->deactivate();
+            we->information_label->label("Stop requested. Please wait for the iteration to finish...");
+        },
+        &we);
 
     we.window->end();
     we.window->show(argc, argv);

@@ -12,8 +12,9 @@ struct Selection {
     // indices of selected solutions
     thrust::device_vector<u16> selected;
     f32 frac;
+    u32 tournament_size;
 
-    Selection(usize population_size, f32 frac);
+    Selection(usize population_size, f32 frac, u32 tournament_size);
 
     void select(const Population &population);
 };

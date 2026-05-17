@@ -46,6 +46,9 @@ struct Population {
     // sort by penalty
     void sort();
 
+    // replace the worst solutions with mutated copies of elites
+    void replace_worst(const TimetableData &d_data, f32 mut_prob);
+
     Penalty get_best_penalty() const;
 
     // copy the solution with the least penalty to the host
