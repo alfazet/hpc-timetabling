@@ -80,7 +80,7 @@ fn classes_hard_penalties(
     n_violations += students_not_enrolled_in_parent_penalty(data, assignment);
     n_violations += rooms_capacity_limits_penalty(sol, data, assignment);
     n_violations += classes_in_unavailable_rooms_penalty(sol, data);
-    n_violations += time_intervals_overlap_penalty(sol);
+    n_violations += time_intervals_overlap_penalty(sol, data);
 
     n_violations
 }
@@ -224,8 +224,8 @@ fn classes_in_unavailable_rooms_penalty(sol: &Solution, data: &TimetableData) ->
 
 /// counts the hard violations -- time intervals of two
 /// classes overlap in the same room
-fn time_intervals_overlap_penalty(sol: &Solution) -> u32 {
-    let mut classes_per_room = vec![vec![]; sol.rooms.len()];
+fn time_intervals_overlap_penalty(sol: &Solution, data: &TimetableData) -> u32 {
+    let mut classes_per_room = vec![vec![]; data.rooms.len()];
     for (i, r) in sol.rooms.iter().enumerate() {
         if let Some(room_idx) = r.as_ref().map(|r| r.room_idx) {
             classes_per_room[room_idx].push(i);
