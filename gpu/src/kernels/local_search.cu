@@ -10,10 +10,10 @@ namespace kernels {
 LocalSearch::LocalSearch(u32 n_iters) : n_iters(n_iters) {}
 
 __device__ inline bool cmp_delta(int2 a, int2 b) {
-    if (a.y == b.y) {
-        return a.x < b.x;
+    if (a.x == b.x) {
+        return a.y < b.y;
     }
-    return a.y < b.y;
+    return a.x < b.x;
 }
 
 // checks whether a pairwise distribution constraint is violated for a given pair of classes
@@ -264,6 +264,8 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
 
     curandState rng;
     curand_init(seed, sol * block_size + tid, 0, &rng);
+
+    int2 overall_best_delta = NEUTRAL;
     for (u32 iter = 0; iter < n_iterations; iter++) {
         // TODO: instead of randomly choosing a class to try to fix,
         // choose the one that creates the most violations (similar to mutations)
@@ -366,7 +368,8 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
                 __syncthreads();
             }
 
-            if (tid == 0 && cmp_delta(sh_delta[0], NEUTRAL)) {
+            if (tid == 0 && cmp_delta(sh_delta[0], overall_best_delta)) {
+                overall_best_delta = sh_delta[0];
                 u16 c = sh_class[0];
                 sh_rooms[c] = sh_room[0];
                 pop_rooms[sol_offset + c] = sh_room[0];
