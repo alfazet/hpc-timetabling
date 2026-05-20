@@ -10,10 +10,10 @@ namespace kernels {
 LocalSearch::LocalSearch(u32 n_iters) : n_iters(n_iters) {}
 
 __device__ inline bool cmp_delta(int2 a, int2 b) {
-    if (a.y == b.y) {
-        return a.x < b.x;
+    if (a.x == b.x) {
+        return a.y < b.y;
     }
-    return a.y < b.y;
+    return a.x < b.x;
 }
 
 // checks whether a pairwise distribution constraint is violated for a given pair of classes
