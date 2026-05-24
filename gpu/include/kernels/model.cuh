@@ -77,10 +77,14 @@ struct ClassData {
     // indices into TimetableData::subparts
     thrust::device_vector<u16> subpart_idx;
 
+    thrust::device_vector<u16> room_class_idxs;
+    thrust::device_vector<usize> room_class_offsets;
+
     ClassData(const std::vector<parser::ClassId> &id, const std::vector<u32> &limit, const std::vector<u16> &parent,
               const std::vector<u16> &times_start, const std::vector<u16> &times_end,
               const std::vector<u16> &rooms_start, const std::vector<u16> &rooms_end,
-              const std::vector<u16> &subpart_idx);
+              const std::vector<u16> &subpart_idx, const std::vector<u16> &room_class_idxs,
+              const std::vector<usize> &room_class_offsets);
 };
 
 struct TimeOption {

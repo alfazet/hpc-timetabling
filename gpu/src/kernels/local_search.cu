@@ -162,7 +162,8 @@ __device__ static int2 compute_dist_delta(usize cls, u16 old_t, u16 old_r, u16 n
 __device__ static int2
 compute_move_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const u16 *sh_times, const u16 *sh_rooms,
                    usize n_classes, const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
-                   const u16 *room_opt_room_idx, const u32 *room_opt_penalty, const parser::TimeSlots *room_unavail,
+                   const u16 *room_class_idxs, const usize *room_class_offsets, const u16 *room_opt_room_idx,
+                   const u32 *room_opt_penalty, const parser::TimeSlots *room_unavail,
                    const usize *room_unavail_offsets, usize n_rooms, usize n_unavail, u32 opt_time, u32 opt_room,
                    const u32 *travel_time, const DistributionKind *dist_kind, const u16 *dist_class_idxs,
                    const usize *dist_class_idxs_offsets, const Penalty *dist_penalty, usize n_distributions,
@@ -201,24 +202,52 @@ compute_move_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const 
         }
     }
 
-    for (usize c2 = 0; c2 < n_classes; c2++) {
-        if (c2 == cls) {
-            continue;
-        }
-        u16 c2_r = sh_rooms[c2];
-        if (c2_r == NO_ROOM) {
-            continue;
-        }
-        u16 c2_real_room = room_opt_room_idx[c2_r];
-        const parser::TimeSlots &c2_time = time_opt_times[sh_times[c2]];
+    if (old_real_room != NO_ROOM) {
+        u32 start = room_class_offsets[old_real_room];
+        u32 end = room_class_offsets[old_real_room + 1];
 
-        if (old_real_room != NO_ROOM && old_real_room == c2_real_room && utils::timeslots_overlap(old_time, c2_time)) {
-            delta_hard--;
-        }
-        if (new_real_room != NO_ROOM && new_real_room == c2_real_room && utils::timeslots_overlap(new_time, c2_time)) {
-            delta_hard++;
+        for (u32 i = start; i < end; i++) {
+            u16 c2 = room_class_idxs[i];
+
+            if (c2 == cls)
+                continue;
+
+            u16 c2_r = sh_rooms[c2];
+            if (c2_r == NO_ROOM)
+                continue;
+
+            u16 c2_real_room = room_opt_room_idx[c2_r];
+            const parser::TimeSlots &c2_time = time_opt_times[sh_times[c2]];
+
+            if (c2_real_room == old_real_room && utils::timeslots_overlap(old_time, c2_time)) {
+                delta_hard--;
+            }
         }
     }
+
+    if (new_real_room != NO_ROOM) {
+        u32 start = room_class_offsets[new_real_room];
+        u32 end = room_class_offsets[new_real_room + 1];
+
+        for (u32 i = start; i < end; i++) {
+            u16 c2 = room_class_idxs[i];
+
+            if (c2 == cls)
+                continue;
+
+            u16 c2_r = sh_rooms[c2];
+            if (c2_r == NO_ROOM)
+                continue;
+
+            u16 c2_real_room = room_opt_room_idx[c2_r];
+            const parser::TimeSlots &c2_time = time_opt_times[sh_times[c2]];
+
+            if (c2_real_room == new_real_room && utils::timeslots_overlap(new_time, c2_time)) {
+                delta_hard++;
+            }
+        }
+    }
+
     int2 dist_d = compute_dist_delta(cls, old_t, old_r, new_t, new_r, sh_times, sh_rooms, time_opt_times,
                                      room_opt_room_idx, travel_time, n_rooms, dist_kind, dist_class_idxs,
                                      dist_class_idxs_offsets, dist_penalty, class_dist_idxs, class_dist_offsets);
@@ -230,6 +259,7 @@ compute_move_delta(usize cls, u16 old_t, u16 old_r, u16 new_t, u16 new_r, const 
 
 __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, const u16 *class_times_start,
                                const u16 *class_times_end, const u16 *class_rooms_start, const u16 *class_rooms_end,
+                               const u16 *room_class_idxs, const usize *room_class_offsets,
                                const parser::TimeSlots *time_opt_times, const u32 *time_opt_penalty,
                                const u16 *room_opt_room_idx, const u32 *room_opt_penalty,
                                const parser::TimeSlots *room_unavail, const usize *room_unavail_offsets, usize n_rooms,
@@ -286,11 +316,12 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
                 if (new_t == old_t) {
                     continue;
                 }
-                int2 delta = compute_move_delta(
-                    my_cls, old_t, old_r, new_t, old_r, sh_times, sh_rooms, n_classes, time_opt_times, time_opt_penalty,
-                    room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets, n_rooms, n_unavail,
-                    opt_time, opt_room, travel_time, dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty,
-                    n_distributions, class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
+                int2 delta = compute_move_delta(my_cls, old_t, old_r, new_t, old_r, sh_times, sh_rooms, n_classes,
+                                                time_opt_times, time_opt_penalty, room_class_idxs, room_class_offsets,
+                                                room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets,
+                                                n_rooms, n_unavail, opt_time, opt_room, travel_time, dist_kind,
+                                                dist_class_idxs, dist_class_idxs_offsets, dist_penalty, n_distributions,
+                                                class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
                 if (cmp_delta(delta, best_delta)) {
                     best_delta = delta;
                     best_time = new_t;
@@ -339,12 +370,13 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
                     if (new_r == old_r) {
                         continue;
                     }
+
                     int2 delta = compute_move_delta(
                         my_cls, old_t, old_r, old_t, new_r, sh_times, sh_rooms, n_classes, time_opt_times,
-                        time_opt_penalty, room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets,
-                        n_rooms, n_unavail, opt_time, opt_room, travel_time, dist_kind, dist_class_idxs,
-                        dist_class_idxs_offsets, dist_penalty, n_distributions, class_dist_idxs, class_dist_offsets,
-                        n_dist_class_idxs);
+                        time_opt_penalty, room_class_idxs, room_class_offsets, room_opt_room_idx, room_opt_penalty,
+                        room_unavail, room_unavail_offsets, n_rooms, n_unavail, opt_time, opt_room, travel_time,
+                        dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty, n_distributions,
+                        class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
                     if (cmp_delta(delta, best_delta)) {
                         best_delta = delta;
                         best_room = new_r;
@@ -392,6 +424,8 @@ void LocalSearch::search(Population &population, const TimetableData &data) {
     const u16 *class_times_end = thrust::raw_pointer_cast(data.classes.times_end.data());
     const u16 *class_rooms_start = thrust::raw_pointer_cast(data.classes.rooms_start.data());
     const u16 *class_rooms_end = thrust::raw_pointer_cast(data.classes.rooms_end.data());
+    const u16 *room_class_idxs = thrust::raw_pointer_cast(data.classes.room_class_idxs.data());
+    const usize *room_class_offsets = thrust::raw_pointer_cast(data.classes.room_class_offsets.data());
     const parser::TimeSlots *time_opt_times = thrust::raw_pointer_cast(data.time_options.times.data());
     const u32 *time_opt_penalty = thrust::raw_pointer_cast(data.time_options.penalty.data());
     const u16 *room_opt_room_idx = thrust::raw_pointer_cast(data.room_options.room_idx.data());
@@ -414,14 +448,15 @@ void LocalSearch::search(Population &population, const TimetableData &data) {
     usize n_dist_class_idxs = dist.class_idxs.size();
 
     u32 seed = population.seed ^ static_cast<u32>(rand());
-    constexpr u32 block_dim = LARGE_BLOCK_SIZE;
+    constexpr u32 block_dim = 1;
     u32 grid_dim = static_cast<u32>(population.population_size);
     usize sh_mem_size = (2 * n_classes + 3 * block_dim) * sizeof(u16) + block_dim * sizeof(int2);
     k_local_search<<<grid_dim, block_dim, sh_mem_size>>>(
         pop_times, pop_rooms, n_classes, class_times_start, class_times_end, class_rooms_start, class_rooms_end,
-        time_opt_times, time_opt_penalty, room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets,
-        n_rooms, n_unavail, opt.time, opt.room, n_iters, seed, travel_time, dist_kind, dist_class_idxs,
-        dist_class_idxs_offsets, dist_penalty, n_distributions, class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
+        room_class_idxs, room_class_offsets, time_opt_times, time_opt_penalty, room_opt_room_idx, room_opt_penalty,
+        room_unavail, room_unavail_offsets, n_rooms, n_unavail, opt.time, opt.room, n_iters, seed, travel_time,
+        dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty, n_distributions, class_dist_idxs,
+        class_dist_offsets, n_dist_class_idxs);
 
     cudaErrCheck(cudaDeviceSynchronize());
 }

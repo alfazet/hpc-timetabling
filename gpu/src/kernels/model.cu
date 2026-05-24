@@ -24,9 +24,11 @@ SubpartData::SubpartData(const std::vector<parser::SubpartId> &id, const std::ve
 ClassData::ClassData(const std::vector<parser::ClassId> &id, const std::vector<u32> &limit,
                      const std::vector<u16> &parent, const std::vector<u16> &times_start,
                      const std::vector<u16> &times_end, const std::vector<u16> &rooms_start,
-                     const std::vector<u16> &rooms_end, const std::vector<u16> &subpart_idx)
+                     const std::vector<u16> &rooms_end, const std::vector<u16> &subpart_idx,
+                     const std::vector<u16> &room_class_idxs, const std::vector<usize> &room_class_offsets)
     : id(id), limit(limit), parent(parent), times_start(times_start), times_end(times_end), rooms_start(rooms_start),
-      rooms_end(rooms_end), subpart_idx(subpart_idx) {}
+      rooms_end(rooms_end), subpart_idx(subpart_idx), room_class_idxs(room_class_idxs),
+      room_class_offsets(room_class_offsets) {}
 
 TimeOption::TimeOption(const std::vector<parser::TimeSlots> &times, const std::vector<u32> &penalty)
     : times(times), penalty(penalty) {}
@@ -38,9 +40,9 @@ StudentData::StudentData(const std::vector<parser::StudentId> &id, const std::ve
                          const std::vector<usize> &course_idxs_offsets)
     : id(id), course_idxs(course_idxs), course_idxs_offsets(course_idxs_offsets) {}
 
-DistributionData::DistributionData(const std::vector<DistributionKind> &kind,
-                                   const std::vector<u16> &class_idxs, const std::vector<usize> &class_idxs_offsets,
-                                   const std::vector<Penalty> &penalty, const std::vector<u16> &class_dist_idxs,
+DistributionData::DistributionData(const std::vector<DistributionKind> &kind, const std::vector<u16> &class_idxs,
+                                   const std::vector<usize> &class_idxs_offsets, const std::vector<Penalty> &penalty,
+                                   const std::vector<u16> &class_dist_idxs,
                                    const std::vector<usize> &class_dist_offsets)
     : kind(kind), class_idxs(class_idxs), class_idxs_offsets(class_idxs_offsets), penalty(penalty),
       class_dist_idxs(class_dist_idxs), class_dist_offsets(class_dist_offsets) {}
@@ -128,6 +130,10 @@ static CourseHierarchy make_course_hierarchy(const parser::Problem &p,
         }
     }
 
+    usize n_classes = class_id.size();
+    usize n_real_rooms = room_id_to_idx.size();
+    std::vector<std::vector<u16>> room_to_classes(n_real_rooms);
+
     for (const auto &course : p.courses.items) {
         usize cfg_start = config_id.size();
         for (const auto &config : course.configs) {
@@ -148,6 +154,8 @@ static CourseHierarchy make_course_hierarchy(const parser::Problem &p,
                         if (iter != room_id_to_idx.end()) {
                             room_idx.push_back(iter->second);
                             room_penalty.push_back(r.penalty);
+                            u16 real_room = iter->second;
+                            room_to_classes[real_room].push_back(class_id_to_idx.at(cls.id.value));
                         }
                     }
                     usize class_rooms_end = room_idx.size();
@@ -186,11 +194,23 @@ static CourseHierarchy make_course_hierarchy(const parser::Problem &p,
         configs_end.push_back(cfg_end);
     }
 
+    std::vector<u16> room_class_idxs;
+    std::vector<usize> room_class_offsets;
+
+    room_class_offsets.reserve(n_real_rooms + 1);
+    room_class_offsets.push_back(0);
+
+    for (usize r = 0; r < n_real_rooms; r++) {
+        room_class_idxs.insert(room_class_idxs.end(), room_to_classes[r].begin(), room_to_classes[r].end());
+        room_class_offsets.push_back(room_class_idxs.size());
+    }
+
     return {
         CourseData(course_id, configs_start, configs_end),
         ConfigData(config_id, subparts_start, subparts_end),
         SubpartData(subpart_id, classes_start, classes_end),
-        ClassData(class_id, limit, parent, times_start, times_end, rooms_start, rooms_end, subpart_idx),
+        ClassData(class_id, limit, parent, times_start, times_end, rooms_start, rooms_end, subpart_idx, room_class_idxs,
+                  room_class_offsets),
         TimeOption(times, time_penalty),
         RoomOption(room_idx, room_penalty),
     };
@@ -229,7 +249,7 @@ static DistributionData make_distribution_data(const parser::Problem &p,
     usize offset = 0;
 
     for (const auto &d : p.distributions.items) {
-        std::visit([&](auto&& arg){ kind.push_back(arg); }, d.kind);
+        std::visit([&](auto &&arg) { kind.push_back(arg); }, d.kind);
         if (d.penalty.has_value()) {
             penalty.emplace_back(0, d.penalty.value());
         } else {
