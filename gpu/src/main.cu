@@ -2,32 +2,12 @@
 
 #include "executor/cmd_args.hpp"
 #include "executor/solver.cuh"
-#include "gui.cuh"
 #include "kernels/model.cuh"
 #include "parser/parser.hpp"
 #include "serializer/serializer.hpp"
 
-template <typename lambda>
-void timetabling_main(int argc, char **argv, std::ostream &out, lambda post_solver_callback, bool *stopper = nullptr) {
-    ArgParser arg_parser(argc - 1, argv + 1, out);
-    auto arg_list = arg_parser.parse_all();
-    auto content = parser::utils::read_file(arg_list.dataset_path);
-    auto problem = parser::Problem::parse(content);
-    auto d_data = kernels::TimetableData::from_problem(problem);
-    auto metadata = serializer::OutputMetadata::from_problem(problem);
-
-    srand(arg_list.seed);
-    Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate,
-                  arg_list.mut_rate, arg_list.mut_trials, arg_list.elites_frac, arg_list.worst_frac, arg_list.ls_iters,
-                  arg_list.tournament_size, arg_list.seed, stopper);
-    auto best_solution = solver.solve(out);
-    auto output = best_solution.serialize(d_data);
-    auto xml = output.serialize(metadata);
-
-    serializer::utils::write_file(arg_list.output_path, xml);
-    out << "Solution file written to " << arg_list.output_path << std::endl;
-    post_solver_callback();
-}
+#ifdef ENABLE_GUI
+#include "gui.cuh"
 
 int gui_main(int argc, char **argv) {
     WindowElements we = {};
@@ -103,6 +83,29 @@ int gui_main(int argc, char **argv) {
 
     return Fl::run();
 }
+#endif
+
+template <typename lambda>
+void timetabling_main(int argc, char **argv, std::ostream &out, lambda post_solver_callback, bool *stopper = nullptr) {
+    ArgParser arg_parser(argc - 1, argv + 1, out);
+    auto arg_list = arg_parser.parse_all();
+    auto content = parser::utils::read_file(arg_list.dataset_path);
+    auto problem = parser::Problem::parse(content);
+    auto d_data = kernels::TimetableData::from_problem(problem);
+    auto metadata = serializer::OutputMetadata::from_problem(problem);
+
+    srand(arg_list.seed);
+    Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate,
+                  arg_list.mut_rate, arg_list.mut_trials, arg_list.elites_frac, arg_list.worst_frac, arg_list.ls_iters,
+                  arg_list.tournament_size, arg_list.seed, stopper);
+    auto best_solution = solver.solve(out);
+    auto output = best_solution.serialize(d_data);
+    auto xml = output.serialize(metadata);
+
+    serializer::utils::write_file(arg_list.output_path, xml);
+    out << "Solution file written to " << arg_list.output_path << std::endl;
+    post_solver_callback();
+}
 
 int main(int argc, char **argv) {
     // open cli version if any argument was provided
@@ -117,5 +120,10 @@ int main(int argc, char **argv) {
     }
 
     // open the gui version otherwise
+#ifdef ENABLE_GUI
     return gui_main(argc, argv);
+#else
+    fprintf(stderr, "GUI support not compiled in.\n");
+    return 1;
+#endif
 }

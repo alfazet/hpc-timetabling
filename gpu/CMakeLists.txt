@@ -8,6 +8,8 @@ set(CMAKE_CUDA_ARCHITECTURES native)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(FetchContent)
 
+option(ENABLE_GUI "Build GUI version" OFF)
+
 include_directories(include)
 find_package(CUDAToolkit REQUIRED)
 
@@ -38,8 +40,26 @@ target_link_libraries(serializer PRIVATE parser)
 
 add_executable(main
         src/main.cu
-        src/gui.cu
 )
+if(ENABLE_GUI)
+    target_sources(main PRIVATE src/gui.cu)
+
+    # fltk
+    set(FLTK_BUILD_TEST OFF CACHE BOOL "" FORCE)
+    set(FLTK_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(FLTK_BUILD_FLUID OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        fltk
+        GIT_REPOSITORY https://github.com/fltk/fltk.git
+        GIT_TAG release-1.4.5
+    )
+    FetchContent_MakeAvailable(fltk)
+
+    target_link_libraries(main PRIVATE fltk)
+    target_compile_definitions(main PRIVATE ENABLE_GUI)
+endif()
+
 target_include_directories(main PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -70,19 +90,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(pugixml)
 target_link_libraries(parser PRIVATE pugixml)
-
-# fltk
-set(FLTK_BUILD_TEST OFF CACHE BOOL "Wyłącz testy" FORCE)
-set(FLTK_BUILD_EXAMPLES OFF CACHE BOOL "Wyłącz przykłady" FORCE)
-set(FLTK_BUILD_FLUID OFF CACHE BOOL "Wyłącz FLUID" FORCE)
-
-FetchContent_Declare(
-        fltk
-        GIT_REPOSITORY https://github.com/fltk/fltk.git
-        GIT_TAG        release-1.4.5
-)
-FetchContent_MakeAvailable(fltk)
-target_link_libraries(main PRIVATE fltk)
 
 # tests
 FetchContent_Declare(
