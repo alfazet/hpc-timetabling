@@ -43,23 +43,26 @@ serializer::Output FoundSolution::serialize(const kernels::TimetableData &d_data
     return {classes_out};
 }
 
-Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-               f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 tournament_size,
-               u32 seed, bool *stopper)
+Solver::Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate_min,
+               f32 cross_rate_max, f32 mut_rate_min, f32 mut_rate_max, u32 mut_trials, f32 elites_frac_min,
+               f32 elites_frac_max, f32 worst_frac_min, f32 worst_frac_max, u32 ls_iters, u32 tournament_size, u32 seed,
+               bool *stopper)
     : d_data(std::move(d_data)), generations(generations), population_size(population_size), sel_frac(sel_frac),
-      cross_rate(cross_rate), mut_rate(mut_rate), mut_trials(mut_trials), elites_frac(elites_frac),
-      worst_frac(worst_frac), ls_iters(ls_iters), tournament_size(tournament_size), seed(seed), stopper(stopper) {}
+      cross_rate_min(cross_rate_min), cross_rate_max(cross_rate_max), mut_rate_min(mut_rate_min),
+      mut_rate_max(mut_rate_max), mut_trials(mut_trials), elites_frac_min(elites_frac_min),
+      elites_frac_max(elites_frac_max), worst_frac_min(worst_frac_min), worst_frac_max(worst_frac_max),
+      ls_iters(ls_iters), tournament_size(tournament_size), seed(seed), stopper(stopper) {}
 
 void Solver::print_metadata(std::ostream &out) const {
     out << "Solver started...\n"
         << "Generations: " << generations << "\n"
         << "Population size: " << population_size << "\n"
         << "Selection: " << std::fixed << std::setprecision(1) << (sel_frac * 100.0) << "%\n"
-        << std::setprecision(4) << "Crossover rate: " << cross_rate << "\n"
-        << "Mutation rate: " << mut_rate << "\n"
+        << std::setprecision(4) << "Crossover rate range: " << cross_rate_min << ".." << cross_rate_max << "\n"
+        << "Mutation rate range: " << mut_rate_min << ".." << mut_rate_max << "\n"
         << "Mutation trials per iter: " << mut_trials << "\n"
-        << "Elites: " << (elites_frac * 100.0) << "%\n"
-        << "Anti-elites: " << (worst_frac * 100.0) << "%\n"
+        << "Elites: " << (elites_frac_min * 100.0) << "%\n"
+        << "Anti-elites: " << (worst_frac_min * 100.0) << "%\n"
         << "Local search iterations: " << ls_iters << "\n"
         << "Tournament size: " << tournament_size << "\n"
         << "Seed: " << seed << "\n";
@@ -69,21 +72,17 @@ FoundSolution Solver::solve(std::ostream &out) const {
     usize n_classes = d_data.classes.id.size();
     usize n_students = d_data.students.id.size();
 
-    f32 delta = 0.05;
-    f32 min_mut = 0.1, max_mut = 0.9;
-    f32 min_cross = 0.1, max_cross = 0.9;
-    f32 min_elites_frac = 0.05, max_elites_frac = 0.05;
-    f32 min_worst_frac = 0.05, max_worst_frac = 0.25;
-    Adjuster adjuster(delta, min_mut, max_mut, min_cross, max_cross, min_elites_frac, max_elites_frac, min_worst_frac,
-                      max_worst_frac);
+    f32 delta = 0.01;
+    Adjuster adjuster(delta, mut_rate_min, mut_rate_max, cross_rate_min, cross_rate_max, elites_frac_min,
+                      elites_frac_max, worst_frac_min, worst_frac_max);
     Stats stats;
 
     kernels::Evaluator evaluator;
-    kernels::Population population(n_students, n_classes, this->population_size, this->elites_frac, this->worst_frac,
-                                   this->seed);
+    kernels::Population population(n_students, n_classes, this->population_size, this->elites_frac_min,
+                                   this->worst_frac_min, this->seed);
     kernels::StudentAssignment assignment(n_classes, this->population_size);
-    kernels::Crossover crossover(this->cross_rate);
-    kernels::Mutation mutation(this->mut_rate, this->mut_trials);
+    kernels::Crossover crossover(this->cross_rate_min);
+    kernels::Mutation mutation(this->mut_rate_min, this->mut_trials);
     kernels::Selection selection(this->population_size, this->sel_frac, this->tournament_size);
     kernels::LocalSearch local_search(this->ls_iters);
     population.init(d_data);

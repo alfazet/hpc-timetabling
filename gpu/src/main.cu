@@ -95,9 +95,10 @@ void timetabling_main(int argc, char **argv, std::ostream &out, lambda post_solv
     auto metadata = serializer::OutputMetadata::from_problem(problem);
 
     srand(arg_list.seed);
-    Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate,
-                  arg_list.mut_rate, arg_list.mut_trials, arg_list.elites_frac, arg_list.worst_frac, arg_list.ls_iters,
-                  arg_list.tournament_size, arg_list.seed, stopper);
+    Solver solver(d_data, arg_list.generations, arg_list.population_size, arg_list.sel_frac, arg_list.cross_rate_min,
+                  arg_list.cross_rate_max, arg_list.mut_rate_min, arg_list.mut_rate_max, arg_list.mut_trials,
+                  arg_list.elites_frac_min, arg_list.elites_frac_max, arg_list.worst_frac_min, arg_list.worst_frac_max,
+                  arg_list.ls_iters, arg_list.tournament_size, arg_list.seed, stopper);
     auto best_solution = solver.solve(out);
     auto output = best_solution.serialize(d_data);
     auto xml = output.serialize(metadata);

@@ -8,15 +8,19 @@
 #include "typedefs.hpp"
 
 constexpr u32 DEFAULT_GENERATIONS = 128;
-constexpr u32 DEFAULT_POPULATION_SIZE = 1024;
+constexpr u32 DEFAULT_POPULATION_SIZE = 512;
 constexpr u32 DEFAULT_SEED = 21372137;
-constexpr f32 DEFAULT_SEL_FRAC = 0.1;
-constexpr f32 DEFAULT_CROSSOVER_RATE = 0.25;
-constexpr f32 DEFAULT_MUTATION_RATE = 0.75;
-constexpr u32 DEFAULT_MUTATION_TRIALS = 32;
-constexpr f32 DEFAULT_ELITES_FRAC = 0.05;
-constexpr f32 DEFAULT_WORST_FRAC = 0.125;
-constexpr u32 DEFAULT_LS_ITERS = 32;
+constexpr f32 DEFAULT_SEL_FRAC = 0.2;
+constexpr f32 DEFAULT_CROSSOVER_RATE_MIN = 0.5;
+constexpr f32 DEFAULT_CROSSOVER_RATE_MAX = 0.9;
+constexpr f32 DEFAULT_MUTATION_RATE_MIN = 0.1;
+constexpr f32 DEFAULT_MUTATION_RATE_MAX = 0.5;
+constexpr u32 DEFAULT_MUTATION_TRIALS = 64;
+constexpr f32 DEFAULT_ELITES_FRAC_MIN = 0.025;
+constexpr f32 DEFAULT_ELITES_FRAC_MAX = 0.075;
+constexpr f32 DEFAULT_WORST_FRAC_MIN = 0.05;
+constexpr f32 DEFAULT_WORST_FRAC_MAX = 0.1;
+constexpr u32 DEFAULT_LS_ITERS = 128;
 constexpr u32 DEFAULT_TOURNAMENT_SIZE = 4;
 constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
 
@@ -25,11 +29,19 @@ constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
     X("-g", generations, u32, parse_u32, DEFAULT_GENERATIONS, "number of generations")                                 \
     X("-p", population_size, u32, parse_u32, DEFAULT_POPULATION_SIZE, "population size")                               \
     X("--sel-frac", sel_frac, f32, parse_f32, DEFAULT_SEL_FRAC, "fraction of population size to select for crossover") \
-    X("--cross", cross_rate, f32, parse_f32, DEFAULT_CROSSOVER_RATE, "crossover rate")                                 \
-    X("--mut-rate", mut_rate, f32, parse_f32, DEFAULT_MUTATION_RATE, "mutation rate")                                  \
+    X("--cross-min", cross_rate_min, f32, parse_f32, DEFAULT_CROSSOVER_RATE_MIN, "min crossover rate")                 \
+    X("--cross-max", cross_rate_max, f32, parse_f32, DEFAULT_CROSSOVER_RATE_MAX, "max crossover rate")                 \
+    X("--mut-rate-min", mut_rate_min, f32, parse_f32, DEFAULT_MUTATION_RATE_MIN, "min mutation rate")                  \
+    X("--mut-rate-max", mut_rate_max, f32, parse_f32, DEFAULT_MUTATION_RATE_MAX, "max mutation rate")                  \
     X("--mut-trials", mut_trials, u32, parse_u32, DEFAULT_MUTATION_TRIALS, "mutation trials per iteration")            \
-    X("--elit-frac", elites_frac, f32, parse_f32, DEFAULT_ELITES_FRAC, "fraction of population to keep as elite")      \
-    X("--worst-frac", worst_frac, f32, parse_f32, DEFAULT_WORST_FRAC, "fraction of the worst solutions to replace")    \
+    X("--elit-frac-min", elites_frac_min, f32, parse_f32, DEFAULT_ELITES_FRAC_MIN,                                     \
+      "min fraction of population to keep as elite")                                                                   \
+    X("--elit-frac-max", elites_frac_max, f32, parse_f32, DEFAULT_ELITES_FRAC_MAX,                                     \
+      "max fraction of population to keep as elite")                                                                   \
+    X("--worst-frac-min", worst_frac_min, f32, parse_f32, DEFAULT_WORST_FRAC_MIN,                                      \
+      "min fraction of the worst solutions to replace")                                                                \
+    X("--worst-frac-max", worst_frac_max, f32, parse_f32, DEFAULT_WORST_FRAC_MAX,                                      \
+      "max fraction of the worst solutions to replace")                                                                \
     X("--ls-iters", ls_iters, u32, parse_u32, DEFAULT_LS_ITERS, "local search iterations per generation")              \
     X("--tour-size", tournament_size, u32, parse_u32, DEFAULT_TOURNAMENT_SIZE,                                         \
       "tournament selection size (must be 2, 4, 8, 16 or 32)")                                                         \

@@ -22,18 +22,23 @@ struct Solver {
     u32 generations;
     u32 population_size;
     f32 sel_frac;
-    f32 cross_rate;
-    f32 mut_rate;
+    f32 cross_rate_min;
+    f32 cross_rate_max;
+    f32 mut_rate_min;
+    f32 mut_rate_max;
     u32 mut_trials;
-    f32 elites_frac;
-    f32 worst_frac;
+    f32 elites_frac_min;
+    f32 elites_frac_max;
+    f32 worst_frac_min;
+    f32 worst_frac_max;
     u32 ls_iters;
     u32 tournament_size;
     u32 seed;
     bool *stopper;
 
-    Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate,
-           f32 mut_rate, u32 mut_trials, f32 elites_frac, f32 worst_frac, u32 ls_iters, u32 tournament_size, u32 seed,
+    Solver(kernels::TimetableData d_data, u32 generations, u32 population_size, f32 sel_frac, f32 cross_rate_min,
+           f32 cross_rate_max, f32 mut_rate_min, f32 mut_rate_max, u32 mut_trials, f32 elites_frac_min,
+           f32 elites_frac_max, f32 worst_frac_min, f32 worst_frac_max, u32 ls_iters, u32 tournament_size, u32 seed,
            bool *stopper);
 
     void print_metadata(std::ostream &out) const;
