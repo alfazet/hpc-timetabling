@@ -273,18 +273,10 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
     usize sol_offset = sol * n_classes;
 
     extern __shared__ u8 sh_mem[];
-    auto *sh_delta = reinterpret_cast<int2 *>(sh_mem);
-    // sh_delta: block_size * sizeof(int2)
-    auto *sh_times = reinterpret_cast<u16 *>(sh_delta + block_size);
+    auto *sh_times = reinterpret_cast<u16 *>(sh_mem);
     // sh_times: n_classes * sizeof(u16) bytes
     u16 *sh_rooms = sh_times + n_classes;
     // sh_rooms: n_classes * sizeof(u16) bytes
-    u16 *sh_class = sh_rooms + n_classes;
-    // sh_class: block_size * sizeof(u16)
-    u16 *sh_time = sh_class + block_size;
-    // sh_time: block_size * sizeof(u16)
-    u16 *sh_room = sh_time + block_size;
-    // sh_room: block_size * sizeof(u16)
 
     for (usize i = tid; i < n_classes; i += block_size) {
         sh_times[i] = pop_times[sol_offset + i];
@@ -295,116 +287,95 @@ __global__ void k_local_search(u16 *pop_times, u16 *pop_rooms, usize n_classes, 
     curandState rng;
     curand_init(seed, sol * block_size + tid, 0, &rng);
 
-    int2 overall_best_delta = NEUTRAL;
     for (u32 iter = 0; iter < n_iterations; iter++) {
-        // TODO: instead of randomly choosing a class to try to fix,
-        // choose the one that creates the most violations (similar to mutations)
+        // seeds for the random ordering of classes
+        u32 a = curand(&rng) | 1;
+        u32 c = curand(&rng);
 
-        // search for a better timeslot
-        {
-            u16 my_cls = curand(&rng) % n_classes;
-            u16 old_t = sh_times[my_cls];
-            u16 old_r = sh_rooms[my_cls];
-            int2 best_delta = make_int2(0, 0);
-            u16 best_time = old_t;
-            u16 t_start = class_times_start[my_cls];
-            u16 t_end = class_times_end[my_cls];
-            u16 n_time_opts = t_end - t_start;
+        // each thread evaluates and commits its own best move
+        for (usize batch_start = 0; batch_start < n_classes; batch_start += block_size) {
+            usize batch_idx = batch_start + tid;
+            usize cls = (static_cast<usize>(a) * batch_idx + c) % n_classes;
 
-            for (u16 t_idx = 0; t_idx < n_time_opts; t_idx++) {
-                u16 new_t = t_start + t_idx;
-                if (new_t == old_t) {
-                    continue;
-                }
-                int2 delta = compute_move_delta(my_cls, old_t, old_r, new_t, old_r, sh_times, sh_rooms, n_classes,
-                                                time_opt_times, time_opt_penalty, room_class_idxs, room_class_offsets,
-                                                room_opt_room_idx, room_opt_penalty, room_unavail, room_unavail_offsets,
-                                                n_rooms, n_unavail, opt_time, opt_room, travel_time, dist_kind,
-                                                dist_class_idxs, dist_class_idxs_offsets, dist_penalty, n_distributions,
-                                                class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
-                if (cmp_delta(delta, best_delta)) {
-                    best_delta = delta;
-                    best_time = new_t;
-                }
-            }
+            bool time_improved = false;
+            u16 best_time = 0;
+            if (batch_idx < n_classes) {
+                u16 old_t = sh_times[cls];
+                u16 old_r = sh_rooms[cls];
+                u16 t_start = class_times_start[cls];
+                u16 t_end = class_times_end[cls];
+                u16 n_time_opts = t_end - t_start;
+                int2 best_delta = NEUTRAL;
+                best_time = old_t;
 
-            sh_delta[tid] = best_delta;
-            sh_class[tid] = my_cls;
-            sh_time[tid] = best_time;
-            sh_room[tid] = old_r;
-            __syncthreads();
-
-            for (u32 s = block_size / 2; s > 0; s /= 2) {
-                if (tid < s && cmp_delta(sh_delta[tid + s], sh_delta[tid])) {
-                    sh_delta[tid] = sh_delta[tid + s];
-                    sh_class[tid] = sh_class[tid + s];
-                    sh_time[tid] = sh_time[tid + s];
-                    sh_room[tid] = sh_room[tid + s];
-                }
-                __syncthreads();
-            }
-
-            if (tid == 0 && cmp_delta(sh_delta[0], NEUTRAL)) {
-                u16 c = sh_class[0];
-                sh_times[c] = sh_time[0];
-                pop_times[sol_offset + c] = sh_time[0];
-            }
-            __syncthreads();
-        }
-
-        // // search for a better room
-        {
-            u16 my_cls = curand(&rng) % n_classes;
-            u16 old_t = sh_times[my_cls];
-            u16 old_r = sh_rooms[my_cls];
-            u16 r_start = class_rooms_start[my_cls];
-            u16 r_end = class_rooms_end[my_cls];
-            u16 n_room_opts = r_end - r_start;
-            bool needs_room = r_start != r_end;
-            int2 best_delta = make_int2(0, 0);
-            u16 best_room = old_r;
-
-            if (needs_room) {
-                for (u16 r_idx = 0; r_idx < n_room_opts; r_idx++) {
-                    u16 new_r = r_start + r_idx;
-                    if (new_r == old_r) {
+                for (u16 t_idx = 0; t_idx < n_time_opts; t_idx++) {
+                    u16 new_t = t_start + t_idx;
+                    if (new_t == old_t) {
                         continue;
                     }
-
                     int2 delta = compute_move_delta(
-                        my_cls, old_t, old_r, old_t, new_r, sh_times, sh_rooms, n_classes, time_opt_times,
+                        cls, old_t, old_r, new_t, old_r, sh_times, sh_rooms, n_classes, time_opt_times,
                         time_opt_penalty, room_class_idxs, room_class_offsets, room_opt_room_idx, room_opt_penalty,
                         room_unavail, room_unavail_offsets, n_rooms, n_unavail, opt_time, opt_room, travel_time,
                         dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty, n_distributions,
                         class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
                     if (cmp_delta(delta, best_delta)) {
                         best_delta = delta;
-                        best_room = new_r;
+                        best_time = new_t;
                     }
                 }
-            }
 
-            sh_delta[tid] = best_delta;
-            sh_class[tid] = my_cls;
-            sh_time[tid] = old_t;
-            sh_room[tid] = best_room;
+                if (cmp_delta(best_delta, NEUTRAL)) {
+                    time_improved = true;
+                }
+            }
             __syncthreads();
 
-            for (u32 s = block_size / 2; s > 0; s /= 2) {
-                if (tid < s && cmp_delta(sh_delta[tid + s], sh_delta[tid])) {
-                    sh_delta[tid] = sh_delta[tid + s];
-                    sh_class[tid] = sh_class[tid + s];
-                    sh_time[tid] = sh_time[tid + s];
-                    sh_room[tid] = sh_room[tid + s];
-                }
-                __syncthreads();
+            if (batch_idx < n_classes && time_improved) {
+                sh_times[cls] = best_time;
+                pop_times[sol_offset + cls] = best_time;
             }
+            __syncthreads();
 
-            if (tid == 0 && cmp_delta(sh_delta[0], overall_best_delta)) {
-                overall_best_delta = sh_delta[0];
-                u16 c = sh_class[0];
-                sh_rooms[c] = sh_room[0];
-                pop_rooms[sol_offset + c] = sh_room[0];
+            bool room_improved = false;
+            u16 best_room = 0;
+            if (batch_idx < n_classes) {
+                u16 old_t = sh_times[cls];
+                u16 old_r = sh_rooms[cls];
+                u16 r_start = class_rooms_start[cls];
+                u16 r_end = class_rooms_end[cls];
+                u16 n_room_opts = r_end - r_start;
+                bool needs_room = r_start != r_end;
+                int2 best_delta = NEUTRAL;
+                best_room = old_r;
+
+                if (needs_room) {
+                    for (u16 r_idx = 0; r_idx < n_room_opts; r_idx++) {
+                        u16 new_r = r_start + r_idx;
+                        if (new_r == old_r) {
+                            continue;
+                        }
+                        int2 delta = compute_move_delta(
+                            cls, old_t, old_r, old_t, new_r, sh_times, sh_rooms, n_classes, time_opt_times,
+                            time_opt_penalty, room_class_idxs, room_class_offsets, room_opt_room_idx, room_opt_penalty,
+                            room_unavail, room_unavail_offsets, n_rooms, n_unavail, opt_time, opt_room, travel_time,
+                            dist_kind, dist_class_idxs, dist_class_idxs_offsets, dist_penalty, n_distributions,
+                            class_dist_idxs, class_dist_offsets, n_dist_class_idxs);
+                        if (cmp_delta(delta, best_delta)) {
+                            best_delta = delta;
+                            best_room = new_r;
+                        }
+                    }
+                }
+                if (cmp_delta(best_delta, NEUTRAL)) {
+                    room_improved = true;
+                }
+            }
+            __syncthreads();
+
+            if (batch_idx < n_classes && room_improved) {
+                sh_rooms[cls] = best_room;
+                pop_rooms[sol_offset + cls] = best_room;
             }
             __syncthreads();
         }
@@ -450,7 +421,7 @@ void LocalSearch::search(Population &population, const TimetableData &data) {
     u32 seed = population.seed ^ static_cast<u32>(rand());
     constexpr u32 block_dim = SMALL_BLOCK_SIZE;
     u32 grid_dim = static_cast<u32>(population.population_size);
-    usize sh_mem_size = (2 * n_classes + 3 * block_dim) * sizeof(u16) + block_dim * sizeof(int2);
+    usize sh_mem_size = 2 * n_classes * sizeof(u16);
     k_local_search<<<grid_dim, block_dim, sh_mem_size>>>(
         pop_times, pop_rooms, n_classes, class_times_start, class_times_end, class_rooms_start, class_rooms_end,
         room_class_idxs, room_class_offsets, time_opt_times, time_opt_penalty, room_opt_room_idx, room_opt_penalty,

@@ -8,7 +8,7 @@
 #include "typedefs.hpp"
 
 constexpr u32 DEFAULT_GENERATIONS = 128;
-constexpr u32 DEFAULT_POPULATION_SIZE = 512;
+constexpr u32 DEFAULT_POPULATION_SIZE = 1024;
 constexpr u32 DEFAULT_SEED = 21372137;
 constexpr f32 DEFAULT_SEL_FRAC = 0.2;
 constexpr f32 DEFAULT_CROSSOVER_RATE_MIN = 0.5;
@@ -20,7 +20,7 @@ constexpr f32 DEFAULT_ELITES_FRAC_MIN = 0.025;
 constexpr f32 DEFAULT_ELITES_FRAC_MAX = 0.075;
 constexpr f32 DEFAULT_WORST_FRAC_MIN = 0.05;
 constexpr f32 DEFAULT_WORST_FRAC_MAX = 0.1;
-constexpr u32 DEFAULT_LS_ITERS = 128;
+constexpr u32 DEFAULT_LS_ITERS = 16;
 constexpr u32 DEFAULT_TOURNAMENT_SIZE = 4;
 constexpr std::string DEFAULT_OUTPUT_PATH = "./solution.xml";
 
